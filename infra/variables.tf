@@ -21,3 +21,22 @@ variable "deploy_branch" {
   type        = string
   default     = "main"
 }
+
+variable "protonmail_verification_token" {
+  description = "ProtonMail domain-verification token (from Proton admin after adding the domain). Blank means email is not yet active: DNS deploys null MX + sender-free SPF so the domain is unspoofable."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "protonmail_dkim_selectors" {
+  description = "ProtonMail DKIM selector -> CNAME target, e.g. { protonmail = \"protonmail.domainkey.abcdef.domains.proton.ch.\" }. Populate after Proton verifies the domain."
+  type        = map(string)
+  default     = {}
+}
+
+variable "dmarc_report_address" {
+  description = "Mailbox that receives DMARC aggregate reports (rua). Configure this as an address or alias in ProtonMail."
+  type        = string
+  default     = "dmarc@millsymills.com"
+}

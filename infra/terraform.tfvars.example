@@ -1,0 +1,19 @@
+# Copy to infra/terraform.tfvars and fill in real values. The
+# terraform.tfvars file itself is gitignored (see top-level .gitignore).
+
+# ProtonMail verification token (from Proton admin -> Settings ->
+# Domains -> add millsymills.com). Until this is set, the email
+# records deploy in "unspoofable null" mode: null MX + v=spf1 -all.
+# protonmail_verification_token = "proton-verification=abcdef1234567890"
+
+# ProtonMail DKIM selectors, shown in Proton admin after domain
+# verification succeeds. All three selectors must be filled in for
+# Proton's automatic key rotation to work.
+# protonmail_dkim_selectors = {
+#   protonmail  = "protonmail.domainkey.abcdef.domains.proton.ch."
+#   protonmail2 = "protonmail2.domainkey.abcdef.domains.proton.ch."
+#   protonmail3 = "protonmail3.domainkey.abcdef.domains.proton.ch."
+# }
+
+# Mailbox / alias that receives DMARC aggregate reports.
+# dmarc_report_address = "dmarc@millsymills.com"
