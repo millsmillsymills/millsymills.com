@@ -1,0 +1,111 @@
+---
+interface Props {
+	title: string;
+	description?: string;
+	noindex?: boolean;
+	canonical?: string;
+}
+
+const { title, description, noindex, canonical } = Astro.props;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		{description && <meta name="description" content={description} />}
+		{noindex && <meta name="robots" content="noindex" />}
+		{canonical && <link rel="canonical" href={canonical} />}
+		<meta property="og:title" content={title} />
+		{description && <meta property="og:description" content={description} />}
+		<meta property="og:type" content="website" />
+		<title>{title}</title>
+		<style is:global>
+			:root {
+				color-scheme: light dark;
+				--fg: #111;
+				--bg: #fafafa;
+				--muted: #555;
+				--accent: #0057ff;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--fg: #f4f4f4;
+					--bg: #0e0e10;
+					--muted: #9a9a9a;
+					--accent: #6ea8ff;
+				}
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				background: var(--bg);
+				color: var(--fg);
+				font-family:
+					ui-sans-serif,
+					system-ui,
+					-apple-system,
+					'Segoe UI',
+					Roboto,
+					Inter,
+					sans-serif;
+				line-height: 1.5;
+			}
+
+			main {
+				min-height: 100dvh;
+				display: grid;
+				place-items: center;
+				padding: 2rem;
+			}
+
+			.card {
+				max-width: 38rem;
+				width: 100%;
+			}
+
+			h1 {
+				font-size: clamp(2.5rem, 8vw, 4rem);
+				margin: 0 0 1.25rem;
+				letter-spacing: -0.02em;
+			}
+
+			p {
+				font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+				color: var(--muted);
+				margin: 0 0 1.5rem;
+			}
+
+			a.cta {
+				display: inline-block;
+				color: var(--accent);
+				text-decoration: none;
+				font-weight: 600;
+				border-bottom: 2px solid transparent;
+				transition: border-color 120ms ease;
+			}
+
+			a.cta:hover,
+			a.cta:focus {
+				border-bottom-color: var(--accent);
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<section class="card">
+				<slot />
+			</section>
+		</main>
+	</body>
+</html>
