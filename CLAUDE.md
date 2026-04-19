@@ -24,6 +24,10 @@ terraform plan       # preview changes
 terraform apply      # deploy infrastructure
 ```
 
+```bash
+./scripts/ci-local.sh  # run the full CI suite locally (node + terraform)
+```
+
 ## Terraform notes
 
 - ACM certificate must be provisioned in us-east-1 (CloudFront requirement) — handled via the `aws.us_east_1` provider alias in `main.tf`
