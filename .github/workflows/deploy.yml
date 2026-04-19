@@ -1,13 +1,14 @@
 name: Deploy
 
-# Runs only after CI has completed successfully on `main`. Also
-# supports manual dispatch for reapplying the current main without
-# pushing a new commit.
+# TEMPORARY: automatic triggers are disabled while we're over the
+# GitHub Actions minute quota. Deploys can still be kicked off via
+# the Actions tab (workflow_dispatch); they just won't chain off a
+# push to main until the workflow_run trigger below is uncommented.
 on:
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
   workflow_dispatch:
+  # workflow_run:
+  #   workflows: ['CI']
+  #   types: [completed]
 
 permissions:
   contents: read
