@@ -33,8 +33,26 @@ terraform apply      # deploy infrastructure
 
 ## Deploy workflow
 
+Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the workflow targets the `production` GitHub Environment, which **must be configured with required reviewers**. GitHub holds each run in a "Waiting" state until a human approves it — so nothing ships to AWS without an explicit click, even if a push lands on `main`.
+
+### One-time setup
+
+1. `cd infra && terraform apply` — creates the OIDC provider and the `millsymills-com-github-deploy` IAM role.
+2. Grab the role ARN from the Terraform output:
+   ```bash
+   terraform output -raw github_deploy_role_arn
+   ```
+3. In GitHub repo settings → **Environments → production**:
+   - Add at least one **required reviewer** (yourself).
+   - Optionally scope the environment to `main` only.
+4. In GitHub repo settings → **Variables**, set these as *repository variables* (not secrets — they're not sensitive):
+   - `AWS_DEPLOY_ROLE_ARN` — the ARN from step 2.
+   - `AWS_REGION` — e.g. `us-east-1`.
+   - `SITE_DOMAIN` — `millsymills.com`.
+   - `CLOUDFRONT_DISTRIBUTION_ID` — from `terraform output cloudfront_distribution_id`.
+
+### Manual deploy (fallback)
+
 1. `npm run build` — outputs static files to `dist/`
 2. `aws s3 sync dist/ s3://millsymills.com --delete`
 3. `aws cloudfront create-invalidation --distribution-id <ID> --paths "/*"`
-
-The CloudFront distribution ID is in Terraform outputs: `terraform output cloudfront_distribution_id`
