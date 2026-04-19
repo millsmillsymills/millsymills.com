@@ -31,6 +31,19 @@ terraform apply      # deploy infrastructure
 - S3 bucket is private; CloudFront accesses it via Origin Access Control (OAC)
 - Backend S3 bucket for state (`millsymills-terraform-state`) must be created manually before uncommenting the `backend` block in `main.tf`. Enable bucket versioning and SSE-S3 on it. The backend uses `encrypt = true` and S3-native state locking (`use_lockfile = true`), which requires Terraform >= 1.10.
 
+## Email (ProtonMail)
+
+Managed in `infra/email.tf`. The config is safe to deploy before Proton is set up — in the "no Proton" state it publishes a null MX (RFC 7505), `v=spf1 -all`, and a strict `DMARC p=reject`, so the domain cannot be spoofed. When you're ready to activate email:
+
+1. Sign up for a ProtonMail plan that supports custom domains (Mail Plus and up).
+2. In Proton admin → **Settings → Domains**, add `millsymills.com`. Proton gives you a verification token.
+3. Put the token in `infra/terraform.tfvars` as `protonmail_verification_token = "..."` and run `terraform apply`. This flips MX to Proton and adds the verification TXT.
+4. Wait for Proton to confirm DNS verification.
+5. Proton now shows three DKIM CNAME targets. Add them to `terraform.tfvars` as `protonmail_dkim_selectors = { protonmail = "...", protonmail2 = "...", protonmail3 = "..." }` and `terraform apply`.
+6. Create `dmarc@millsymills.com` (and whatever other addresses you want) in Proton.
+
+DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip the `p=quarantine` training phase because Proton is the only legitimate sender and aligned DKIM/SPF should pass on day one.
+
 ## Deploy workflow
 
 Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the workflow targets the `production` GitHub Environment, which **must be configured with required reviewers**. GitHub holds each run in a "Waiting" state until a human approves it — so nothing ships to AWS without an explicit click, even if a push lands on `main`.
