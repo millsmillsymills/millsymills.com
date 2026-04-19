@@ -6,7 +6,7 @@ Personal/portfolio website. Currently hosted on Squarespace; this repo is the re
 
 - **Frontend**: Astro 6 (static output) — `src/` contains pages and components
 - **Hosting**: AWS S3 + CloudFront + Route53 + ACM — `infra/` contains Terraform
-- **IaC**: Terraform 1.9+
+- **IaC**: Terraform 1.10+
 
 ## Key commands
 
@@ -29,7 +29,7 @@ terraform apply      # deploy infrastructure
 - ACM certificate must be provisioned in us-east-1 (CloudFront requirement) — handled via the `aws.us_east_1` provider alias in `main.tf`
 - Route53 hosted zone for millsymills.com must exist before running `terraform apply` (data source lookup, not managed)
 - S3 bucket is private; CloudFront accesses it via Origin Access Control (OAC)
-- Backend S3 bucket for state (`millsymills-terraform-state`) must be created manually before uncommenting the `backend` block in `main.tf`
+- Backend S3 bucket for state (`millsymills-terraform-state`) must be created manually before uncommenting the `backend` block in `main.tf`. Enable bucket versioning and SSE-S3 on it. The backend uses `encrypt = true` and S3-native state locking (`use_lockfile = true`), which requires Terraform >= 1.10.
 
 ## Deploy workflow
 
