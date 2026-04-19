@@ -143,25 +143,46 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   }
 }
 
-# Allow the S3 logging service to write access logs here.
+# Grant PutObject to:
+#   - the S3 server access logging service (for the site bucket's own logs)
+#   - the CloudWatch Logs delivery service (for CloudFront standard logs v2)
 resource "aws_s3_bucket_policy" "logs" {
   bucket = aws_s3_bucket.logs.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Sid    = "AllowS3ServerAccessLogging"
-      Effect = "Allow"
-      Principal = {
-        Service = "logging.s3.amazonaws.com"
-      }
-      Action   = "s3:PutObject"
-      Resource = "${aws_s3_bucket.logs.arn}/s3-access/*"
-      Condition = {
-        ArnLike = {
-          "aws:SourceArn" = aws_s3_bucket.site.arn
+    Statement = [
+      {
+        Sid    = "AllowS3ServerAccessLogging"
+        Effect = "Allow"
+        Principal = {
+          Service = "logging.s3.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.logs.arn}/s3-access/*"
+        Condition = {
+          ArnLike = {
+            "aws:SourceArn" = aws_s3_bucket.site.arn
+          }
+        }
+      },
+      {
+        Sid    = "AllowCloudFrontStandardLogsV2Delivery"
+        Effect = "Allow"
+        Principal = {
+          Service = "delivery.logs.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.logs.arn}/cloudfront-access/*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:delivery-source:*"
+          }
         }
       }
-    }]
+    ]
   })
 }
