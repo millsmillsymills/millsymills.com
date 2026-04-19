@@ -1,8 +1,12 @@
 name: Deploy
 
+# Runs only after CI has completed successfully on `main`. Also
+# supports manual dispatch for reapplying the current main without
+# pushing a new commit.
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -17,16 +21,28 @@ jobs:
   deploy:
     name: Build + sync to S3 + invalidate CloudFront
     runs-on: ubuntu-latest
+
+    # Gate: manual dispatch OR CI succeeded on the main branch.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.head_branch == 'main') }}
+
     # The `production` environment MUST have required reviewers
-    # configured in the repository settings. GitHub will hold this job
-    # in a "Waiting" state until a reviewer explicitly approves the run.
-    # See: https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment#required-reviewers
+    # configured in the repository settings. GitHub holds this job in
+    # a "Waiting" state until a reviewer explicitly approves.
+    # https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment#required-reviewers
     environment:
       name: production
       url: https://${{ vars.SITE_DOMAIN }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # On workflow_run we must explicitly check out the SHA that
+          # triggered CI — the default would be main's tip at queue
+          # time, which may have moved.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
