@@ -11,9 +11,13 @@ variable "domain" {
 }
 
 variable "github_repo" {
-  description = "GitHub repo (owner/name) allowed to assume the deploy role via OIDC."
+  description = "GitHub repo (owner/name) allowed to assume the deploy role via OIDC. No default: forks must set this explicitly so the deploy role can't be trivially assumed by the upstream repo."
   type        = string
-  default     = "millsmillsymills/millsymills.com"
+
+  validation {
+    condition     = can(regex("^[^/]+/[^/]+$", var.github_repo))
+    error_message = "github_repo must be in `owner/name` form (e.g. `millsmillsymills/millsymills.com`)."
+  }
 }
 
 variable "deploy_branch" {
@@ -36,7 +40,7 @@ variable "protonmail_dkim_selectors" {
 }
 
 variable "dmarc_report_address" {
-  description = "Mailbox that receives DMARC aggregate reports (rua). Configure this as an address or alias in ProtonMail."
+  description = "Mailbox that receives DMARC aggregate reports (rua). Leave blank to default to `dmarc@<var.domain>`. Configure the chosen address as an address or alias in ProtonMail."
   type        = string
-  default     = "dmarc@millsymills.com"
+  default     = ""
 }
