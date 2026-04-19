@@ -1,0 +1,35 @@
+# Note: the CI and Deploy workflows are currently configured for
+# workflow_dispatch only (see ci.yml / deploy.yml). Dependabot PRs
+# opened here will NOT trigger automated checks until those triggers
+# are re-enabled; run `./scripts/ci-local.sh` on each Dependabot
+# branch before merging.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      astro:
+        patterns:
+          - astro
+          - "@astrojs/*"
+      dev-dependencies:
+        dependency-type: development
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: terraform
+    directory: "/infra"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
