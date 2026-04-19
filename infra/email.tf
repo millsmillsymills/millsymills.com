@@ -27,6 +27,11 @@ locals {
     # spoofing attempt at the SMTP layer.
     "0 .",
   ]
+
+  # Default to the `dmarc@<domain>` convention when the var is unset,
+  # so a fork that changes `var.domain` doesn't accidentally leak
+  # DMARC telemetry to the upstream operator's mailbox.
+  dmarc_rua = var.dmarc_report_address != "" ? var.dmarc_report_address : "dmarc@${var.domain}"
 }
 
 resource "aws_route53_record" "mx" {
@@ -73,6 +78,6 @@ resource "aws_route53_record" "dmarc" {
   type    = "TXT"
   ttl     = 3600
   records = [
-    "v=DMARC1; p=reject; sp=reject; rua=mailto:${var.dmarc_report_address}; fo=1; adkim=s; aspf=s",
+    "v=DMARC1; p=reject; sp=reject; rua=mailto:${local.dmarc_rua}; fo=1; adkim=s; aspf=s",
   ]
 }
