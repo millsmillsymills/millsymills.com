@@ -4,6 +4,8 @@ import Resume from './apps/Resume.astro';
 import Photos from './apps/Photos.astro';
 import Mail from './apps/Mail.astro';
 import Flags from './apps/Flags.astro';
+import Music from './apps/Music.astro';
+import Memes from './apps/Memes.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
 
@@ -16,8 +18,8 @@ const apps = [
 	{ id: 'flags', label: 'flags', glyph: '🚩', title: 'flags.exe', component: 'flags' },
 	{ id: 'mail', label: 'mail', glyph: '✉️', title: 'mail.exe', component: 'mail' },
 	{ id: 'terminal', label: 'terminal', glyph: '⌨️', title: 'terminal', component: 'terminal' },
-	{ id: 'music', label: 'music', glyph: '💿', title: 'winamp.exe', component: 'stub' },
-	{ id: 'memes', label: 'memes', glyph: '🗂️', title: 'memes/', component: 'stub' },
+	{ id: 'music', label: 'music', glyph: '💿', title: 'winamp.exe', component: 'music' },
+	{ id: 'memes', label: 'memes', glyph: '🗂️', title: 'memes/', component: 'memes' },
 ];
 ---
 
@@ -70,6 +72,8 @@ const apps = [
 						{a.component === 'photos' && <Photos />}
 						{a.component === 'flags' && <Flags />}
 						{a.component === 'mail' && <Mail />}
+						{a.component === 'music' && <Music />}
+						{a.component === 'memes' && <Memes />}
 						{a.component === 'terminal' && (
 							<Stub
 								title="terminal"
