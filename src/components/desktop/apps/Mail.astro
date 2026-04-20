@@ -1,0 +1,22 @@
+---
+import { profile } from '../../../data/profile';
+
+const subject = encodeURIComponent('hi from millsymills.com');
+const body = encodeURIComponent('');
+---
+
+<h1>mail.exe</h1>
+
+<p>
+	the contact form is a <code>mailto:</code> for now. swap to formspree / SES + lambda later.
+</p>
+
+<p>
+	<a href={`mailto:${profile.email}?subject=${subject}&body=${body}`} style="font-size:24px"
+		>→ {profile.email}</a
+	>
+</p>
+
+<p>
+	or shout into the void on <a href={profile.github}>github</a>.
+</p>

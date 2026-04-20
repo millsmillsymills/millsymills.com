@@ -1,0 +1,41 @@
+---
+interface MenuItem {
+	target: string;
+	label: string;
+}
+
+interface Props {
+	menu: MenuItem[];
+}
+
+const { menu } = Astro.props;
+---
+
+<nav class="taskbar" aria-label="taskbar">
+	<button type="button" class="taskbar__start" aria-haspopup="menu" aria-expanded="false">
+		<span aria-hidden="true">★</span>
+		<span>start</span>
+	</button>
+	<ul class="taskbar__items" aria-label="open windows"></ul>
+	<span class="taskbar__clock" aria-label="current time">--:--</span>
+</nav>
+
+<div class="start-menu" hidden role="menu" aria-label="start menu">
+	<div class="start-menu__header">mills@millsymills:~$</div>
+	<ul class="start-menu__list">
+		{
+			menu.map((item) => (
+				<li>
+					<button
+						type="button"
+						class="start-menu__item"
+						data-open-window={item.target}
+						role="menuitem"
+					>
+						{item.label}
+					</button>
+				</li>
+			))
+		}
+	</ul>
+</div>

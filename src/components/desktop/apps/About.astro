@@ -1,0 +1,82 @@
+---
+import { profile } from '../../../data/profile';
+---
+
+<style>
+	.about {
+		display: grid;
+		grid-template-columns: 120px 1fr;
+		gap: 16px;
+	}
+
+	.about__avatar {
+		width: 120px;
+		height: 120px;
+		object-fit: cover;
+		background: var(--lilac-100);
+		border: 2px solid var(--border);
+		border-radius: 8px;
+	}
+
+	.about__avatar--placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-pixel);
+		font-size: 11px;
+		text-align: center;
+		color: var(--ink-soft);
+		padding: 6px;
+	}
+
+	.about__meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 8px;
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		color: var(--ink-soft);
+		margin: 0 0 8px;
+	}
+
+	.about__meta span {
+		padding: 2px 6px;
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 3px;
+	}
+
+	@media (max-width: 460px) {
+		.about {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+
+<article class="about">
+	<img
+		class="about__avatar"
+		src="/images/headshot.jpg"
+		alt={`${profile.name} headshot`}
+		onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'about__avatar about__avatar--placeholder',textContent:'headshot.jpg pending — drop into public/images/'}))"
+	/>
+	<div>
+		<h1>{profile.name}</h1>
+		<p class="about__meta">
+			{profile.certifications.map((c) => <span>{c}</span>)}
+		</p>
+		<p class="about__meta">
+			<span>{profile.pronouns}</span>
+			<span>{profile.location}</span>
+		</p>
+		<p>
+			<strong>{profile.title}</strong> @ {profile.currentEmployer}.
+		</p>
+		<p>{profile.summary}</p>
+		<p>
+			<a href={`mailto:${profile.email}`}>{profile.email}</a> · <a href={profile.github}
+				>github</a
+			>
+		</p>
+	</div>
+</article>
