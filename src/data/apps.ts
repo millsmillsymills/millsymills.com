@@ -85,6 +85,17 @@ export const apps: AppDef[] = [
 		height: 520,
 	},
 	{
+		id: 'uses',
+		label: 'uses',
+		glyph: '🧰',
+		title: '/uses',
+		ogDescription: 'gear on the desk + chimera in the rack. keyboard, keycaps, unraid, unifi, coffee.',
+		x: 160,
+		y: 80,
+		width: 640,
+		height: 520,
+	},
+	{
 		id: 'music',
 		label: 'music',
 		glyph: '💿',
