@@ -11,18 +11,32 @@ import Terminal from './apps/Terminal.astro';
 import Music from './apps/Music.astro';
 import Memes from './apps/Memes.astro';
 import Trash from './apps/Trash.astro';
+import { apps } from '../../data/apps';
 
-const apps = [
-	{ id: 'about', label: 'about.me', glyph: '🪪', title: 'about.exe' },
-	{ id: 'resume', label: 'resume', glyph: '📄', title: 'resume.txt' },
-	{ id: 'photos', label: 'photos', glyph: '🖼️', title: 'photos/' },
-	{ id: 'terminal', label: 'terminal', glyph: '⌨️', title: 'mills@millsymills:~' },
-	{ id: 'flags', label: 'flags.exe', glyph: '🚩', title: 'flags.exe' },
-	{ id: 'music', label: 'music', glyph: '💿', title: 'winamp.exe' },
-	{ id: 'memes', label: 'memes', glyph: '🗂️', title: 'memes/' },
-	{ id: 'mail', label: 'mail', glyph: '✉️', title: 'mail.exe' },
-	{ id: 'trash', label: 'trash', glyph: '🗑️', title: 'recycle.bin' },
-];
+const contentFor = (id: string) => {
+	switch (id) {
+		case 'about':
+			return About;
+		case 'resume':
+			return Resume;
+		case 'photos':
+			return Photos;
+		case 'mail':
+			return Mail;
+		case 'terminal':
+			return Terminal;
+		case 'flags':
+			return Flags;
+		case 'music':
+			return Music;
+		case 'memes':
+			return Memes;
+		case 'trash':
+			return Trash;
+		default:
+			return null;
+	}
+};
 ---
 
 <main class="desktop" id="desktop">
@@ -30,41 +44,16 @@ const apps = [
 		{apps.map((a) => <DesktopIcon target={a.id} label={a.label} glyph={a.glyph} />)}
 	</ul>
 
-	<Window id="about" title="about.exe" x={140} y={60} width={620} height={460}>
-		<About />
-	</Window>
-
-	<Window id="resume" title="resume.txt" x={200} y={120} width={680} height={520}>
-		<Resume />
-	</Window>
-
-	<Window id="photos" title="photos/" x={260} y={140} width={520} height={460}>
-		<Photos />
-	</Window>
-
-	<Window id="mail" title="mail.exe" x={300} y={160} width={460} height={300}>
-		<Mail />
-	</Window>
-
-	<Window id="terminal" title="mills@millsymills:~" x={180} y={120} width={680} height={460}>
-		<Terminal />
-	</Window>
-
-	<Window id="flags" title="flags.exe" x={220} y={140} width={520} height={520}>
-		<Flags />
-	</Window>
-
-	<Window id="music" title="winamp.exe" x={220} y={180} width={460} height={460}>
-		<Music />
-	</Window>
-
-	<Window id="memes" title="memes/" x={240} y={200} width={560} height={460}>
-		<Memes />
-	</Window>
-
-	<Window id="trash" title="recycle.bin" x={280} y={220} width={520} height={460}>
-		<Trash />
-	</Window>
+	{
+		apps.map((a) => {
+			const Content = contentFor(a.id);
+			return (
+				<Window id={a.id} title={a.title} x={a.x} y={a.y} width={a.width} height={a.height}>
+					{Content && <Content />}
+				</Window>
+			);
+		})
+	}
 
 	<Taskbar menu={apps.map((a) => ({ target: a.id, label: a.label }))} />
 </main>

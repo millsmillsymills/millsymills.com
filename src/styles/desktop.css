@@ -733,6 +733,100 @@ body.mshell-app-open {
 	transform: translateX(0);
 }
 
+/* ------------------------------------------------------------------ */
+/* boot overlay — CRT power-on                                        */
+/* ------------------------------------------------------------------ */
+
+.boot-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 99999;
+	background: #000;
+	pointer-events: none;
+	opacity: 0;
+}
+
+.boot-overlay--on {
+	pointer-events: auto;
+	opacity: 1;
+	animation: boot-crt 1.4s ease-out forwards;
+	display: grid;
+	place-items: center;
+}
+
+.boot-overlay--on::before {
+	content: 'mills.exe';
+	font-family: var(--font-pixel);
+	font-size: 18px;
+	color: var(--pink-300);
+	letter-spacing: 2px;
+	text-shadow: 0 0 8px var(--pink-300), 0 0 16px var(--pink-500);
+	opacity: 0;
+	animation: boot-text 1.4s ease-out forwards;
+}
+
+.boot-overlay--on::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background:
+		repeating-linear-gradient(
+			0deg,
+			rgba(255, 79, 168, 0.05) 0 1px,
+			transparent 1px 3px
+		);
+	pointer-events: none;
+}
+
+.boot-overlay--done {
+	animation: none !important;
+	opacity: 0;
+	transition: opacity 350ms ease;
+}
+
+@keyframes boot-crt {
+	0% {
+		opacity: 1;
+		transform: scaleY(0.01);
+		filter: brightness(3) blur(2px);
+	}
+	15% {
+		transform: scaleY(0.02);
+		filter: brightness(2) blur(1px);
+	}
+	35% {
+		transform: scaleY(1);
+		filter: brightness(1.3) blur(0);
+	}
+	100% {
+		opacity: 1;
+		transform: scaleY(1);
+		filter: none;
+	}
+}
+
+@keyframes boot-text {
+	0%,
+	30% {
+		opacity: 0;
+	}
+	45% {
+		opacity: 0.4;
+	}
+	60% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.boot-overlay {
+		display: none !important;
+	}
+}
+
 @media (max-width: 768px) {
 	html,
 	body {

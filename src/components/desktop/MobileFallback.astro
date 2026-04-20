@@ -9,20 +9,30 @@ import Memes from './apps/Memes.astro';
 import Trash from './apps/Trash.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
+import { apps } from '../../data/apps';
 
-// Same icon set as the desktop, minus terminal (no real keyboard).
-// Order intentionally mirrors desktop.
-const apps = [
-	{ id: 'about', label: 'about', glyph: '🪪', title: 'about.exe', component: 'about' },
-	{ id: 'resume', label: 'resume', glyph: '📄', title: 'resume.txt', component: 'resume' },
-	{ id: 'photos', label: 'photos', glyph: '🖼️', title: 'photos/', component: 'photos' },
-	{ id: 'flags', label: 'flags', glyph: '🚩', title: 'flags.exe', component: 'flags' },
-	{ id: 'mail', label: 'mail', glyph: '✉️', title: 'mail.exe', component: 'mail' },
-	{ id: 'terminal', label: 'terminal', glyph: '⌨️', title: 'terminal', component: 'terminal' },
-	{ id: 'music', label: 'music', glyph: '💿', title: 'winamp.exe', component: 'music' },
-	{ id: 'memes', label: 'memes', glyph: '🗂️', title: 'memes/', component: 'memes' },
-	{ id: 'trash', label: 'trash', glyph: '🗑️', title: 'recycle.bin', component: 'trash' },
-];
+const contentFor = (id: string) => {
+	switch (id) {
+		case 'about':
+			return About;
+		case 'resume':
+			return Resume;
+		case 'photos':
+			return Photos;
+		case 'mail':
+			return Mail;
+		case 'flags':
+			return Flags;
+		case 'music':
+			return Music;
+		case 'memes':
+			return Memes;
+		case 'trash':
+			return Trash;
+		default:
+			return null;
+	}
+};
 ---
 
 <div class="mshell">
@@ -67,25 +77,21 @@ const apps = [
 		</header>
 		<div class="mshell__app-body">
 			{
-				apps.map((a) => (
-					<div data-mobile-app={a.id} hidden>
-						{a.component === 'about' && <About />}
-						{a.component === 'resume' && <Resume />}
-						{a.component === 'photos' && <Photos />}
-						{a.component === 'flags' && <Flags />}
-						{a.component === 'mail' && <Mail />}
-						{a.component === 'music' && <Music />}
-						{a.component === 'memes' && <Memes />}
-						{a.component === 'trash' && <Trash />}
-						{a.component === 'terminal' && (
-							<Stub
-								title="terminal"
-								note="terminal needs a real keyboard — open this site on a wider screen to play. flags.exe works fine here though."
-							/>
-						)}
-						{a.component === 'stub' && <Stub title={a.label} />}
-					</div>
-				))
+				apps.map((a) => {
+					const Content = contentFor(a.id);
+					return (
+						<div data-mobile-app={a.id} hidden>
+							{Content && <Content />}
+							{!Content && a.id === 'terminal' && (
+								<Stub
+									title="terminal"
+									note="terminal needs a real keyboard — open this site on a wider screen to play. flags.exe works fine here though."
+								/>
+							)}
+							{!Content && a.id !== 'terminal' && <Stub title={a.label} />}
+						</div>
+					);
+				})
 			}
 		</div>
 	</section>
