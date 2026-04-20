@@ -71,5 +71,16 @@ const { menu } = Astro.props;
 				</li>
 			))
 		}
+		<li class="start-menu__sep" aria-hidden="true"></li>
+		<li>
+			<button
+				type="button"
+				class="start-menu__item start-menu__item--danger"
+				data-reset-trigger
+				role="menuitem"
+			>
+				⟲ reset desktop
+			</button>
+		</li>
 	</ul>
 </div>
