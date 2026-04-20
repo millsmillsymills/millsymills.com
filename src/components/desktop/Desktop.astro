@@ -10,7 +10,7 @@ import Flags from './apps/Flags.astro';
 import Terminal from './apps/Terminal.astro';
 import Music from './apps/Music.astro';
 import Memes from './apps/Memes.astro';
-import Stub from './apps/Stub.astro';
+import Trash from './apps/Trash.astro';
 
 const apps = [
 	{ id: 'about', label: 'about.me', glyph: '🪪', title: 'about.exe' },
@@ -62,8 +62,8 @@ const apps = [
 		<Memes />
 	</Window>
 
-	<Window id="trash" title="recycle.bin" x={280} y={220} width={420} height={260}>
-		<Stub title="trash" note="empty. (or is it?)" />
+	<Window id="trash" title="recycle.bin" x={280} y={220} width={520} height={460}>
+		<Trash />
 	</Window>
 
 	<Taskbar menu={apps.map((a) => ({ target: a.id, label: a.label }))} />

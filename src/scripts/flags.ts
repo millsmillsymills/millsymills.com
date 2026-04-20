@@ -61,6 +61,14 @@ export const challenges: Challenge[] = [
 		difficulty: 'medium',
 		digest: 'e2e7689004c5f71b6da1c53d2355c3daf248f0759a19fbb4d7a20d27f82d72d6',
 	},
+	{
+		id: 'garbage',
+		title: 'the garbage file',
+		hint: 'rent is too damn high. dade. cereal. burn.',
+		difficulty: 'easy',
+		digest: '7ed8cd3de6664045c6019faa963233411a6a111a56d62434b6599e5a50e38b7e',
+		tag: 'hackers',
+	},
 ];
 /* eslint-enable max-len */
 
