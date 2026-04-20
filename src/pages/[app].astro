@@ -2,6 +2,7 @@
 import DesktopLayout from '../layouts/DesktopLayout.astro';
 import Desktop from '../components/desktop/Desktop.astro';
 import MobileFallback from '../components/desktop/MobileFallback.astro';
+import CommandPalette from '../components/desktop/CommandPalette.astro';
 import { apps, findApp } from '../data/apps';
 import { profile } from '../data/profile';
 
@@ -27,4 +28,5 @@ const canonical = `https://millsymills.com/${app.id}/`;
 >
 	<Desktop />
 	<MobileFallback />
+	<CommandPalette />
 </DesktopLayout>

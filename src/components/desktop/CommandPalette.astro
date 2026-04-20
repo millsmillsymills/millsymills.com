@@ -1,0 +1,27 @@
+<div class="cmdp" role="dialog" aria-label="command palette" aria-modal="true" hidden>
+	<div class="cmdp__panel" role="presentation">
+		<header class="cmdp__header">
+			<span class="cmdp__prompt" aria-hidden="true">❯</span>
+			<input
+				type="text"
+				class="cmdp__input"
+				autocomplete="off"
+				spellcheck="false"
+				placeholder="jump to… (try typing an app name)"
+				aria-label="search apps"
+			/>
+			<kbd class="cmdp__kbd">esc</kbd>
+		</header>
+		<ul class="cmdp__list" role="listbox"></ul>
+		<footer class="cmdp__footer">
+			<span>↑↓ move</span>
+			<span>↵ open</span>
+			<span>esc close</span>
+			<span>⌘ / ctrl + K to toggle</span>
+		</footer>
+	</div>
+</div>
+
+<script>
+	import '../../scripts/command-palette';
+</script>
