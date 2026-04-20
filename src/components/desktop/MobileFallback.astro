@@ -8,6 +8,7 @@ import Music from './apps/Music.astro';
 import Memes from './apps/Memes.astro';
 import Trash from './apps/Trash.astro';
 import Projects from './apps/Projects.astro';
+import Uses from './apps/Uses.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
 import { apps } from '../../data/apps';
@@ -32,6 +33,8 @@ const contentFor = (id: string) => {
 			return Trash;
 		case 'projects':
 			return Projects;
+		case 'uses':
+			return Uses;
 		default:
 			return null;
 	}
