@@ -8,16 +8,11 @@ terraform {
     }
   }
 
-  # Uncomment after creating the S3 backend bucket manually with
-  # versioning and SSE-S3 enabled. `use_lockfile = true` requires
-  # Terraform >= 1.10 (S3-native locking, no DynamoDB table needed).
-  # backend "s3" {
-  #   bucket       = "millsymills-terraform-state"
-  #   key          = "millsymills.com/terraform.tfstate"
-  #   region       = "us-east-1"
-  #   encrypt      = true
-  #   use_lockfile = true
-  # }
+  # All backend fields (bucket, key, region, encrypt, use_lockfile) are
+  # supplied per-stack via `terraform init -backend-config=...`. See
+  # infra/stacks/*.backend.hcl and scripts/tf.sh. An empty block here is
+  # required for Terraform to recognize the S3 backend at all.
+  backend "s3" {}
 }
 
 provider "aws" {
