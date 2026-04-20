@@ -63,14 +63,20 @@ class MobileShell {
 			this.show(next, /* fromPop */ true);
 		});
 
-		// initial render: prefer ?open=<id> deep-link over last-session
-		// state, since a shareable URL should win.
+		// initial render: first preference is the server-rendered
+		// <body data-initial-open="..."> (per-app permalink route).
+		// Second: ?open=<id> query param. Fallback: last-session state.
 		let initial: string | null = this.state.current;
-		try {
-			const requested = new URLSearchParams(window.location.search).get('open');
-			if (requested) initial = requested.split(',')[0]?.trim() || initial;
-		} catch {
-			/* noop */
+		const bodyInitial = document.body?.dataset.initialOpen;
+		if (bodyInitial) {
+			initial = bodyInitial;
+		} else {
+			try {
+				const requested = new URLSearchParams(window.location.search).get('open');
+				if (requested) initial = requested.split(',')[0]?.trim() || initial;
+			} catch {
+				/* noop */
+			}
 		}
 		this.show(initial, /* fromPop */ true);
 	}
