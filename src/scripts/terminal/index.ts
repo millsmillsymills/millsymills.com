@@ -12,6 +12,7 @@ import './commands/flag';
 import './commands/net';
 import './commands/fun';
 import './commands/mcp';
+import './commands/uses';
 
 import { bootTerminal } from './repl';
 
