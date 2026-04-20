@@ -29,7 +29,11 @@ ok "npm run build"
 
 section "node: assert no URL leakage in rehearsal build"
 ./scripts/assert-no-url-leakage.sh
-ok "no URL leakage"
+ok "no URL leakage (rehearsal direction)"
+
+section "node: assert no rehearsal URL leakage in prod build"
+./scripts/assert-no-rehearsal-leakage.sh
+ok "no URL leakage (prod direction)"
 
 section "node: astro check"
 # Prefer the `check` script if defined; otherwise fall back to npx.
