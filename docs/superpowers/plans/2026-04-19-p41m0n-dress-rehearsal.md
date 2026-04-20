@@ -22,7 +22,11 @@ Files created or modified, grouped by responsibility:
 - `src/pages/[app].astro` (edit) — canonical/ogImage from `Astro.site`.
 - `src/pages/sitemap.xml.ts` (edit) — `SITE` from `Astro.site`.
 - `src/pages/robots.txt.ts` (new) — replaces `public/robots.txt`; conditional disallow-all.
+- `src/pages/llms.txt.ts` (new) — replaces `public/llms.txt`; URLs from Astro.site.
+- `src/pages/llms-full.txt.ts` (new) — replaces `public/llms-full.txt`; URLs from Astro.site.
 - `public/robots.txt` (delete).
+- `public/llms.txt` (delete) — scope added after Task 6 surfaced 12 hardcoded URL hits.
+- `public/llms-full.txt` (delete) — scope added after Task 6 surfaced 2 hardcoded URL hits.
 - `scripts/assert-no-url-leakage.sh` (new) — post-build grep for hardcoded prod URLs.
 
 **Terraform two-stack isolation (Phase 2)**
@@ -551,13 +555,19 @@ git commit -m "feat(pages): derive sitemap origin from Astro.site"
 
 ---
 
-## Task 8: Replace `public/robots.txt` with `src/pages/robots.txt.ts`
+## Task 8: Replace static content files with dynamic endpoints
 
-Static `public/robots.txt` cannot vary with env. Move to an Astro endpoint that reads `Astro.site` for the `Sitemap:` line and conditionally emits disallow-all when `NO_INDEX=true`.
+**SCOPE NOTE (added during execution):** During Task 6 the leakage assertion surfaced hardcoded URLs in `public/llms.txt` (12 hits) and `public/llms-full.txt` (2 hits) — files the original spec didn't enumerate. They follow the same static-content-needs-to-vary-by-env pattern as `robots.txt`, so Task 8 absorbs them. Final end-state: three static files in `public/` are replaced by three dynamic endpoints in `src/pages/`.
+
+Static `public/*.txt` content cannot vary with env. Move each to an Astro endpoint that reads `Astro.site` for URLs and, where applicable, conditionally switches content based on `NO_INDEX`.
 
 **Files:**
 - Create: `src/pages/robots.txt.ts`
+- Create: `src/pages/llms.txt.ts`
+- Create: `src/pages/llms-full.txt.ts`
 - Delete: `public/robots.txt`
+- Delete: `public/llms.txt`
+- Delete: `public/llms-full.txt`
 
 - [ ] **Step 1: Create the new endpoint**
 
@@ -645,30 +655,127 @@ export const GET: APIRoute = ({ site }) => {
 };
 ```
 
-- [ ] **Step 2: Delete the static file**
+- [ ] **Step 1b: Create `src/pages/llms.txt.ts`**
 
-Run: `git rm public/robots.txt`
+The current `public/llms.txt` is a markdown-shaped summary of the site for LLM consumers. Replace with an endpoint that reads `Astro.site` for all URL references. Derive `origin` as in Task 7 (`site.href.replace(/\/$/, '')`).
+
+Write `src/pages/llms.txt.ts`:
+
+```ts
+import type { APIRoute } from 'astro';
+
+export const GET: APIRoute = ({ site }) => {
+	if (!site) {
+		throw new Error('llms.txt: Astro.site is undefined. Check astro.config.mjs site value.');
+	}
+	const origin = site.href.replace(/\/$/, '');
+
+	const body = `# mills
+
+> Andrew Mills (\`mills\`) — Corporate Security Engineer at Trail of Bits.
+> Based in Seattle, WA; works remote. 10+ years across identity and
+> access management, endpoint security, and security automation.
+
+This site is a personal portfolio styled as a Y2K-pink retro desktop.
+It's released under MIT as a community template — fork it if you like
+the layout.
+
+## pages
+
+- [about](${origin}/about/): bio, pronouns, contact.
+- [resume](${origin}/resume/): rendered work history.
+- [photos](${origin}/photos/): mostly cats.
+- [terminal](${origin}/terminal/): a mock shell with
+  help / ls / cat / nmap / curl / sudo / flag.
+- [flags](${origin}/flags/): a Juice-Shop-style CTF.
+  Ten hidden challenges at varied difficulty.
+- [music](${origin}/music/): a toy winamp player.
+- [memes](${origin}/memes/): small and earnest.
+- [mail](${origin}/mail/): contact info.
+- [trash](${origin}/trash/): deleted files, mostly
+  garbage.
+
+## machine-readable
+
+- [resume.md](${origin}/files/resume.md) — full resume
+  as markdown.
+- [llms-full.txt](${origin}/llms-full.txt) — the entire
+  site content concatenated into a single markdown file.
+- [sitemap.xml](${origin}/sitemap.xml)
+- [robots.txt](${origin}/robots.txt)
+`;
+
+	return new Response(body, {
+		status: 200,
+		headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+	});
+};
+```
+
+**NOTE:** Before writing, READ `public/llms.txt` in full to preserve exact prose wording and structure. The above template is representative; match the current file's content verbatim except for swapping each `https://millsymills.com` → `${origin}`.
+
+- [ ] **Step 1c: Create `src/pages/llms-full.txt.ts`**
+
+The current `public/llms-full.txt` is the full site content serialized. Only 2 URL hits — straightforward substitution. Read the current file in full, port its contents byte-for-byte into a template literal in the endpoint, and swap the 2 hardcoded `https://millsymills.com` occurrences for `${origin}`.
+
+Write `src/pages/llms-full.txt.ts`:
+
+```ts
+import type { APIRoute } from 'astro';
+
+export const GET: APIRoute = ({ site }) => {
+	if (!site) {
+		throw new Error('llms-full.txt: Astro.site is undefined. Check astro.config.mjs site value.');
+	}
+	const origin = site.href.replace(/\/$/, '');
+
+	const body = `<<<PASTE THE CURRENT public/llms-full.txt CONTENTS HERE>>>`;
+
+	return new Response(body, {
+		status: 200,
+		headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+	});
+};
+```
+
+When replacing `<<<PASTE...>>>` with the current file contents:
+1. Escape any backticks in the content as `\``.
+2. Escape any `${` sequences as `\${`.
+3. Swap both `https://millsymills.com` → `${origin}`.
+
+- [ ] **Step 2: Delete the static files**
+
+Run: `git rm public/robots.txt public/llms.txt public/llms-full.txt`
 
 - [ ] **Step 3: Run the leakage assertion — should now pass**
 
 Run: `./scripts/assert-no-url-leakage.sh`
 Expected: `✓ no URL leakage`. Exit 0.
 
-- [ ] **Step 4: Verify prod robots.txt**
+- [ ] **Step 4: Verify prod robots.txt + llms variants**
 
-Run: `rm -rf dist && SITE_URL=https://millsymills.com npm run build && grep -E '^(User-agent|Disallow|Sitemap):' dist/robots.txt | head -5`
-Expected: contains `Sitemap: https://millsymills.com/sitemap.xml` and permissive `Allow: /`.
+Run: `rm -rf dist && SITE_URL=https://millsymills.com npm run build`
 
-- [ ] **Step 5: Verify rehearsal robots.txt**
+Then:
+- `grep -E '^(User-agent|Disallow|Sitemap):' dist/robots.txt | head -5` — contains `Sitemap: https://millsymills.com/sitemap.xml` and permissive `Allow: /`.
+- `grep -c 'https://millsymills.com' dist/llms.txt` — > 0 (URLs point at prod).
+- `grep -c 'https://millsymills.com' dist/llms-full.txt` — > 0.
 
-Run: `rm -rf dist && SITE_URL=https://p41m0n.com NO_INDEX=true npm run build && cat dist/robots.txt`
-Expected: `User-agent: * / Disallow: /` and `Sitemap: https://p41m0n.com/sitemap.xml`.
+- [ ] **Step 5: Verify rehearsal robots.txt + llms variants**
+
+Run: `rm -rf dist && SITE_URL=https://p41m0n.com NO_INDEX=true npm run build`
+
+Then:
+- `cat dist/robots.txt` — `User-agent: * / Disallow: /` and `Sitemap: https://p41m0n.com/sitemap.xml`.
+- `grep -c 'https://millsymills.com' dist/llms.txt` — exactly 0.
+- `grep -c 'https://p41m0n.com' dist/llms.txt` — > 0.
+- `grep -c 'https://millsymills.com' dist/llms-full.txt` — exactly 0.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/pages/robots.txt.ts public/robots.txt
-git commit -m "feat(pages): robots.txt as endpoint with rehearsal-mode switch"
+git add src/pages/robots.txt.ts src/pages/llms.txt.ts src/pages/llms-full.txt.ts public/robots.txt public/llms.txt public/llms-full.txt
+git commit -m "feat(pages): robots.txt + llms.txt + llms-full.txt as env-aware endpoints"
 ```
 
 ---
