@@ -38,7 +38,7 @@ jobs:
       url: https://${{ vars.SITE_DOMAIN }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # On workflow_run we must explicitly check out the SHA that
           # triggered CI — the default would be main's tip at queue
