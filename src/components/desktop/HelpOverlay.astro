@@ -1,0 +1,55 @@
+<div class="help" role="dialog" aria-label="keyboard shortcuts" aria-modal="true" hidden>
+	<div class="help__panel">
+		<header class="help__header">
+			<span>keyboard shortcuts</span>
+			<button type="button" class="help__close" aria-label="close">✕</button>
+		</header>
+		<div class="help__body">
+			<h3>everywhere</h3>
+			<dl>
+				<dt><kbd>?</kbd></dt>
+				<dd>toggle this help</dd>
+				<dt><kbd>⌘</kbd>/<kbd>ctrl</kbd> + <kbd>K</kbd></dt>
+				<dd>open command palette</dd>
+				<dt><kbd>esc</kbd></dt>
+				<dd>close palette / help / etc.</dd>
+				<dt><kbd>↑↑↓↓←→←→BA</kbd></dt>
+				<dd>classic cheat code (tip: a flag lives here)</dd>
+			</dl>
+
+			<h3>command palette</h3>
+			<dl>
+				<dt><kbd>↑</kbd> / <kbd>↓</kbd></dt>
+				<dd>navigate</dd>
+				<dt><kbd>↵</kbd></dt>
+				<dd>open selected app</dd>
+			</dl>
+
+			<h3>terminal (<code>mills@millsymills:~</code>)</h3>
+			<dl>
+				<dt><kbd>↑</kbd> / <kbd>↓</kbd></dt>
+				<dd>command history</dd>
+				<dt><kbd>tab</kbd></dt>
+				<dd>complete command name</dd>
+				<dt><kbd>ctrl</kbd> + <kbd>L</kbd></dt>
+				<dd>clear screen</dd>
+				<dt><kbd>ctrl</kbd> + <kbd>C</kbd></dt>
+				<dd>abort current line</dd>
+				<dt><code>help</code></dt>
+				<dd>list all commands</dd>
+				<dt><code>flag status</code></dt>
+				<dd>see CTF progress</dd>
+			</dl>
+
+			<h3>deep-links</h3>
+			<p class="help__note">
+				every app has its own URL: <code>/about/</code>, <code>/terminal/</code>,
+				<code>/flags/</code>, etc. <code>?open=&lt;id&gt;</code> also works from the root.
+			</p>
+		</div>
+	</div>
+</div>
+
+<script>
+	import '../../scripts/help-overlay';
+</script>
