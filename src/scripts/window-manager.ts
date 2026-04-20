@@ -318,3 +318,5 @@ if (typeof window !== 'undefined') {
 		new WindowManager();
 	}
 }
+
+export {};
