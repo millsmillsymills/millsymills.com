@@ -107,7 +107,7 @@ export const apps: AppDef[] = [
 		id: 'music',
 		label: 'music',
 		glyph: '💿',
-		iconUrl: '/images/icons/vaporwave/casette-tape.png',
+		iconUrl: '/images/icons/vaporwave/cassette-tape.png',
 		title: 'winamp.exe',
 		ogDescription: 'a tiny y2k winamp for whatever track mills is spinning this week.',
 		x: 220,
