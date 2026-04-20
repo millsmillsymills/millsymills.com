@@ -1,0 +1,17 @@
+---
+interface Props {
+	title: string;
+	note?: string;
+}
+
+const { title, note = 'coming soon. shipping incrementally.' } = Astro.props;
+---
+
+<h1>{title}</h1>
+<p style="color:var(--ink-soft)">{note}</p>
+<p style="font-family:var(--font-mono);font-size:14px;color:var(--ink-soft)">
+	$ touch {title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.exe<br />
+	$ chmod +x {title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.exe<br />
+	$ ./{title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.exe<br />
+	zsh: command not implemented yet
+</p>

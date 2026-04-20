@@ -1,22 +1,15 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-
-const title = 'mills';
-const description =
-	"mills is going dark for a bit… he's busy hacking shit and celebrating those six simple words.";
-const contactEmail = 'hi@millsymills.com';
+import DesktopLayout from '../layouts/DesktopLayout.astro';
+import Desktop from '../components/desktop/Desktop.astro';
+import MobileFallback from '../components/desktop/MobileFallback.astro';
+import { profile } from '../data/profile';
 ---
 
-<BaseLayout
-	title={title}
-	description={description}
+<DesktopLayout
+	title={profile.handle}
+	description={`${profile.title} @ ${profile.currentEmployer}. portfolio + links.`}
 	canonical="https://millsymills.com/"
 >
-	<h1>{title}</h1>
-	<p>{description}</p>
-	<p>
-		<a class="cta" href={`mailto:${contactEmail}?subject=convince%20me`}
-			>try to convince him &rarr;</a
-		>
-	</p>
-</BaseLayout>
+	<Desktop />
+	<MobileFallback />
+</DesktopLayout>
