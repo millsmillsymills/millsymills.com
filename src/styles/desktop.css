@@ -33,6 +33,33 @@
 	--font-pixel: 'Press Start 2P', 'VT323', 'Courier New', monospace;
 	--font-screen: 'VT323', 'Courier New', monospace;
 	--font-mono: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', monospace;
+
+	/* Y2K-XP cursor pack (3dw white set + default_link hand). Hotspots are
+	 * tuned for a 32x32 sprite — arrow tip top-left, beam/move/no center,
+	 * link near the index-finger tip. Native CSS keyword stays as fallback
+	 * for browsers that fail PNG cursors or for pages outside .desktop. */
+	--c-default: url('/cursors/3dwarro.png') 0 0, default;
+	--c-pointer: url('/cursors/default_link.png') 6 2, pointer;
+	--c-text: url('/cursors/3dwbeam.png') 16 16, text;
+	--c-grab: url('/cursors/3dwmove.png') 16 16, grab;
+	--c-grabbing: url('/cursors/3dwmove.png') 16 16, grabbing;
+	--c-not-allowed: url('/cursors/3dwno.png') 16 16, not-allowed;
+}
+
+/* Apply the default cursor at the document root so unstyled regions and
+ * the desktop surface itself pick up the XP arrow. */
+html,
+body {
+	cursor: var(--c-default);
+}
+
+/* Native text controls get the I-beam variant so password / search /
+ * future input surfaces feel era-correct. */
+input,
+textarea,
+select,
+[contenteditable] {
+	cursor: var(--c-text);
 }
 
 /* ------------------------------------------------------------------ */
@@ -133,7 +160,7 @@ a {
 
 .desktop-icon {
 	all: unset;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -209,13 +236,13 @@ a {
 	font-family: var(--font-pixel);
 	font-size: 11px;
 	letter-spacing: 0.5px;
-	cursor: grab;
+	cursor: var(--c-grab);
 	user-select: none;
 	border-bottom: 2px solid var(--border);
 }
 
 .window__titlebar:active {
-	cursor: grabbing;
+	cursor: var(--c-grabbing);
 }
 
 .window__title {
@@ -232,7 +259,7 @@ a {
 
 .window-control {
 	all: unset;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -365,7 +392,7 @@ a {
 	color: var(--ink);
 	border: 2px solid var(--border);
 	border-radius: 6px;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	letter-spacing: 0.5px;
 }
 
@@ -388,7 +415,7 @@ a {
 
 .taskbar-item {
 	all: unset;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -466,7 +493,7 @@ a {
 	display: block;
 	width: 100%;
 	padding: 8px 14px;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	color: var(--ink);
 	font-family: var(--font-pixel);
 	font-size: 11px;
@@ -557,7 +584,7 @@ a {
 
 .mshell-icon {
 	all: unset;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -621,7 +648,7 @@ a {
 
 .mshell__chrome-back {
 	all: unset;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
@@ -939,7 +966,7 @@ body.mshell-app-open {
 	align-items: center;
 	gap: 10px;
 	padding: 8px 14px;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	color: var(--ink);
 	font-size: 17px;
 }
@@ -1035,7 +1062,7 @@ body.mshell-app-open {
 
 .help__close {
 	all: unset;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	width: 24px;
 	height: 24px;
 	display: inline-flex;
@@ -1229,7 +1256,7 @@ body.mshell-app-open {
 
 .reset-confirm__btn {
 	all: unset;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 	padding: 6px 14px;
 	background: var(--cream);
 	color: var(--ink);
