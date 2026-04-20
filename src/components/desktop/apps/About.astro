@@ -58,8 +58,10 @@ import { profile } from '../../../data/profile';
 		class="about__avatar"
 		src="/images/headshot.jpg"
 		alt={`${profile.name} headshot`}
-		onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'about__avatar about__avatar--placeholder',textContent:'headshot.jpg pending — drop into public/images/'}))"
 	/>
+	<div class="about__avatar about__avatar--placeholder" hidden>
+		headshot.jpg pending — drop into public/images/
+	</div>
 	<div>
 		<h1>{profile.name}</h1>
 		<p class="about__meta">
@@ -80,3 +82,29 @@ import { profile } from '../../../data/profile';
 		</p>
 	</div>
 </article>
+
+<script>
+	// CSP forbids inline `onerror=` (script-src 'self' with no 'unsafe-inline'),
+	// so the placeholder swap has to be wired up here. If the avatar 404s,
+	// hide it and reveal the sibling `.about__avatar--placeholder` div.
+	function init() {
+		document.querySelectorAll<HTMLImageElement>('img.about__avatar').forEach((img) => {
+			const placeholder = img.nextElementSibling as HTMLElement | null;
+			if (!placeholder?.classList.contains('about__avatar--placeholder')) return;
+			const swap = () => {
+				img.hidden = true;
+				placeholder.removeAttribute('hidden');
+			};
+			// If the image already failed before we bound (cached 404, fast network),
+			// `complete` is true and `naturalWidth` is 0. Trigger the swap manually.
+			if (img.complete && img.naturalWidth === 0) swap();
+			else img.addEventListener('error', swap, { once: true });
+		});
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+</script>
