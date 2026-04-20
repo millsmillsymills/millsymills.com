@@ -40,6 +40,28 @@ else
 fi
 ok "astro check"
 
+section "scripts: tf.sh refusal checks"
+# Invalid stack name must exit 2.
+if ./scripts/tf.sh definitely-not-a-stack plan >/dev/null 2>&1; then
+	printf '\033[1;31m✗ tf.sh accepted an invalid stack name\033[0m\n' >&2
+	exit 1
+fi
+# Missing marker (no init yet) must exit 3.
+rm -rf infra/.terraform
+if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
+	printf '\033[1;31m✗ tf.sh did not catch missing init\033[0m\n' >&2
+	exit 1
+fi
+# Wrong-stack marker must exit 4.
+mkdir -p infra/.terraform
+printf 'millsymills\n' > infra/.terraform/.stack
+if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
+	printf '\033[1;31m✗ tf.sh did not catch wrong-stack marker\033[0m\n' >&2
+	exit 1
+fi
+rm -rf infra/.terraform
+ok "tf.sh refuses invalid stack + missing init + wrong-stack marker"
+
 section "terraform: fmt"
 terraform -chdir=infra fmt -check -recursive
 ok "terraform fmt"
