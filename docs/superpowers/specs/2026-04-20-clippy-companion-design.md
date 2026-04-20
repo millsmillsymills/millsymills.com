@@ -53,7 +53,7 @@ Out (deliberate):
 | `think.png` | think (idle 30s) | 55 | 13200 × 240 | 1.9 MB |
 | `sleep.png` | sleep (idle 5m+) | 145 | 34800 × 240 | 4.2 MB |
 | `cool.png` | cool (on flag captured) | 60 | 14400 × 240 | 1.7 MB |
-| `tired.png` | tired (on error toast) | 133 | 31920 × 240 | 4.3 MB |
+| `tired.png` | tired (idle 2min, between think and sleep) | 133 | 31920 × 240 | 4.3 MB |
 | `point-right.png` | point right (quip delivery) | 34 | 8160 × 240 | 1.0 MB |
 
 **Total: ~14 MB.** All 240px tall; one frame = 240×240 square.
