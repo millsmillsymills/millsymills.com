@@ -1,0 +1,30 @@
+---
+import DesktopLayout from '../layouts/DesktopLayout.astro';
+import Desktop from '../components/desktop/Desktop.astro';
+import MobileFallback from '../components/desktop/MobileFallback.astro';
+import { apps, findApp } from '../data/apps';
+import { profile } from '../data/profile';
+
+export function getStaticPaths() {
+	return apps.map((a) => ({ params: { app: a.id } }));
+}
+
+const { app: appId } = Astro.params;
+const app = findApp(appId!);
+if (!app) throw new Error(`Unknown app: ${appId}`);
+
+const pageTitle = `${app.title} — ${profile.handle}`;
+const description = app.ogDescription;
+const canonical = `https://millsymills.com/${app.id}/`;
+---
+
+<DesktopLayout
+	title={pageTitle}
+	description={description}
+	canonical={canonical}
+	ogUrl={canonical}
+	initialOpen={app.id}
+>
+	<Desktop />
+	<MobileFallback />
+</DesktopLayout>
