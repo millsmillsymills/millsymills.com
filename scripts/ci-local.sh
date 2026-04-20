@@ -27,6 +27,10 @@ section "node: build"
 npm run build
 ok "npm run build"
 
+section "node: assert no URL leakage in rehearsal build"
+./scripts/assert-no-url-leakage.sh
+ok "no URL leakage"
+
 section "node: astro check"
 # Prefer the `check` script if defined; otherwise fall back to npx.
 if node -e "process.exit(require('./package.json').scripts.check ? 0 : 1)" 2>/dev/null; then
