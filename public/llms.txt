@@ -1,0 +1,45 @@
+# mills
+
+> Andrew Mills (`mills`) — Corporate Security Engineer at Trail of Bits.
+> Based in Seattle, WA; works remote. 10+ years across identity and
+> access management, endpoint security, and security automation.
+
+This site is a personal portfolio styled as a Y2K-pink retro desktop.
+It's released under MIT as a community template — fork it if you like
+the layout.
+
+## pages
+
+- [about](https://millsymills.com/about/): bio, pronouns, contact.
+- [resume](https://millsymills.com/resume/): rendered work history.
+- [photos](https://millsymills.com/photos/): mostly cats.
+- [terminal](https://millsymills.com/terminal/): a mock shell with
+  help / ls / cat / nmap / curl / sudo / flag.
+- [flags](https://millsymills.com/flags/): a Juice-Shop-style CTF.
+  Eight hidden challenges at varied difficulty.
+- [music](https://millsymills.com/music/): a toy winamp player.
+- [memes](https://millsymills.com/memes/): small and earnest.
+- [mail](https://millsymills.com/mail/): contact info.
+- [trash](https://millsymills.com/trash/): deleted files, mostly
+  garbage.
+
+## machine-readable
+
+- [resume.md](https://millsymills.com/files/resume.md) — full resume
+  as markdown.
+- [llms-full.txt](https://millsymills.com/llms-full.txt) — the entire
+  site serialized as markdown, one file.
+- [sitemap.xml](https://millsymills.com/sitemap.xml) — canonical URL
+  list.
+
+## tech
+
+- Astro 6 static output.
+- Terraform for AWS (S3 + CloudFront + Route53 + ACM).
+- CI via GitHub Actions with OIDC deploy role.
+- Source: <https://github.com/millsmillsymills/millsymills.com>.
+
+## contact
+
+- email: <mailto:mills@millsymills.com>
+- github: <https://github.com/millsmillsymills>
