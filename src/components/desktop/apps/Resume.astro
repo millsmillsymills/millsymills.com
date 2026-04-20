@@ -1,0 +1,40 @@
+---
+import { coreSkills, experience } from '../../../data/profile';
+---
+
+<h1>resume.txt</h1>
+
+<p>
+	<a href="/files/resume.md" download>↓ download resume.md</a>
+</p>
+
+<h2>core skills</h2>
+<ul>
+	{
+		coreSkills.map((g) => (
+			<li>
+				<strong>{g.group}:</strong> {g.items.join(' · ')}
+			</li>
+		))
+	}
+</ul>
+
+<h2>experience</h2>
+{
+	experience.map((job) => (
+		<section>
+			<h3>
+				{job.title} — {job.company}
+				<br />
+				<small style="color:var(--ink-soft);font-family:var(--font-screen);font-size:16px">
+					{job.period}
+				</small>
+			</h3>
+			<ul>
+				{job.bullets.map((b) => (
+					<li>{b}</li>
+				))}
+			</ul>
+		</section>
+	))
+}

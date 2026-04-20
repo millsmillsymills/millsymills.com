@@ -1,0 +1,565 @@
+/*
+ * Y2K-pink retro-desktop chrome.
+ *
+ * Two layouts coexist in the DOM:
+ *   .desktop          — visible at >=769px, the full draggable-window UI
+ *   .mobile-fallback  — visible at <=768px, a vertical stack of cards
+ *
+ * Color/spacing tokens live in :root so individual apps can re-use them.
+ */
+
+:root {
+	--pink-50: #fff0f7;
+	--pink-100: #ffd6ec;
+	--pink-200: #ffaad7;
+	--pink-300: #ff7ec0;
+	--pink-400: #ff4fa8;
+	--pink-500: #e62b8c;
+	--pink-600: #b6196d;
+
+	--lilac-100: #efe1ff;
+	--lilac-300: #c8a8ff;
+
+	--cream: #fff9f3;
+	--ink: #1a0e23;
+	--ink-soft: #4a3257;
+	--border: #321a44;
+
+	--titlebar-bg: linear-gradient(180deg, #ff4fa8 0%, #e62b8c 100%);
+	--titlebar-fg: #fff9f3;
+	--window-bg: #fff9f3;
+	--window-shadow: 4px 4px 0 0 var(--border);
+
+	--font-pixel: 'Press Start 2P', 'VT323', 'Courier New', monospace;
+	--font-screen: 'VT323', 'Courier New', monospace;
+	--font-mono: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', monospace;
+}
+
+/* ------------------------------------------------------------------ */
+/* base reset                                                         */
+/* ------------------------------------------------------------------ */
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	color: var(--ink);
+	font-family: var(--font-screen);
+	font-size: 20px;
+	line-height: 1.35;
+	background: var(--pink-200);
+	overflow: hidden; /* desktop owns scroll on its own surface */
+}
+
+body.scroll-mobile {
+	overflow: auto; /* mobile fallback uses normal page scroll */
+}
+
+a {
+	color: var(--pink-600);
+}
+
+/* ------------------------------------------------------------------ */
+/* desktop surface                                                    */
+/* ------------------------------------------------------------------ */
+
+.desktop {
+	position: fixed;
+	inset: 0;
+	display: block;
+	overflow: hidden;
+
+	/* checkerboard tile + soft pink wash */
+	background-color: var(--pink-200);
+	background-image:
+		linear-gradient(135deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
+		linear-gradient(225deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
+		linear-gradient(315deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
+		linear-gradient(45deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%);
+	background-size: 32px 32px;
+	background-position:
+		16px 0,
+		16px 0,
+		0 0,
+		0 0;
+}
+
+/* sparkle decorations in the background */
+.desktop::before,
+.desktop::after {
+	content: '✦   ✧   ⋆   ✦   ✧   ⋆   ✦   ✧';
+	position: absolute;
+	color: rgba(255, 255, 255, 0.55);
+	font-family: var(--font-screen);
+	font-size: 28px;
+	letter-spacing: 4px;
+	pointer-events: none;
+	user-select: none;
+}
+
+.desktop::before {
+	top: 12%;
+	left: 8%;
+	transform: rotate(-8deg);
+}
+
+.desktop::after {
+	bottom: 18%;
+	right: 6%;
+	transform: rotate(7deg);
+}
+
+/* ------------------------------------------------------------------ */
+/* desktop icons                                                      */
+/* ------------------------------------------------------------------ */
+
+.desktop__icons {
+	position: absolute;
+	top: 24px;
+	left: 24px;
+	display: grid;
+	grid-template-columns: repeat(2, 96px);
+	gap: 12px 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	z-index: 1;
+}
+
+.desktop-icon {
+	all: unset;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 4px;
+	border-radius: 6px;
+	color: var(--cream);
+	text-align: center;
+	font-family: var(--font-screen);
+	font-size: 18px;
+	text-shadow: 1px 1px 0 var(--border);
+	transition: background 100ms ease;
+}
+
+.desktop-icon:hover,
+.desktop-icon:focus-visible {
+	background: rgba(255, 255, 255, 0.22);
+	outline: 2px dashed var(--cream);
+	outline-offset: -4px;
+}
+
+.desktop-icon__glyph {
+	font-size: 40px;
+	line-height: 1;
+	filter: drop-shadow(2px 2px 0 var(--border));
+}
+
+.desktop-icon__label {
+	display: inline-block;
+	max-width: 92px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* windows                                                            */
+/* ------------------------------------------------------------------ */
+
+.window {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	min-width: 280px;
+	min-height: 180px;
+	max-width: calc(100vw - 32px);
+	max-height: calc(100vh - 96px);
+	background: var(--window-bg);
+	border: 2px solid var(--border);
+	border-radius: 8px;
+	box-shadow: var(--window-shadow);
+	overflow: hidden;
+}
+
+.window[hidden] {
+	display: none;
+}
+
+.window--maximized {
+	top: 16px !important;
+	left: 16px !important;
+	width: calc(100vw - 32px) !important;
+	height: calc(100vh - 80px) !important;
+}
+
+.window__titlebar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	background: var(--titlebar-bg);
+	color: var(--titlebar-fg);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	letter-spacing: 0.5px;
+	cursor: grab;
+	user-select: none;
+	border-bottom: 2px solid var(--border);
+}
+
+.window__titlebar:active {
+	cursor: grabbing;
+}
+
+.window__title {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.window__controls {
+	display: flex;
+	gap: 4px;
+}
+
+.window-control {
+	all: unset;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 4px;
+	font-family: var(--font-pixel);
+	font-size: 9px;
+	line-height: 1;
+	transition: background 80ms ease, transform 80ms ease;
+}
+
+.window-control:hover,
+.window-control:focus-visible {
+	background: var(--pink-100);
+	outline: 2px solid var(--cream);
+	outline-offset: 1px;
+}
+
+.window-control:active {
+	transform: translate(1px, 1px);
+}
+
+.window-control--close:hover {
+	background: var(--pink-400);
+	color: var(--cream);
+}
+
+.window__body {
+	flex: 1;
+	overflow: auto;
+	padding: 16px 18px;
+	font-family: var(--font-screen);
+	font-size: 20px;
+	color: var(--ink);
+	background: var(--window-bg);
+}
+
+.window__body h1,
+.window__body h2,
+.window__body h3 {
+	font-family: var(--font-pixel);
+	font-weight: normal;
+	color: var(--pink-600);
+	letter-spacing: 0.5px;
+}
+
+.window__body h1 {
+	font-size: 18px;
+	margin: 0 0 12px;
+}
+
+.window__body h2 {
+	font-size: 14px;
+	margin: 16px 0 8px;
+}
+
+.window__body h3 {
+	font-size: 12px;
+	margin: 12px 0 6px;
+	color: var(--ink-soft);
+}
+
+.window__body p {
+	margin: 0 0 12px;
+}
+
+.window__body ul {
+	padding-left: 1.2em;
+	margin: 0 0 12px;
+}
+
+.window__body code,
+.window__body pre {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	background: var(--lilac-100);
+	border: 1px solid var(--lilac-300);
+	border-radius: 4px;
+	padding: 1px 4px;
+}
+
+.window__body pre {
+	padding: 12px;
+	overflow-x: auto;
+}
+
+.window__body a {
+	color: var(--pink-500);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.window__body a:hover {
+	color: var(--pink-600);
+}
+
+/* ------------------------------------------------------------------ */
+/* taskbar                                                            */
+/* ------------------------------------------------------------------ */
+
+.taskbar {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 44px;
+	display: flex;
+	align-items: stretch;
+	padding: 4px;
+	background: var(--pink-500);
+	border-top: 2px solid var(--border);
+	box-shadow: 0 -2px 0 0 rgba(255, 255, 255, 0.4) inset;
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	color: var(--cream);
+	z-index: 9999;
+}
+
+.taskbar__start {
+	all: unset;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0 14px;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 6px;
+	cursor: pointer;
+	letter-spacing: 0.5px;
+}
+
+.taskbar__start:hover,
+.taskbar__start:focus-visible {
+	background: var(--pink-100);
+	outline: 2px solid var(--cream);
+	outline-offset: 1px;
+}
+
+.taskbar__items {
+	flex: 1;
+	display: flex;
+	gap: 4px;
+	margin: 0 8px;
+	padding: 0;
+	list-style: none;
+	overflow: hidden;
+}
+
+.taskbar-item {
+	all: unset;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 12px;
+	background: var(--pink-300);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 4px;
+	max-width: 180px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.taskbar-item--active {
+	background: var(--cream);
+}
+
+.taskbar-item:hover,
+.taskbar-item:focus-visible {
+	outline: 2px solid var(--cream);
+	outline-offset: 1px;
+}
+
+.taskbar__clock {
+	display: inline-flex;
+	align-items: center;
+	padding: 0 14px;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 6px;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.5px;
+}
+
+/* ------------------------------------------------------------------ */
+/* start menu                                                         */
+/* ------------------------------------------------------------------ */
+
+.start-menu {
+	position: fixed;
+	left: 4px;
+	bottom: 48px;
+	width: 220px;
+	background: var(--cream);
+	border: 2px solid var(--border);
+	border-radius: 8px;
+	box-shadow: var(--window-shadow);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	z-index: 10000;
+	overflow: hidden;
+}
+
+.start-menu[hidden] {
+	display: none;
+}
+
+.start-menu__header {
+	padding: 10px 14px;
+	background: var(--titlebar-bg);
+	color: var(--titlebar-fg);
+	letter-spacing: 0.5px;
+}
+
+.start-menu__list {
+	margin: 0;
+	padding: 6px 0;
+	list-style: none;
+}
+
+.start-menu__item {
+	all: unset;
+	display: block;
+	width: 100%;
+	padding: 8px 14px;
+	cursor: pointer;
+	color: var(--ink);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	letter-spacing: 0.5px;
+}
+
+.start-menu__item:hover,
+.start-menu__item:focus-visible {
+	background: var(--pink-100);
+	outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* mobile fallback                                                    */
+/* ------------------------------------------------------------------ */
+
+.mobile-fallback {
+	display: none;
+}
+
+.mobile-fallback__hero {
+	padding: 28px 20px 16px;
+	text-align: center;
+	color: var(--cream);
+	font-family: var(--font-pixel);
+}
+
+.mobile-fallback__hero h1 {
+	margin: 0 0 6px;
+	font-size: 22px;
+	text-shadow: 2px 2px 0 var(--border);
+}
+
+.mobile-fallback__hero p {
+	margin: 0;
+	font-family: var(--font-screen);
+	font-size: 18px;
+	color: var(--cream);
+	text-shadow: 1px 1px 0 var(--border);
+}
+
+.mobile-fallback__list {
+	margin: 0;
+	padding: 0 12px 32px;
+	list-style: none;
+	display: grid;
+	gap: 14px;
+}
+
+.mobile-card {
+	background: var(--window-bg);
+	border: 2px solid var(--border);
+	border-radius: 8px;
+	box-shadow: var(--window-shadow);
+	overflow: hidden;
+}
+
+.mobile-card__header {
+	padding: 10px 12px;
+	background: var(--titlebar-bg);
+	color: var(--titlebar-fg);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	letter-spacing: 0.5px;
+}
+
+.mobile-card__body {
+	padding: 14px 16px;
+	font-family: var(--font-screen);
+	font-size: 18px;
+	color: var(--ink);
+}
+
+@media (max-width: 768px) {
+	html,
+	body {
+		overflow: auto;
+		background: var(--pink-300);
+		background-image:
+			linear-gradient(135deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
+			linear-gradient(225deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
+			linear-gradient(315deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
+			linear-gradient(45deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%);
+		background-size: 24px 24px;
+		background-attachment: fixed;
+	}
+
+	.desktop {
+		display: none;
+	}
+
+	.mobile-fallback {
+		display: block;
+		min-height: 100vh;
+	}
+}
