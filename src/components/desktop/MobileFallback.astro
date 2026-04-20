@@ -7,6 +7,7 @@ import Flags from './apps/Flags.astro';
 import Music from './apps/Music.astro';
 import Memes from './apps/Memes.astro';
 import Trash from './apps/Trash.astro';
+import Projects from './apps/Projects.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
 import { apps } from '../../data/apps';
@@ -29,6 +30,8 @@ const contentFor = (id: string) => {
 			return Memes;
 		case 'trash':
 			return Trash;
+		case 'projects':
+			return Projects;
 		default:
 			return null;
 	}
