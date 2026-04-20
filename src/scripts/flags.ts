@@ -1,9 +1,13 @@
 /*
  * CTF flag tracker — Juice-Shop-style.
  *
- * Each challenge is `flag{...}`. Canonical strings are NOT in the source;
- * we only ship SHA-256 digests, so view-source-diving the bundle gives
- * you the puzzle, not the answer.
+ * Most flags ship only as SHA-256 digests, so view-source-diving the
+ * bundle gives you the puzzle, not the answer. A few flags ARE
+ * intentionally embedded in source as the puzzle itself — view-source
+ * (HTML comment in DesktopLayout), console (console.log banner), garbage
+ * (Trash hex dump), base64 (DesktopLayout meta), llms (llms-full.txt),
+ * etc/shadow (terminal fake FS), and lab.local (terminal HTTP mock).
+ * Captures still route through the same digest-verify path either way.
  *
  * State (captured ids + first-capture timestamps) is persisted in
  * localStorage so progress survives reloads.

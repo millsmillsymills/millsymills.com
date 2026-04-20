@@ -105,7 +105,7 @@ friendly stub.
 
 ## flags (CTF)
 
-Juice-Shop-style challenge set. Eight flags scattered across
+Juice-Shop-style challenge set. Ten flags scattered across
 the site at varied difficulty. Submit via `flags.exe` (the
 scoreboard window) or the terminal's `flag submit` command.
 
@@ -131,6 +131,10 @@ leak canonical flag strings for most challenges.
    file: **flag{read_the_llms_dot_txt}**]
 8. `robots` (medium) — disallowed paths are sometimes an
    invitation.
+9. `palette` (medium) — press the power-user shortcut. ask for
+   the thing you should not need to ask for.
+10. `base64` (easy) — agents read head tags. humans with
+    devtools do too. ZmxhZ3s=...
 
 ---
 
