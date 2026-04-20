@@ -8,6 +8,26 @@
  * Color/spacing tokens live in :root so individual apps can re-use them.
  */
 
+/* ------------------------------------------------------------------ */
+/* webfonts (NullTale WinXp pack — see #95)                           */
+/* ------------------------------------------------------------------ */
+
+@font-face {
+	font-family: 'Tahoma';
+	src: url('/fonts/tahoma.ttf') format('truetype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Franklin Gothic ITC';
+	src: url('/fonts/framdit.ttf') format('truetype');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+
 :root {
 	--pink-50: #fff0f7;
 	--pink-100: #ffd6ec;
@@ -33,6 +53,8 @@
 	--font-pixel: 'Press Start 2P', 'VT323', 'Courier New', monospace;
 	--font-screen: 'VT323', 'Courier New', monospace;
 	--font-mono: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', monospace;
+	--font-xp-ui: 'Tahoma', 'Geneva', system-ui, sans-serif;
+	--font-xp-display: 'Franklin Gothic ITC', 'Georgia', serif;
 }
 
 /* ------------------------------------------------------------------ */
@@ -206,9 +228,12 @@ a {
 	padding: 8px 10px;
 	background: var(--titlebar-bg);
 	color: var(--titlebar-fg);
-	font-family: var(--font-pixel);
-	font-size: 11px;
-	letter-spacing: 0.5px;
+	/* Tahoma is the actual XP titlebar font — bumped to 13px because
+	 * Tahoma at 11px reads smaller than Press Start 2P did. */
+	font-family: var(--font-xp-ui);
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
 	cursor: grab;
 	user-select: none;
 	border-bottom: 2px solid var(--border);
