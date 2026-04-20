@@ -16,7 +16,7 @@ the layout.
 - [terminal](https://millsymills.com/terminal/): a mock shell with
   help / ls / cat / nmap / curl / sudo / flag.
 - [flags](https://millsymills.com/flags/): a Juice-Shop-style CTF.
-  Eight hidden challenges at varied difficulty.
+  Ten hidden challenges at varied difficulty.
 - [music](https://millsymills.com/music/): a toy winamp player.
 - [memes](https://millsymills.com/memes/): small and earnest.
 - [mail](https://millsymills.com/mail/): contact info.
