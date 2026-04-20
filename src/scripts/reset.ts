@@ -12,34 +12,12 @@
  *   - "clear progress" button inside flags.exe
  *   - `window.mills.reset()` from devtools
  *
- * Always confirms first. Reloads the page after wiping so every
- * controller re-initializes from the clean slate.
+ * Always confirms first via the on-page modal. Refuses to wipe state if the
+ * modal isn't rendered — destructive actions never fall through to silent
+ * native confirms or auto-purges.
  */
 
 const STORAGE_PREFIX = 'mills.';
-
-function purge(): void {
-	try {
-		const local: string[] = [];
-		for (let i = 0; i < localStorage.length; i += 1) {
-			const k = localStorage.key(i);
-			if (k && k.startsWith(STORAGE_PREFIX)) local.push(k);
-		}
-		local.forEach((k) => localStorage.removeItem(k));
-	} catch {
-		/* localStorage might be disabled — ignore */
-	}
-	try {
-		const session: string[] = [];
-		for (let i = 0; i < sessionStorage.length; i += 1) {
-			const k = sessionStorage.key(i);
-			if (k && k.startsWith(STORAGE_PREFIX)) session.push(k);
-		}
-		session.forEach((k) => sessionStorage.removeItem(k));
-	} catch {
-		/* noop */
-	}
-}
 
 export interface ResetOptions {
 	/** if true, skip the confirm modal. used by callers that already confirmed. */
@@ -48,79 +26,138 @@ export interface ResetOptions {
 	href?: string;
 }
 
-export function resetAll(opts: ResetOptions = {}): void {
-	const proceed = opts.skipConfirm ? true : confirmReset();
-	if (!proceed) return;
-	purge();
+function purge(): void {
+	const local: string[] = [];
+	for (let i = 0; i < localStorage.length; i += 1) {
+		const k = localStorage.key(i);
+		if (k && k.startsWith(STORAGE_PREFIX)) local.push(k);
+	}
+	local.forEach((k) => localStorage.removeItem(k));
+
+	const session: string[] = [];
+	for (let i = 0; i < sessionStorage.length; i += 1) {
+		const k = sessionStorage.key(i);
+		if (k && k.startsWith(STORAGE_PREFIX)) session.push(k);
+	}
+	session.forEach((k) => sessionStorage.removeItem(k));
+}
+
+function performReset(opts: ResetOptions): void {
+	try {
+		purge();
+	} catch (err) {
+		// Loud failure: do NOT reload. Leaving the user where they are with
+		// state intact is better than reloading on a half-purge and pretending
+		// it worked.
+		console.error('[reset] purge failed — state not cleared', err);
+		return;
+	}
 	window.location.href = opts.href ?? '/';
 }
 
-function confirmReset(): boolean {
-	const overlay = document.querySelector<HTMLElement>('.reset-confirm');
-	if (overlay) {
-		// modal-driven flow — open it and let buttons handle the resolution
-		openModal(overlay);
-		return false;
-	}
-	// fallback to native confirm if the modal isn't on the page
-	return window.confirm(
-		'reset desktop?\n\n' +
-			'this will clear:\n' +
-			'  · open windows + their positions\n' +
-			'  · captured CTF flags (all 10)\n' +
-			'  · last-open mobile app\n' +
-			'  · boot-animation skip\n\n' +
-			'no way back. continue?',
-	);
+// Modal state lives at module scope so closeModal() can tear down everything
+// it set up — replaces the previous { once: true } pattern that broke on
+// re-open and leaked the keydown listener after cancel.
+let activeOverlay: HTMLElement | null = null;
+let activeOpts: ResetOptions = {};
+let onKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+let onClickOutsideHandler: ((e: MouseEvent) => void) | null = null;
+let triggerEl: HTMLElement | null = null;
+
+function onYesClick(): void {
+	const opts = activeOpts;
+	closeModal();
+	performReset(opts);
 }
 
-function openModal(overlay: HTMLElement): void {
+function onNoClick(): void {
+	closeModal();
+}
+
+function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElement | null): void {
+	if (activeOverlay) return;
+	activeOverlay = overlay;
+	activeOpts = opts;
+	triggerEl = trigger;
 	overlay.hidden = false;
-	const close = () => {
-		overlay.hidden = true;
-	};
-	const onConfirm = () => {
-		close();
-		resetAll({ skipConfirm: true });
-	};
 
 	const yes = overlay.querySelector<HTMLButtonElement>('[data-reset-yes]');
 	const no = overlay.querySelector<HTMLButtonElement>('[data-reset-no]');
-	yes?.addEventListener('click', onConfirm, { once: true });
-	no?.addEventListener('click', close, { once: true });
+	yes?.addEventListener('click', onYesClick);
+	no?.addEventListener('click', onNoClick);
 
-	const onKey = (e: KeyboardEvent) => {
+	onKeyHandler = (e: KeyboardEvent) => {
 		if (e.key === 'Escape') {
-			close();
-			window.removeEventListener('keydown', onKey);
+			e.preventDefault();
+			closeModal();
 		} else if (e.key === 'Enter') {
-			window.removeEventListener('keydown', onKey);
-			onConfirm();
+			e.preventDefault();
+			onYesClick();
 		}
 	};
-	window.addEventListener('keydown', onKey);
+	window.addEventListener('keydown', onKeyHandler);
 
-	overlay.addEventListener(
-		'click',
-		(e) => {
-			if (e.target === overlay) close();
-		},
-		{ once: true },
-	);
+	onClickOutsideHandler = (e: MouseEvent) => {
+		if (e.target === overlay) closeModal();
+	};
+	overlay.addEventListener('click', onClickOutsideHandler);
+
+	// Focus the safe default. Cancel rather than Yes so that an accidental
+	// space/enter on a freshly-focused control doesn't wipe state.
+	no?.focus();
+}
+
+function closeModal(): void {
+	if (!activeOverlay) return;
+	const overlay = activeOverlay;
+	const yes = overlay.querySelector<HTMLButtonElement>('[data-reset-yes]');
+	const no = overlay.querySelector<HTMLButtonElement>('[data-reset-no]');
+	yes?.removeEventListener('click', onYesClick);
+	no?.removeEventListener('click', onNoClick);
+	if (onKeyHandler) window.removeEventListener('keydown', onKeyHandler);
+	if (onClickOutsideHandler) overlay.removeEventListener('click', onClickOutsideHandler);
+	onKeyHandler = null;
+	onClickOutsideHandler = null;
+	overlay.hidden = true;
+	activeOverlay = null;
+	activeOpts = {};
+	triggerEl?.focus();
+	triggerEl = null;
+}
+
+export function resetAll(opts: ResetOptions = {}): void {
+	if (opts.skipConfirm) {
+		performReset(opts);
+		return;
+	}
+	const overlay = document.querySelector<HTMLElement>('.reset-confirm');
+	if (!overlay) {
+		console.error('[reset] confirm modal not found on this page; refusing to wipe state');
+		return;
+	}
+	openModal(overlay, opts, null);
 }
 
 function init(): void {
-	// Wire any [data-reset-trigger] elements to call resetAll().
-	document.querySelectorAll<HTMLElement>('[data-reset-trigger]').forEach((el) => {
-		el.addEventListener('click', (e) => {
-			e.preventDefault();
-			resetAll();
-		});
+	// Event delegation handles dynamically-mounted triggers (e.g. windows that
+	// hydrate after DOMContentLoaded) without requiring re-binding on every
+	// app open.
+	document.addEventListener('click', (e) => {
+		const target = e.target as HTMLElement | null;
+		const trigger = target?.closest<HTMLElement>('[data-reset-trigger]');
+		if (!trigger) return;
+		e.preventDefault();
+		e.stopPropagation();
+		const overlay = document.querySelector<HTMLElement>('.reset-confirm');
+		if (!overlay) {
+			console.error('[reset] confirm modal not found; refusing to wipe state');
+			return;
+		}
+		openModal(overlay, {}, trigger);
 	});
 
-	// Expose to window.mills for devtools convenience.
 	const w = window as unknown as { mills?: Record<string, unknown> };
-	w.mills = { ...(w.mills ?? {}), reset: resetAll };
+	Object.assign((w.mills ??= {}), { reset: resetAll });
 }
 
 if (typeof window !== 'undefined') {
@@ -130,5 +167,3 @@ if (typeof window !== 'undefined') {
 		init();
 	}
 }
-
-export {};

@@ -60,6 +60,26 @@ import { challenges } from '../../../scripts/flags';
 		color: var(--pink-600);
 	}
 
+	.flags__reset-row {
+		margin: 0 0 14px;
+		text-align: right;
+	}
+
+	.flags__reset-btn {
+		all: unset;
+		cursor: pointer;
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		color: var(--ink-soft);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	.flags__reset-btn:hover,
+	.flags__reset-btn:focus-visible {
+		color: var(--pink-600);
+	}
+
 	.flags__list {
 		list-style: none;
 		margin: 0;
@@ -134,11 +154,11 @@ import { challenges } from '../../../scripts/flags';
 
 <p class="flags__msg" data-flags-msg></p>
 
-<p style="margin: 0 0 14px; text-align: right">
+<p class="flags__reset-row">
 	<button
 		type="button"
+		class="flags__reset-btn"
 		data-reset-trigger
-		style="all: unset; cursor: pointer; font-family: var(--font-pixel); font-size: 9px; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px"
 		title="clear all flag progress (and all other client-side state)"
 	>
 		⟲ reset progress
