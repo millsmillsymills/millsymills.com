@@ -161,6 +161,13 @@ a {
 	filter: drop-shadow(2px 2px 0 var(--border));
 }
 
+.desktop-icon__icon {
+	width: 48px;
+	height: 48px;
+	object-fit: contain;
+	filter: drop-shadow(2px 2px 0 var(--border));
+}
+
 .desktop-icon__label {
 	display: inline-block;
 	max-width: 92px;
@@ -589,6 +596,17 @@ a {
 	border: 2px solid var(--border);
 	border-radius: 14px;
 	box-shadow: 2px 2px 0 0 var(--border);
+}
+
+.mshell-icon__icon {
+	width: 56px;
+	height: 56px;
+	background: var(--cream);
+	border: 2px solid var(--border);
+	border-radius: 14px;
+	box-shadow: 2px 2px 0 0 var(--border);
+	object-fit: contain;
+	padding: 6px;
 }
 
 .mshell-icon__label {
