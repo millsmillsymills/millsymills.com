@@ -1,0 +1,96 @@
+<style>
+	.term {
+		--term-bg: #100614;
+		--term-fg: #ffd6ec;
+		--term-dim: #9a7fb8;
+		--term-err: #ff7ec0;
+		--term-ok: #6ea8ff;
+		--term-dir: #c8a8ff;
+
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		margin: -16px -18px;
+		background: var(--term-bg);
+		color: var(--term-fg);
+		font-family: var(--font-mono);
+		font-size: 14px;
+		line-height: 1.4;
+	}
+
+	.term__output {
+		flex: 1;
+		overflow-y: auto;
+		padding: 12px 14px;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
+	.term__line {
+		min-height: 1em;
+	}
+
+	.term__line.t-err {
+		color: var(--term-err);
+	}
+
+	.term__line.t-ok {
+		color: var(--term-ok);
+	}
+
+	.term__line.t-dim {
+		color: var(--term-dim);
+	}
+
+	.term__line.t-dir {
+		color: var(--term-dir);
+		font-weight: bold;
+	}
+
+	.term__input-line {
+		display: flex;
+		align-items: center;
+		padding: 8px 14px 12px;
+		gap: 4px;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+	}
+
+	.term__prompt {
+		color: var(--term-ok);
+		white-space: pre;
+	}
+
+	.term__input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--term-fg);
+		font: inherit;
+		caret-color: var(--term-fg);
+		padding: 0;
+	}
+
+	.term__input::-webkit-input-placeholder {
+		color: transparent;
+	}
+</style>
+
+<div class="term">
+	<div class="term__output" aria-live="polite"></div>
+	<div class="term__input-line">
+		<span class="term__prompt">mills@millsymills:~$&nbsp;</span>
+		<input
+			class="term__input"
+			type="text"
+			autocomplete="off"
+			autocapitalize="off"
+			spellcheck="false"
+			aria-label="terminal input"
+		/>
+	</div>
+</div>
+
+<script>
+	import '../../../scripts/terminal/index';
+</script>
