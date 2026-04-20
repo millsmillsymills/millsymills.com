@@ -8,34 +8,41 @@ interface Props {
 	canonical?: string;
 	ogUrl?: string;
 	ogImage?: string;
+	noindex?: boolean;
 	/** App id to auto-open on load (overrides localStorage + ?open=). */
 	initialOpen?: string;
 }
 
-const { title, description, canonical, ogUrl, ogImage, initialOpen } = Astro.props;
+const { title, description, canonical, ogUrl, ogImage, noindex, initialOpen } = Astro.props;
+
+if (!Astro.site) {
+	throw new Error('DesktopLayout: Astro.site is undefined. Check astro.config.mjs site value.');
+}
+const siteHref = Astro.site.href; // e.g. "https://p41m0n.com/"
+const forceNoIndex = import.meta.env.NO_INDEX === 'true';
 
 const jsonLd = {
 	'@context': 'https://schema.org',
 	'@graph': [
 		{
 			'@type': 'Person',
-			'@id': 'https://millsymills.com/#mills',
+			'@id': `${siteHref}#mills`,
 			name: profile.name,
 			alternateName: profile.handle,
 			jobTitle: profile.title,
 			worksFor: { '@type': 'Organization', name: profile.currentEmployer },
 			address: { '@type': 'PostalAddress', addressLocality: 'Seattle', addressRegion: 'WA' },
 			email: `mailto:${profile.email}`,
-			url: 'https://millsymills.com/',
+			url: siteHref,
 			sameAs: [profile.github],
 		},
 		{
 			'@type': 'WebSite',
-			'@id': 'https://millsymills.com/#website',
-			url: 'https://millsymills.com/',
+			'@id': `${siteHref}#website`,
+			url: siteHref,
 			name: 'millsymills.com',
 			description: 'mills — corporate security engineer. portfolio + links.',
-			author: { '@id': 'https://millsymills.com/#mills' },
+			author: { '@id': `${siteHref}#mills` },
 			license: 'https://github.com/millsmillsymills/millsymills.com/blob/main/LICENSE',
 		},
 	],
@@ -49,6 +56,7 @@ const jsonLd = {
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
+		{(noindex || forceNoIndex) && <meta name="robots" content="noindex,nofollow" />}
 		{description && <meta name="description" content={description} />}
 		{canonical && <link rel="canonical" href={canonical} />}
 		<meta property="og:title" content={title} />
