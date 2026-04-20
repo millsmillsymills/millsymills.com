@@ -18,10 +18,10 @@ npm run preview      # preview the built site
 ```
 
 ```bash
-cd infra
-terraform init       # first-time or after provider changes
-terraform plan       # preview changes
-terraform apply      # deploy infrastructure
+./scripts/tf.sh millsymills init    # first-time or after provider changes
+./scripts/tf.sh millsymills plan    # preview changes
+./scripts/tf.sh millsymills apply   # deploy infrastructure
+# For the p41m0n rehearsal stack, substitute `p41m0n` for `millsymills`.
 ```
 
 ```bash
@@ -80,7 +80,7 @@ Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the 
 
 ### One-time setup
 
-1. `cd infra && terraform apply` — creates the OIDC provider and the `millsymills-com-github-deploy` IAM role.
+1. `./scripts/tf.sh millsymills init && ./scripts/tf.sh millsymills apply` — creates the OIDC provider and the `millsymills-com-github-deploy` IAM role.
 2. Grab the role ARN from the Terraform output:
    ```bash
    terraform output -raw github_deploy_role_arn
@@ -93,9 +93,10 @@ Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the 
    - `AWS_REGION` — e.g. `us-east-1`.
    - `SITE_DOMAIN` — `millsymills.com`.
    - `CLOUDFRONT_DISTRIBUTION_ID` — from `terraform output cloudfront_distribution_id`.
+   - `SITE_URL` — `https://millsymills.com` (or equivalent for the `rehearsal` environment: `https://p41m0n.com`). **Required** — `astro.config.mjs` refuses CI builds that do not set `SITE_URL`.
 
 ### Manual deploy (fallback)
 
-1. `npm run build` — outputs static files to `dist/`
+1. `SITE_URL=https://millsymills.com npm run build` — outputs static files to `dist/`
 2. `aws s3 sync dist/ s3://millsymills.com --delete`
 3. `aws cloudfront create-invalidation --distribution-id <ID> --paths "/*"`
