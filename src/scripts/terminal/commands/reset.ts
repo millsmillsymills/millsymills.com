@@ -6,6 +6,11 @@ register({
 	summary: 'wipe all client-side state (windows, flags, history)',
 	usage: 'reset',
 	handler: ({ out }) => {
+		const modal = document.querySelector('.reset-confirm');
+		if (!modal) {
+			out('reset: confirm modal not found on this page', 't-err');
+			return;
+		}
 		out('this will clear:', 't-dim');
 		out('  · open windows + saved positions');
 		out('  · captured CTF flags (all of them)');
@@ -13,7 +18,6 @@ register({
 		out('  · boot-animation skip');
 		out('');
 		out('confirm in the modal (or cancel).');
-		// triggers the modal flow on the page
 		resetAll();
 	},
 });
