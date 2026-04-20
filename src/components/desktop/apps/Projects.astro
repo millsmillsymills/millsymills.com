@@ -1,0 +1,172 @@
+---
+import { projects } from '../../../data/projects';
+---
+
+<style>
+	.projects__intro {
+		font-family: var(--font-screen);
+		font-size: 17px;
+		color: var(--ink-soft);
+		margin: 0 0 16px;
+	}
+
+	.projects__list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 14px;
+	}
+
+	.project-card {
+		background: var(--window-bg);
+		border: 2px solid var(--border);
+		border-radius: 8px;
+		box-shadow: var(--window-shadow);
+		overflow: hidden;
+	}
+
+	.project-card__header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		padding: 10px 14px;
+		background: var(--titlebar-bg);
+		color: var(--titlebar-fg);
+		font-family: var(--font-pixel);
+		font-size: 11px;
+		letter-spacing: 0.5px;
+	}
+
+	.project-card__kind {
+		padding: 2px 8px;
+		background: var(--cream);
+		color: var(--ink);
+		border: 2px solid var(--border);
+		border-radius: 3px;
+		font-size: 9px;
+		text-transform: uppercase;
+	}
+
+	.project-card__body {
+		padding: 14px 16px;
+	}
+
+	.project-card__tagline {
+		font-family: var(--font-screen);
+		font-size: 17px;
+		color: var(--ink);
+		margin: 0 0 8px;
+	}
+
+	.project-card__description {
+		font-family: var(--font-screen);
+		font-size: 16px;
+		color: var(--ink-soft);
+		margin: 0 0 12px;
+	}
+
+	.project-card__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin: 0 0 12px;
+	}
+
+	.project-card__tag {
+		padding: 2px 6px;
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 3px;
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		color: var(--ink-soft);
+	}
+
+	.project-card__install {
+		margin: 0 0 10px;
+	}
+
+	.project-card__install code {
+		display: block;
+		padding: 8px 10px;
+		background: #0e0214;
+		color: #ffd6ec;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		border: 2px solid var(--border);
+		border-radius: 4px;
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+
+	.project-card__actions {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.project-card__btn {
+		display: inline-block;
+		padding: 6px 12px;
+		background: var(--pink-300);
+		color: var(--ink);
+		border: 2px solid var(--border);
+		border-radius: 4px;
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		text-decoration: none;
+	}
+
+	.project-card__btn:hover {
+		background: var(--pink-100);
+	}
+</style>
+
+<h1>projects.exe</h1>
+
+<p class="projects__intro">
+	MCP servers and site source. fork, install, break, tell me what's busted.
+</p>
+
+<ul class="projects__list">
+	{
+		projects.map((p) => (
+			<li class="project-card">
+				<header class="project-card__header">
+					<span>{p.name}</span>
+					<span class="project-card__kind">{p.kind}</span>
+				</header>
+				<div class="project-card__body">
+					<p class="project-card__tagline">{p.tagline}</p>
+					<p class="project-card__description">{p.description}</p>
+					<ul class="project-card__tags">
+						{p.tags.map((t) => (
+							<li class="project-card__tag">{t}</li>
+						))}
+					</ul>
+					{p.install && (
+						<div class="project-card__install">
+							<code>$ {p.install}</code>
+						</div>
+					)}
+					<div class="project-card__actions">
+						<a class="project-card__btn" href={p.repo} target="_blank" rel="noopener">
+							source ↗
+						</a>
+						{p.install && (
+							<a
+								class="project-card__btn"
+								href={`/terminal/?open=terminal`}
+								title="open the terminal to run `mcp install` interactively"
+							>
+								open in terminal →
+							</a>
+						)}
+					</div>
+				</div>
+			</li>
+		))
+	}
+</ul>
