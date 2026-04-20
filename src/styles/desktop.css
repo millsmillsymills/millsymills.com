@@ -2,8 +2,8 @@
  * Y2K-pink retro-desktop chrome.
  *
  * Two layouts coexist in the DOM:
- *   .desktop          — visible at >=769px, the full draggable-window UI
- *   .mobile-fallback  — visible at <=768px, a vertical stack of cards
+ *   .desktop  — visible at >=769px, the full draggable-window UI
+ *   .mshell   — visible at <=768px, a phone-OS launcher + app views
  *
  * Color/spacing tokens live in :root so individual apps can re-use them.
  */
@@ -480,64 +480,222 @@ a {
 }
 
 /* ------------------------------------------------------------------ */
-/* mobile fallback                                                    */
+/* mobile shell — phone-OS metaphor                                   */
 /* ------------------------------------------------------------------ */
 
-.mobile-fallback {
-	display: none;
+.mshell {
+	display: none; /* hidden on desktop */
 }
 
-.mobile-fallback__hero {
-	padding: 28px 20px 16px;
-	text-align: center;
+.mshell__statusbar {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 14px;
+	background: var(--pink-500);
+	color: var(--cream);
+	border-bottom: 2px solid var(--border);
+	font-family: var(--font-pixel);
+	font-size: 10px;
+	letter-spacing: 0.5px;
+	min-height: 28px;
+	padding-top: max(6px, env(safe-area-inset-top));
+}
+
+.mshell__sparkles {
+	letter-spacing: 4px;
+	color: var(--pink-100);
+}
+
+.mshell__clock {
+	font-variant-numeric: tabular-nums;
+}
+
+.mshell__home {
+	padding: 24px 16px max(24px, env(safe-area-inset-bottom));
+	min-height: calc(100vh - 36px);
+}
+
+.mshell__home-hero {
+	margin: 8px 4px 24px;
 	color: var(--cream);
 	font-family: var(--font-pixel);
 }
 
-.mobile-fallback__hero h1 {
+.mshell__home-hero h1 {
 	margin: 0 0 6px;
-	font-size: 22px;
+	font-size: 26px;
 	text-shadow: 2px 2px 0 var(--border);
+	letter-spacing: 1px;
 }
 
-.mobile-fallback__hero p {
+.mshell__home-hero p {
 	margin: 0;
 	font-family: var(--font-screen);
-	font-size: 18px;
+	font-size: 17px;
 	color: var(--cream);
 	text-shadow: 1px 1px 0 var(--border);
 }
 
-.mobile-fallback__list {
-	margin: 0;
-	padding: 0 12px 32px;
-	list-style: none;
+.mshell__grid {
 	display: grid;
-	gap: 14px;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
-.mobile-card {
-	background: var(--window-bg);
+@media (max-width: 360px) {
+	.mshell__grid {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+.mshell-icon {
+	all: unset;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 2px;
+	border-radius: 12px;
+	color: var(--cream);
+	text-align: center;
+	font-family: var(--font-pixel);
+	font-size: 9px;
+	letter-spacing: 0.5px;
+	text-shadow: 1px 1px 0 var(--border);
+}
+
+.mshell-icon:active {
+	background: rgba(255, 255, 255, 0.18);
+	transform: scale(0.96);
+}
+
+.mshell-icon__glyph {
+	font-size: 36px;
+	line-height: 1;
+	width: 56px;
+	height: 56px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--cream);
 	border: 2px solid var(--border);
-	border-radius: 8px;
-	box-shadow: var(--window-shadow);
-	overflow: hidden;
+	border-radius: 14px;
+	box-shadow: 2px 2px 0 0 var(--border);
 }
 
-.mobile-card__header {
+.mshell-icon__label {
+	display: inline-block;
+	max-width: 80px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mshell__app-view[hidden] {
+	display: none;
+}
+
+.mshell__app-chrome {
+	position: sticky;
+	top: 28px;
+	z-index: 4;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 	padding: 10px 12px;
 	background: var(--titlebar-bg);
 	color: var(--titlebar-fg);
+	border-bottom: 2px solid var(--border);
 	font-family: var(--font-pixel);
 	font-size: 11px;
 	letter-spacing: 0.5px;
 }
 
-.mobile-card__body {
-	padding: 14px 16px;
+.mshell__chrome-back {
+	all: unset;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 6px;
+	font-family: var(--font-pixel);
+	font-size: 10px;
+}
+
+.mshell__chrome-back:active {
+	transform: translate(1px, 1px);
+}
+
+.mshell__chrome-title {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mshell__app-body {
+	padding: 18px 18px max(24px, env(safe-area-inset-bottom));
+	background: var(--window-bg);
+	color: var(--ink);
+	min-height: calc(100vh - 80px);
 	font-family: var(--font-screen);
 	font-size: 18px;
-	color: var(--ink);
+}
+
+.mshell__app-body h1 {
+	font-family: var(--font-pixel);
+	font-size: 18px;
+	color: var(--pink-600);
+	margin: 0 0 12px;
+}
+
+.mshell__app-body h2 {
+	font-family: var(--font-pixel);
+	font-size: 13px;
+	color: var(--pink-600);
+	margin: 16px 0 8px;
+}
+
+.mshell__app-body h3 {
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	color: var(--ink-soft);
+	margin: 12px 0 6px;
+}
+
+.mshell__app-body code,
+.mshell__app-body pre {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	background: var(--lilac-100);
+	border: 1px solid var(--lilac-300);
+	border-radius: 4px;
+	padding: 1px 4px;
+}
+
+.mshell__app-body a {
+	color: var(--pink-500);
+	text-decoration: underline;
+}
+
+[data-mobile-app][hidden] {
+	display: none;
+}
+
+body.mshell-app-open {
+	background: var(--window-bg);
 }
 
 /* ------------------------------------------------------------------ */
@@ -593,7 +751,7 @@ a {
 		display: none;
 	}
 
-	.mobile-fallback {
+	.mshell {
 		display: block;
 		min-height: 100vh;
 	}
