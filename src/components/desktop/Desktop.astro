@@ -8,6 +8,8 @@ import Photos from './apps/Photos.astro';
 import Mail from './apps/Mail.astro';
 import Flags from './apps/Flags.astro';
 import Terminal from './apps/Terminal.astro';
+import Music from './apps/Music.astro';
+import Memes from './apps/Memes.astro';
 import Stub from './apps/Stub.astro';
 
 const apps = [
@@ -52,15 +54,12 @@ const apps = [
 		<Flags />
 	</Window>
 
-	<Window id="music" title="winamp.exe" x={220} y={180} width={420} height={260}>
-		<Stub title="music" note="phase 3 — chiptune player with skin." />
+	<Window id="music" title="winamp.exe" x={220} y={180} width={460} height={460}>
+		<Music />
 	</Window>
 
-	<Window id="memes" title="memes/" x={240} y={200} width={520} height={420}>
-		<Stub
-			title="memes"
-			note="phase 3 — image gallery starting with the hac meme. drop into public/images/memes/."
-		/>
+	<Window id="memes" title="memes/" x={240} y={200} width={560} height={460}>
+		<Memes />
 	</Window>
 
 	<Window id="trash" title="recycle.bin" x={280} y={220} width={420} height={260}>
