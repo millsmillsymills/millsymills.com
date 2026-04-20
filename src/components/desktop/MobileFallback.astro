@@ -3,6 +3,7 @@ import About from './apps/About.astro';
 import Resume from './apps/Resume.astro';
 import Photos from './apps/Photos.astro';
 import Mail from './apps/Mail.astro';
+import Flags from './apps/Flags.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
 
@@ -10,6 +11,7 @@ const cards = [
 	{ title: 'about.exe', component: 'about' },
 	{ title: 'resume.txt', component: 'resume' },
 	{ title: 'photos/', component: 'photos' },
+	{ title: 'flags.exe', component: 'flags' },
 	{ title: 'mail.exe', component: 'mail' },
 	{ title: 'terminal', component: 'terminal' },
 ];
@@ -30,11 +32,12 @@ const cards = [
 						{c.component === 'about' && <About />}
 						{c.component === 'resume' && <Resume />}
 						{c.component === 'photos' && <Photos />}
+						{c.component === 'flags' && <Flags />}
 						{c.component === 'mail' && <Mail />}
 						{c.component === 'terminal' && (
 							<Stub
 								title="terminal"
-								note="terminal is desktop-only for now. open this site on a wider screen to play."
+								note="REPL deferred (see issue #27). Use flags.exe above to submit flags."
 							/>
 						)}
 					</div>
