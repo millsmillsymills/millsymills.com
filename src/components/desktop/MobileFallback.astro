@@ -1,0 +1,45 @@
+---
+import About from './apps/About.astro';
+import Resume from './apps/Resume.astro';
+import Photos from './apps/Photos.astro';
+import Mail from './apps/Mail.astro';
+import Stub from './apps/Stub.astro';
+import { profile } from '../../data/profile';
+
+const cards = [
+	{ title: 'about.exe', component: 'about' },
+	{ title: 'resume.txt', component: 'resume' },
+	{ title: 'photos/', component: 'photos' },
+	{ title: 'mail.exe', component: 'mail' },
+	{ title: 'terminal', component: 'terminal' },
+];
+---
+
+<div class="mobile-fallback">
+	<header class="mobile-fallback__hero">
+		<h1>{profile.handle}</h1>
+		<p>{profile.title} @ {profile.currentEmployer}</p>
+	</header>
+
+	<ul class="mobile-fallback__list">
+		{
+			cards.map((c) => (
+				<li class="mobile-card">
+					<header class="mobile-card__header">{c.title}</header>
+					<div class="mobile-card__body">
+						{c.component === 'about' && <About />}
+						{c.component === 'resume' && <Resume />}
+						{c.component === 'photos' && <Photos />}
+						{c.component === 'mail' && <Mail />}
+						{c.component === 'terminal' && (
+							<Stub
+								title="terminal"
+								note="terminal is desktop-only for now. open this site on a wider screen to play."
+							/>
+						)}
+					</div>
+				</li>
+			))
+		}
+	</ul>
+</div>
