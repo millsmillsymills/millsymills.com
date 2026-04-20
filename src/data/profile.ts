@@ -114,8 +114,14 @@ export const experience = [
 ] as const;
 
 export const photos = [
-	// Replace placeholders with the real files in public/images/cats/ and update names below.
-	{ src: '/images/cats/1.jpg', alt: 'long-haired tabby by the fireplace', caption: 'cat #1' },
-	{ src: '/images/cats/2.jpg', alt: 'gray dilute calico, very poised', caption: 'cat #2' },
-	{ src: '/images/cats/3.jpg', alt: 'long-haired gray-and-white, full belly trust mode', caption: 'cat #3' },
+	{
+		src: '/images/cats/tabby-fluff.jpg',
+		alt: 'long-haired tabby with green eyes, looking up',
+		caption: 'fluff',
+	},
+	{
+		src: '/images/cats/kittens-pair.jpg',
+		alt: 'two kittens on a couch — gray dilute calico and a smaller white-and-gray',
+		caption: 'the kittens, day one',
+	},
 ] as const;
