@@ -1,0 +1,174 @@
+---
+import { chimera, gear } from '../../../data/uses';
+---
+
+<style>
+	.uses__intro {
+		font-family: var(--font-screen);
+		font-size: 17px;
+		color: var(--ink-soft);
+		margin: 0 0 18px;
+	}
+
+	.chimera {
+		background: #0e0214;
+		color: #ffd6ec;
+		border: 2px solid var(--border);
+		border-radius: 6px;
+		padding: 14px 16px;
+		margin: 0 0 20px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.5;
+	}
+
+	.chimera__header {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 10px;
+		margin-bottom: 10px;
+		padding-bottom: 8px;
+		border-bottom: 1px dashed #6ea8ff;
+	}
+
+	.chimera__name {
+		font-family: var(--font-pixel);
+		font-size: 14px;
+		color: #ff7ec0;
+		letter-spacing: 2px;
+	}
+
+	.chimera__role {
+		color: #c8a8ff;
+		font-size: 12px;
+	}
+
+	.chimera__specs {
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 4px 14px;
+		margin: 0;
+	}
+
+	.chimera__specs dt {
+		color: #9a7fb8;
+		text-transform: uppercase;
+		font-size: 10px;
+		letter-spacing: 1px;
+		padding-top: 2px;
+	}
+
+	.chimera__specs dd {
+		color: #ffd6ec;
+		margin: 0;
+	}
+
+	.uses-group {
+		margin: 0 0 20px;
+	}
+
+	.uses-group h2 {
+		font-family: var(--font-pixel);
+		font-size: 12px;
+		letter-spacing: 1px;
+		color: var(--pink-600);
+		margin: 0 0 10px;
+		text-transform: lowercase;
+	}
+
+	.uses-group ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 10px;
+	}
+
+	.uses-item {
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 4px;
+		padding: 10px 12px;
+	}
+
+	.uses-item__name {
+		font-family: var(--font-screen);
+		font-size: 18px;
+		color: var(--ink);
+		margin: 0 0 2px;
+	}
+
+	.uses-item__detail {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-soft);
+		margin: 0 0 4px;
+	}
+
+	.uses-item__why {
+		font-family: var(--font-screen);
+		font-size: 15px;
+		color: var(--ink);
+		margin: 0;
+	}
+
+	.uses-item__why::before {
+		content: '› ';
+		color: var(--pink-500);
+	}
+
+	.uses-item a {
+		color: var(--pink-500);
+		text-decoration: underline;
+	}
+</style>
+
+<h1>/uses</h1>
+
+<p class="uses__intro">
+	the gear that survives selection pressure. updated when i replace something, not when i think about
+	replacing something.
+</p>
+
+<section class="chimera" aria-label="chimera server specs">
+	<header class="chimera__header">
+		<span class="chimera__name">chimera</span>
+		<span class="chimera__role">{chimera.role}</span>
+	</header>
+	<dl class="chimera__specs">
+		{
+			chimera.specs.map((s) => (
+				<>
+					<dt>{s.k}</dt>
+					<dd>{s.v}</dd>
+				</>
+			))
+		}
+	</dl>
+</section>
+
+{
+	gear.map((g) => (
+		<section class="uses-group">
+			<h2>{g.title}</h2>
+			<ul>
+				{g.items.map((item) => (
+					<li class="uses-item">
+						<p class="uses-item__name">
+							{item.url ? (
+								<a href={item.url} target="_blank" rel="noopener">
+									{item.name}
+								</a>
+							) : (
+								item.name
+							)}
+						</p>
+						{item.detail && <p class="uses-item__detail">{item.detail}</p>}
+						{item.why && <p class="uses-item__why">{item.why}</p>}
+					</li>
+				))}
+			</ul>
+		</section>
+	))
+}
