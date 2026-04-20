@@ -1,10 +1,7 @@
 /*
- * Terminal bootstrap.
- *
- * Importing this file:
- *   - registers every command (basic, flag, net, fun)
- *   - binds the REPL to the .term root inside the terminal window
- *   - wires the close button to hide the window
+ * Terminal bootstrap. Side-effect imports below register every command
+ * module; this file then binds the REPL to the .term root inside the
+ * terminal window and wires the exit handler to hide the window.
  */
 
 import './commands/basic';

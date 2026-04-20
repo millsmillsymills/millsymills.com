@@ -1,10 +1,8 @@
 import { register, lookup } from '../registry';
 import { sha256, captureById } from '../../flags';
 
-// SHA-256 of the canonical sudo password. Don't put the literal in the bundle.
-// Generated locally:
-//   echo -n password | shasum -a 256
-// gives 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
+// SHA-256 of the canonical sudo password. Don't put the literal in the
+// bundle — the puzzle is finding it elsewhere on the site.
 const SUDO_PASS_DIGEST = '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8';
 
 register(
