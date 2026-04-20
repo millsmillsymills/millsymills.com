@@ -6,6 +6,7 @@ import About from './apps/About.astro';
 import Resume from './apps/Resume.astro';
 import Photos from './apps/Photos.astro';
 import Mail from './apps/Mail.astro';
+import Flags from './apps/Flags.astro';
 import Stub from './apps/Stub.astro';
 
 const apps = [
@@ -13,6 +14,7 @@ const apps = [
 	{ id: 'resume', label: 'resume', glyph: '📄', title: 'resume.txt' },
 	{ id: 'photos', label: 'photos', glyph: '🖼️', title: 'photos/' },
 	{ id: 'terminal', label: 'terminal', glyph: '⌨️', title: 'mills@millsymills:~' },
+	{ id: 'flags', label: 'flags.exe', glyph: '🚩', title: 'flags.exe' },
 	{ id: 'music', label: 'music', glyph: '💿', title: 'winamp.exe' },
 	{ id: 'memes', label: 'memes', glyph: '🗂️', title: 'memes/' },
 	{ id: 'mail', label: 'mail', glyph: '✉️', title: 'mail.exe' },
@@ -42,7 +44,14 @@ const apps = [
 	</Window>
 
 	<Window id="terminal" title="mills@millsymills:~" x={180} y={120} width={620} height={420}>
-		<Stub title="terminal" note="phase 2 — mock REPL with whoami, ls, cat, sudo, and easter eggs." />
+		<Stub
+			title="terminal"
+			note={`REPL deferred (see issue #27). Submit flags via the flags.exe window, or open devtools and call window.mills.flag.submit("flag{...}").`}
+		/>
+	</Window>
+
+	<Window id="flags" title="flags.exe" x={220} y={140} width={520} height={520}>
+		<Flags />
 	</Window>
 
 	<Window id="music" title="winamp.exe" x={220} y={180} width={420} height={260}>

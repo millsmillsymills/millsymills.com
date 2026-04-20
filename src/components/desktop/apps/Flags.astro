@@ -1,0 +1,200 @@
+---
+import { challenges } from '../../../scripts/flags';
+---
+
+<style>
+	.flags__score {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		margin: 0 0 14px;
+		font-family: var(--font-pixel);
+	}
+
+	.flags__score strong {
+		font-size: 22px;
+		color: var(--pink-600);
+	}
+
+	.flags__submit {
+		display: flex;
+		gap: 6px;
+		margin: 0 0 14px;
+	}
+
+	.flags__submit input {
+		flex: 1;
+		font-family: var(--font-mono);
+		font-size: 14px;
+		padding: 6px 8px;
+		background: var(--lilac-100);
+		border: 2px solid var(--border);
+		border-radius: 4px;
+		color: var(--ink);
+	}
+
+	.flags__submit button {
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		padding: 6px 10px;
+		background: var(--pink-300);
+		color: var(--ink);
+		border: 2px solid var(--border);
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	.flags__submit button:hover {
+		background: var(--pink-100);
+	}
+
+	.flags__msg {
+		min-height: 20px;
+		margin: 0 0 14px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-soft);
+	}
+
+	.flags__msg.flags__msg--ok {
+		color: var(--pink-600);
+	}
+
+	.flags__list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 6px;
+	}
+
+	.flags__row {
+		display: grid;
+		grid-template-columns: 28px 1fr auto;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 8px;
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 4px;
+		font-size: 16px;
+	}
+
+	.flags__row.flags__row--captured {
+		background: var(--pink-100);
+		border-color: var(--pink-200);
+	}
+
+	.flags__row__check {
+		font-family: var(--font-pixel);
+		font-size: 12px;
+		color: var(--pink-500);
+		text-align: center;
+	}
+
+	.flags__row__title {
+		font-family: var(--font-screen);
+	}
+
+	.flags__row__hint {
+		display: block;
+		color: var(--ink-soft);
+		font-size: 13px;
+		margin-top: 2px;
+	}
+
+	.flags__row__diff {
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		padding: 2px 6px;
+		background: var(--cream);
+		border: 1px solid var(--border);
+		border-radius: 3px;
+		text-transform: uppercase;
+	}
+</style>
+
+<h1>flags.exe</h1>
+
+<p class="flags__score">
+	<strong><span data-flags-captured>0</span> / {challenges.length}</strong>
+	flags captured
+</p>
+
+<form class="flags__submit" data-flags-form autocomplete="off" novalidate>
+	<input
+		type="text"
+		name="flag"
+		placeholder="flag{...}"
+		spellcheck="false"
+		aria-label="submit a flag"
+	/>
+	<button type="submit">submit</button>
+</form>
+
+<p class="flags__msg" data-flags-msg></p>
+
+<ul class="flags__list">
+	{
+		challenges.map((c) => (
+			<li class="flags__row" data-flag-row={c.id}>
+				<span class="flags__row__check" aria-hidden="true">
+					🔒
+				</span>
+				<span class="flags__row__title">
+					{c.title}
+					<small class="flags__row__hint">{c.hint}</small>
+				</span>
+				<span class="flags__row__diff">{c.difficulty}</span>
+			</li>
+		))
+	}
+</ul>
+
+<script>
+	import { submitFlag, getCaptured, challenges } from '../../../scripts/flags';
+
+	function render() {
+		const captured = getCaptured();
+		const count = Object.keys(captured).length;
+		document.querySelectorAll<HTMLElement>('[data-flags-captured]').forEach((el) => {
+			el.textContent = String(count);
+		});
+		challenges.forEach((c) => {
+			document.querySelectorAll<HTMLElement>(`[data-flag-row="${c.id}"]`).forEach((row) => {
+				const check = row.querySelector<HTMLElement>('.flags__row__check');
+				if (captured[c.id]) {
+					row.classList.add('flags__row--captured');
+					if (check) check.textContent = '✓';
+				} else {
+					row.classList.remove('flags__row--captured');
+					if (check) check.textContent = '🔒';
+				}
+			});
+		});
+	}
+
+	function init() {
+		render();
+		window.addEventListener('mills:flag-captured', render);
+		document.querySelectorAll<HTMLFormElement>('[data-flags-form]').forEach((form) => {
+			const input = form.querySelector<HTMLInputElement>('input[name="flag"]');
+			const msg = form.parentElement?.querySelector<HTMLElement>('[data-flags-msg]');
+			if (!input || !msg) return;
+			form.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				const result = await submitFlag(input.value);
+				msg.textContent = result.message;
+				msg.classList.toggle('flags__msg--ok', result.ok && !result.already);
+				if (result.ok && !result.already) input.value = '';
+				render();
+			});
+		});
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+</script>

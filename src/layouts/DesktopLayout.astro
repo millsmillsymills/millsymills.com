@@ -33,9 +33,18 @@ const { title, description, canonical } = Astro.props;
 		<title>{title}</title>
 	</head>
 	<body>
+		<!-- flag{html_comments_have_no_secrets} -->
 		<slot />
 		<script>
 			import '../scripts/window-manager';
+			import { consoleBanner, konami, submitFlag, getCaptured, captureById } from '../scripts/flags';
+			consoleBanner();
+			konami();
+			// Expose a tiny API so devtools-savvy visitors can play with flags
+			// before the terminal app ships. Read-only by intent.
+			(window as unknown as { mills: unknown }).mills = {
+				flag: { submit: submitFlag, status: getCaptured, capture: captureById },
+			};
 		</script>
 	</body>
 </html>
