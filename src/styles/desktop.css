@@ -540,6 +540,41 @@ a {
 	color: var(--ink);
 }
 
+/* ------------------------------------------------------------------ */
+/* flag capture toasts                                                */
+/* ------------------------------------------------------------------ */
+
+.flag-toast-host {
+	position: fixed;
+	top: 16px;
+	right: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	z-index: 10001;
+	pointer-events: none;
+}
+
+.flag-toast {
+	padding: 10px 14px;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-left: 6px solid var(--pink-500);
+	border-radius: 6px;
+	box-shadow: var(--window-shadow);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	max-width: 280px;
+	transform: translateX(120%);
+	transition: transform 220ms ease;
+	pointer-events: auto;
+}
+
+.flag-toast.flag-toast--in {
+	transform: translateX(0);
+}
+
 @media (max-width: 768px) {
 	html,
 	body {
