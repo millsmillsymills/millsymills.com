@@ -68,12 +68,33 @@ class MusicPlayer {
 		this.audio.addEventListener('timeupdate', () => this.renderTime());
 		this.audio.addEventListener('durationchange', () => this.renderTime());
 		this.audio.addEventListener('ended', () => this.next());
-		this.audio.addEventListener('play', () => this.setStatus('playing', '⏸'));
-		this.audio.addEventListener('pause', () => this.setStatus('paused', '▶'));
+		this.audio.addEventListener('play', () => {
+			this.setStatus('playing', '⏸');
+			this.emitNowPlaying();
+		});
+		this.audio.addEventListener('pause', () => {
+			this.setStatus('paused', '▶');
+			this.emitNowPlaying({ playing: false });
+		});
 		this.audio.addEventListener('error', () => {
 			this.setStatus('track unavailable');
 			if (this.titleEl) this.titleEl.textContent = '(404 — drop audio into public/audio/)';
+			this.emitNowPlaying({ playing: false });
 		});
+	}
+
+	private emitNowPlaying(opts: { playing?: boolean } = {}): void {
+		const track = this.tracks[this.current];
+		const playing = opts.playing ?? !this.audio.paused;
+		window.dispatchEvent(
+			new CustomEvent('mills:now-playing', {
+				detail: {
+					playing,
+					title: track?.title ?? '',
+					artist: track?.artist ?? '',
+				},
+			}),
+		);
 	}
 
 	private load(i: number, autoplay = false): void {

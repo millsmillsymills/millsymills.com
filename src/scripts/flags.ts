@@ -92,6 +92,14 @@ export const challenges: Challenge[] = [
 		difficulty: 'medium',
 		digest: '5ceddd3df10d3eacac036d599fe4bf10c5bdb34faa7810129d4a197ff5d96834',
 	},
+	{
+		id: 'base64',
+		title: 'decoder rings are cool again',
+		hint: 'agents read head tags. humans with devtools do too. ZmxhZ3s=...',
+		difficulty: 'easy',
+		digest: '152e75c2cd7d9b5347368c06fb7a4d7bc18f5a4afc2373a8cb6d1556f5eb266e',
+		tag: 'discoverability',
+	},
 ];
 /* eslint-enable max-len */
 
