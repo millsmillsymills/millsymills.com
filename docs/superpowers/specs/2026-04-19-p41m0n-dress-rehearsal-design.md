@@ -31,11 +31,15 @@ One Terraform codebase, two stacks, separated only by state. The code path run a
 
 ```
 infra/
+  main.tf                       (edit) — activate backend "s3" {} as an empty
+                                  block; all fields provided per-stack via
+                                  -backend-config. REQUIRED for the two-stack
+                                  isolation claim below to hold.
   stacks/
     millsymills.tfvars          (new) — domain, github_repo, protonmail vars
     p41m0n.tfvars               (new) — domain = p41m0n.com, rehearsal values
-    millsymills.backend.hcl     (new) — key = millsymills.com/terraform.tfstate
-    p41m0n.backend.hcl          (new) — key = p41m0n.com/terraform.tfstate
+    millsymills.backend.hcl     (new) — bucket, region, key=millsymills.com/terraform.tfstate
+    p41m0n.backend.hcl          (new) — bucket, region, key=p41m0n.com/terraform.tfstate
 scripts/
   tf.sh                         (new) — stack-aware terraform wrapper
   gandi-snapshot.sh             (new) — dump Gandi zone JSON for rollback
@@ -43,24 +47,35 @@ scripts/
 .github/workflows/
   deploy-rehearsal.yml          (new) — workflow_dispatch-only, rehearsal env
 astro.config.mjs                (edit) — SITE_URL from env with millsymills default
-src/…/<head partial>            (edit) — emit noindex meta when NO_INDEX=true
-public/robots.txt               (keep) — plus a rehearsal-mode override mechanism
+src/layouts/BaseLayout.astro    (edit) — emit noindex meta when build-env flag set
+src/layouts/DesktopLayout.astro (edit) — emit noindex meta + parameterize 4 JSON-LD URL refs
+src/pages/index.astro           (edit) — compute canonical + ogUrl from Astro.site
+src/pages/[app].astro           (edit) — compute canonical + ogImage from Astro.site
+src/pages/sitemap.xml.ts        (edit) — replace hardcoded SITE const with Astro.site
+src/pages/robots.txt.ts         (new)  — replace static public/robots.txt; emits
+                                  disallow-all + correct Sitemap: URL per env
+public/robots.txt               (delete) — replaced by the endpoint above
 docs/superpowers/specs/2026-04-19-p41m0n-dress-rehearsal-design.md (this file)
 ```
-
-Nothing in `infra/*.tf` changes structurally. The only new Terraform-visible thing is two tfvars files plus two backend-config files.
 
 ### `scripts/tf.sh` contract
 
 - Usage: `./scripts/tf.sh <stack> <terraform-args...>` where `<stack>` is `millsymills` or `p41m0n`. Any other stack value is a hard refusal.
-- Auto-runs `terraform -chdir=infra init -reconfigure -backend-config=stacks/<stack>.backend.hcl` on first invocation per stack.
+- On first invocation per stack (and any time the backend key changes), runs `terraform -chdir=infra init -reconfigure -backend-config=stacks/<stack>.backend.hcl`.
 - Prepends `-var-file=stacks/<stack>.tfvars` to `plan` / `apply` / `destroy` / `refresh`.
 - Echoes the active stack + state key before every command as a footgun guard.
+- **Stale-state guard:** before any apply/destroy, reads `infra/.terraform/terraform.tfstate` and confirms the `"backend"` block's `config.key` matches the requested stack's key. If not, refuses to run and instructs the user to re-init. Prevents "ran `./scripts/tf.sh p41m0n apply` after forgetting to re-init from millsymills" → wrong state file, wrong resources touched.
 - Never accepts an implicit/default stack — you must name it every call.
 
 ### State
 
-Both stacks' state lives in the same S3 bucket (`millsymills-terraform-state`) under distinct keys. State bucket is created manually per the existing runbook in `CLAUDE.md` — no change there.
+Both stacks' state lives in the same S3 bucket (`millsymills-terraform-state`) under distinct keys, both with versioning + SSE-S3 + native S3 locking (`use_lockfile = true`) per the existing bucket's config.
+
+The backend block in `infra/main.tf` is activated as an **empty** `backend "s3" {}` — no inline `bucket`/`key`/`region`/`encrypt`/`use_lockfile`. All of those fields are supplied per-stack via `-backend-config=stacks/<stack>.backend.hcl`. This is the cleanest way to support two stacks out of one codebase without hardcoding either stack's key: Terraform merges the `.hcl` file into the empty block at `init` time.
+
+The state bucket itself is created manually per the existing runbook in `CLAUDE.md` — no change there.
+
+**Consequence for the runbook:** the current `CLAUDE.md` step "Uncomment the `backend "s3"` block in `infra/main.tf`" becomes slightly different: you activate the block as empty and supply all config via `-backend-config` at init. The runbook must be updated at the same time `infra/main.tf` is edited.
 
 ### Per-stack resources (unchanged from current code)
 
@@ -78,7 +93,7 @@ Both stacks' state lives in the same S3 bucket (`millsymills-terraform-state`) u
 
 ## Build pipeline
 
-The same `npm run build` needs to produce either a millsymills-canonical indexed build or a p41m0n-canonical noindexed build, depending on environment.
+The same `npm run build` needs to produce either a millsymills-canonical indexed build or a p41m0n-canonical noindexed build, depending on environment. **Noindex alone is not enough** — every URL emitted by the build must point at the correct domain, because robots/noindex directives are best-effort and not honored by every unfurler, scraper, or structured-data consumer.
 
 ### `astro.config.mjs`
 
@@ -86,22 +101,45 @@ The same `npm run build` needs to produce either a millsymills-canonical indexed
 site: process.env.SITE_URL ?? 'https://millsymills.com',
 ```
 
-Keeps the existing default so bare `npm run build` behaves as today, unblocking casual local work.
+Keeps the existing default so bare `npm run build` behaves as today, unblocking casual local work. `Astro.site` then returns a URL object based on this value, and every URL that the build emits should be derived from `Astro.site` rather than a hardcoded string.
+
+### URL emission sites (exhaustive — all must be parameterized)
+
+Every one of these currently hardcodes `https://millsymills.com/...` and would leak production URLs into a p41m0n rehearsal build if left untouched:
+
+1. **`src/layouts/DesktopLayout.astro`** — four JSON-LD URL refs (`@id: ...#mills`, `url: ...`, `@id: ...#website`, `url: ...`). Derive from `Astro.site`. The `name`, `og:site_name`, and brand copy ("millsymills.com" as a string) are *content/branding* and stay — only URL-valued emissions change.
+2. **`src/pages/index.astro`** — `canonical` and `ogUrl` props. Replace with values computed from `Astro.site` and `Astro.url.pathname`.
+3. **`src/pages/[app].astro`** — `canonical` and `ogImage` URLs. Replace with values computed from `Astro.site`.
+4. **`src/pages/sitemap.xml.ts`** — the `SITE` constant on line 4. Replace with `Astro.site?.href.replace(/\/$/, '')` (or equivalent; `Astro.site` is available in endpoint handlers).
+5. **`public/robots.txt`** — the `Sitemap:` line hardcodes `https://millsymills.com/sitemap.xml`. Delete the file; replace with a new `src/pages/robots.txt.ts` endpoint that emits the same content but with `Sitemap: ${Astro.site}sitemap.xml` and conditionally switches to `User-agent: * / Disallow: /` when the rehearsal env flag is set.
+
+### Not changed (content/branding, not URLs)
+
+- `src/pages/og/[app].svg.ts` — the text `"mills · millsymills.com"` burnt into the OG image is a brand signature, not a URL. Leave.
+- `src/layouts/DesktopLayout.astro` — `name: 'millsymills.com'`, `og:site_name: 'millsymills.com'`, `description: '...'`. Content.
+- `src/pages/404.astro` title, `src/data/profile.ts` email, `src/data/projects.ts` self-reference, `src/components/desktop/apps/Mail.astro` subject. All content.
 
 ### Noindex mechanism
 
-Env-var `NO_INDEX=true` triggers two things:
+Env-var `NO_INDEX=true` drives three independent emissions, all gated on the same flag so you can't half-apply it:
 
-1. The shared `<head>` partial emits `<meta name="robots" content="noindex,nofollow">`.
-2. `public/robots.txt` is overridden at build time with `User-agent: *` + `Disallow: /`. Mechanism TBD during implementation — either a small Astro integration or a `prebuild` script that rewrites the file into `dist/`. Pick whichever is more idiomatic for the current Astro project shape.
+1. **`src/layouts/BaseLayout.astro`** and **`src/layouts/DesktopLayout.astro`** each emit `<meta name="robots" content="noindex,nofollow">` when `import.meta.env.NO_INDEX === 'true'` OR (in BaseLayout's case) the existing per-page `noindex` prop is set. (DesktopLayout currently has no robots meta at all — this adds one.)
+2. **`src/pages/robots.txt.ts`** — when `NO_INDEX=true`, emits `User-agent: *` + `Disallow: /` instead of the permissive default, plus the correctly-parameterized `Sitemap:` line.
+3. **CloudFront response-headers policy** (future tightening, currently out of scope) — `X-Robots-Tag: noindex, nofollow` as a defense-in-depth for consumers that ignore HTML meta. Flagged here so we don't forget; deferred unless the rehearsal shows leaks.
 
-### Build-time assertion
+Accessing build-time env vars in Astro: either expose via `vite.define` in `astro.config.mjs` (`'import.meta.env.NO_INDEX': JSON.stringify(process.env.NO_INDEX)`) or use Astro's built-in `astro:env` if the project's Astro version supports it. Pick whichever fits at implementation time.
 
-If `NO_INDEX=true` is set but `SITE_URL` contains `millsymills.com`, fail the build. Prevents accidentally deploying a noindexed build to the real site if someone wires CI variables wrong.
+### Build-time assertions (run in `astro.config.mjs`)
+
+Fail the build immediately if any of these are true — these are footgun guards, not belt-and-braces:
+
+- `NO_INDEX === 'true'` and `SITE_URL` contains `millsymills.com` → exiting with a non-zero code.
+- `SITE_URL` is set but not a valid URL → exit with a descriptive error.
+- `SITE_URL` is unset *in CI* (detect via `process.env.CI === 'true'`) → exit. Local dev can still default.
 
 ### Out of scope
 
-No content, component, styling, CSP, or header changes. The rehearsal tests deployment, not content.
+No styling, CSP, or header changes. The rehearsal tests deployment + URL plumbing, not content or security posture.
 
 ## Deploy pipeline
 
@@ -128,36 +166,57 @@ The trust policy on `p41m0n-com-github-deploy` is the same as millsymills: `repo
 
 ## DNS cutover sequence for p41m0n
 
-Ordered so that the site is never broken for more than the user-controlled TTL and every step has a clean rollback.
+### TTL scope — read this first
+
+Two different TTLs govern DNS behavior during a registrar cutover, and conflating them leads to false rollback promises:
+
+- **Record TTLs** (apex A, `www` CNAME, MX, etc., set inside the authoritative zone) govern how long resolvers cache those records. Lowering these lets you change *record values* quickly — but only while the current nameservers are still authoritative.
+- **Parent-zone delegation TTL** (the NS records in the `.com` TLD zone that point at the authoritative nameservers) governs how long resolvers cache the NS delegation itself. This is **set by the parent zone, not by you**; for `.com` it is typically 172800s (48h). This is the TTL that matters when you flip nameservers at the registrar — and it cannot be lowered by you in advance.
+
+Consequence: **an NS flip cannot be rolled back quickly.** If the cutover fails and you flip NS back at the registrar, resolvers that cached the new delegation will continue to hit Route53 for up to the parent TTL before picking up the Gandi NS again. Plan for rollback measured in hours, not minutes.
+
+This is the honest constraint. The rehearsal strategy therefore front-loads validation: nothing is public until exhaustive pre-flip checks pass, because post-flip recovery is slow.
 
 ### Pre-cutover (Gandi is still authoritative)
 
-1. **Lower Gandi TTLs.** In Gandi LiveDNS, drop apex A and `www` CNAME TTLs from 10800s (3h) to 300s. Wait 3h for the old TTL to age out. Biggest single risk-reducer: if we roll back after the NS flip, recovery is minutes not hours.
+1. **Lower Gandi record TTLs.** In Gandi LiveDNS, drop apex A and `www` CNAME TTLs from 10800s (3h) to 300s. Wait 3h for the old TTL to age out. This **does not** speed up NS rollback (see TTL scope above). It does let us change record values fast while Gandi is still authoritative — useful if step 2's snapshot reveals a need to fix a record before cutover.
 2. **Snapshot Gandi zone.** `./scripts/gandi-snapshot.sh p41m0n.com > .local/gandi-p41m0n-pre-cutover.json`. Script calls the Gandi LiveDNS API directly (`curl` + `GANDI_API_KEY` env var) and dumps every rrset. Not via MCP — MCP is for interactive use, a rollback source of truth should not depend on Claude Code being attached. `.local/` is git-ignored.
 3. **Create Route53 hosted zone** for `p41m0n.com` (AWS console).
 4. **First Terraform apply.** `./scripts/tf.sh p41m0n init`, then `./scripts/tf.sh p41m0n apply`. Takes ~15–20 min (ACM + CloudFront). Result: cert `ISSUED`, CloudFront `Deployed`, Route53 records in place, null-MX + strict DMARC published. **Nothing public yet** — registrar still points at Gandi.
-5. **Smoke test via CloudFront domain.** Sync `dist/` to `s3://p41m0n.com`, invalidate, hit `https://<dist-id>.cloudfront.net/` directly. Click through several pages. Confirm CloudFront Function directory-index rewrites work (`/about/`, etc.). Confirm `<meta robots noindex>` is present and `/robots.txt` is the rehearsal version.
+5. **Smoke test via CloudFront domain.** Sync `dist/` to `s3://p41m0n.com`, invalidate, hit `https://<dist-id>.cloudfront.net/` directly. Click through several pages. Confirm CloudFront Function directory-index rewrites work (`/about/`, etc.). Confirm `<meta robots noindex>` is present on every page, `/robots.txt` is the rehearsal disallow-all, canonical/og:url/JSON-LD URLs point at `p41m0n.com`, and `/sitemap.xml` lists `p41m0n.com` URLs only.
 6. **Dress-rehearse the CI deploy.** Manually trigger `deploy-rehearsal.yml`, approve the `rehearsal` environment prompt, confirm the workflow deploys successfully via OIDC. Still accessed via CloudFront domain.
+7. **Go/no-go gate.** All of 4–6 must have passed with zero manual patching. If anything was patched manually, fix it in code and re-run from step 4. Do not proceed to the flip on a stack that was "fixed by hand."
 
 ### Cutover
 
-7. **Flip nameservers at Gandi registrar.** In Gandi's registrar UI for `p41m0n.com` → Nameservers, replace the Gandi nameservers with the four Route53 NS records from `./scripts/tf.sh p41m0n output route53_nameservers` (or the hosted-zone page). Point of no return for this phase. Because Gandi TTLs were pre-lowered, propagation is minutes-to-tens-of-minutes.
+8. **Flip nameservers at Gandi registrar.** In Gandi's registrar UI for `p41m0n.com` → Nameservers, replace the Gandi nameservers with the four Route53 NS records from `./scripts/tf.sh p41m0n output route53_nameservers` (or the hosted-zone page). This is the point of no return for this phase.
+   - Initial propagation is typically **minutes to tens of minutes** as resolvers with no cached delegation pick up the new NS.
+   - **Global** propagation (i.e., every resolver converges on Route53) is bounded by the parent-zone delegation TTL, which for `.com` is typically 48h. Plan accordingly: brokenness on one resolver does not automatically mean a bad cutover — it may just be a slow resolver cache. Cross-check with multiple geographically-distributed DNS probes.
 
 ### Post-cutover verification (`scripts/verify-p41m0n.sh`)
 
-8. After propagation, run the verify script. All of these must pass:
-   - `dig +short NS p41m0n.com` returns only Route53 nameservers
+9. After initial propagation (wait at least 30 minutes, or until `dig @8.8.8.8 NS p41m0n.com` returns Route53), run the verify script. All of these must pass:
+   - `dig +short NS p41m0n.com` returns only Route53 nameservers (check against multiple resolvers: `@8.8.8.8`, `@1.1.1.1`, `@9.9.9.9`)
    - `dig A p41m0n.com` and `dig AAAA p41m0n.com` both resolve to CloudFront
    - `https://p41m0n.com/` and `https://www.p41m0n.com/` both serve the site over HTTPS with a valid cert
    - `curl -sI https://p41m0n.com/` shows `Strict-Transport-Security`, a `Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`
    - `curl -sI https://p41m0n.com/about/` (or another known page) returns `200`, not `404` — validates the CloudFront Function directory-index rewrite
    - `curl -s https://p41m0n.com/robots.txt` is the rehearsal-mode disallow-all
    - HTML source contains `<meta name="robots" content="noindex,nofollow">`
+   - No HTML page emits `https://millsymills.com/` in canonical, og:url, og:image, or JSON-LD — all such URLs are `p41m0n.com`
+   - `curl -s https://p41m0n.com/sitemap.xml` lists only `p41m0n.com` URLs
    - `dig MX p41m0n.com` is `.` (null MX per RFC 7505), `dig TXT p41m0n.com` shows `v=spf1 -all` and a DMARC record with `p=reject`
 
-### Rollback (if anything in 7–8 fails)
+### Rollback
 
-9. Flip registrar NS back to the captured Gandi values (`ns-188-a.gandi.net`, `ns-40-b.gandi.net`, `ns-43-c.gandi.net`). Gandi LiveDNS records are untouched — p41m0n returns to its pre-rehearsal state within minutes thanks to the pre-lowered TTLs. Diagnose the failure offline, then retry.
+10. **Rollback is slow.** If verification fails after the flip:
+    - Option A (preferred): **fix forward.** The state machine is now authoritative in Route53, and Route53-side DNS changes are fast (respecting our Route53 record TTLs, which are short by default). Most failure modes — wrong header, missing file, bad redirect — can be corrected by fixing code + redeploying via `deploy-rehearsal.yml` + invalidating CloudFront. No DNS change needed.
+    - Option B (flip NS back): only if the failure is *structural* to the Route53/CloudFront side (e.g., cert failed to issue, CloudFront distribution misconfigured) and fix-forward is not fast enough. Flip registrar NS back to the captured Gandi values (`ns-188-a.gandi.net`, `ns-40-b.gandi.net`, `ns-43-c.gandi.net`). Gandi LiveDNS records are still intact. Expect partial rollback within minutes-to-hours for resolvers with short NS caches, and **up to 48h for some resolvers** to stop hitting Route53.
+    - During any NS-flip rollback window: do not `terraform destroy` the p41m0n stack. Resolvers that still have Route53 cached will continue to hit it, so the stack must remain operational until the parent TTL fully decays.
+
+### Why this is still worth rehearsing
+
+The slow-rollback constraint applies to the real millsymills cutover too. Learning that on p41m0n — where brokenness is cheap — is exactly the point. The rehearsal's output is a calibrated answer to "how paranoid should I be before flipping NS on the real domain?" Answer: very.
 
 ## Acceptance criteria
 
@@ -176,12 +235,15 @@ Leave p41m0n running for 3–7 days. Long enough to surface async issues (CloudF
 
 ## Tear-down
 
-1. Flip p41m0n registrar NS back to the captured Gandi values. Route53 remains authoritative until propagation completes; Gandi LiveDNS records are still intact.
-2. Wait for NS propagation (short, TTLs are 300s).
-3. `./scripts/tf.sh p41m0n destroy` — tears down CloudFront, S3 bucket, ACM cert, Route53 records, IAM role, email DNS records.
-4. Delete the Route53 hosted zone for p41m0n in the AWS console (Terraform never managed it).
-5. Either delete the `rehearsal` GitHub Environment and `deploy-rehearsal.yml`, or keep them in place disabled for a future re-rehearsal. Decide at tear-down time.
-6. Optionally restore Gandi TTLs on p41m0n from 300 → 10800.
+Tear-down is the same dance as rollback in reverse, and runs into the same parent-zone delegation TTL.
+
+1. Flip p41m0n registrar NS back to the captured Gandi values. Route53 remains authoritative for any resolver with a cached delegation — potentially up to the parent TTL (~48h for `.com`).
+2. **Do not destroy the Route53 stack yet.** Keep the Route53 zone + CloudFront + S3 operational through the delegation-TTL window. If you destroy it immediately, resolvers that still have Route53 cached will serve failures to whoever's still hitting the domain.
+3. Wait at least 48h after the NS flip (or confirm via multi-resolver checks that no resolver is still returning Route53 NS). This wait is inherent; nothing you did in step 1 of the pre-cutover can speed it up.
+4. `./scripts/tf.sh p41m0n destroy` — tears down CloudFront, S3 bucket, ACM cert, Route53 records, IAM role, email DNS records.
+5. Delete the Route53 hosted zone for p41m0n in the AWS console (Terraform never managed it).
+6. Either delete the `rehearsal` GitHub Environment and `deploy-rehearsal.yml`, or keep them in place disabled for a future re-rehearsal. Decide at tear-down time.
+7. Optionally restore Gandi record TTLs on p41m0n from 300 → 10800.
 
 ## Loopback into the millsymills runbook
 
