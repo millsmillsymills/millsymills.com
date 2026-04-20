@@ -1,0 +1,233 @@
+/*
+ * CTF flag tracker — Juice-Shop-style.
+ *
+ * Each challenge is `flag{...}`. Canonical strings are NOT in the source;
+ * we only ship SHA-256 digests, so view-source-diving the bundle gives
+ * you the puzzle, not the answer.
+ *
+ * State (captured ids + first-capture timestamps) is persisted in
+ * localStorage so progress survives reloads.
+ */
+
+const STORAGE_KEY = 'mills.flags.v1';
+
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
+
+export interface Challenge {
+	id: string;
+	title: string;
+	hint: string; // gentle nudge; deeper hint via the terminal `flag hints <id>` command
+	difficulty: Difficulty;
+	digest: string; // SHA-256 of the canonical `flag{...}` string, lowercase hex
+	tag?: string; // optional thematic group
+}
+
+/* eslint-disable max-len */
+// digests below are SHA-256 of the canonical flag strings.
+// Generated locally; do not regenerate in CI.
+export const challenges: Challenge[] = [
+	{
+		id: 'view-source',
+		title: 'view source, hacker',
+		hint: 'somewhere in the HTML, comments are still a thing',
+		difficulty: 'easy',
+		digest: '7393e24b5a43daed1299e4e2378de94f372e0a512110a35dc93bcf0b8b2d98f2',
+	},
+	{
+		id: 'console',
+		title: 'devtools enjoyer',
+		hint: 'open devtools and have a look at what we logged for you',
+		difficulty: 'easy',
+		digest: '21067b4b7ff2bbb7005cb1253cdcb5fd6a83e90670b8ccddcdf1f6d92e53fa07',
+	},
+	{
+		id: 'sudo',
+		title: 'mills, the password is...',
+		hint: 'a frequent and very common password used by lazy admins',
+		difficulty: 'medium',
+		digest: 'a9328548fa14b082ed9d8c28578ff5972bcbe3e108e07148dd15d0da8d1faf4a',
+	},
+	{
+		id: 'nmap',
+		title: 'who else is on this network',
+		hint: 'try scanning the local /24 from the terminal',
+		difficulty: 'medium',
+		digest: '9232bdf536c8460ad6e1ef8ca165c2b1156a97b80f831a9193b6a4fe2664f567',
+	},
+	{
+		id: 'konami',
+		title: '↑↑↓↓←→←→BA',
+		hint: 'old school cheat codes still work, even on the modern web',
+		difficulty: 'medium',
+		digest: 'e2e7689004c5f71b6da1c53d2355c3daf248f0759a19fbb4d7a20d27f82d72d6',
+	},
+];
+/* eslint-enable max-len */
+
+export type FlagState = Record<string, number>; // id -> capture epoch ms
+
+function loadState(): FlagState {
+	try {
+		const raw = localStorage.getItem(STORAGE_KEY);
+		if (!raw) return {};
+		const parsed = JSON.parse(raw);
+		return parsed && typeof parsed === 'object' ? parsed : {};
+	} catch {
+		return {};
+	}
+}
+
+function saveState(state: FlagState): void {
+	try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+	} catch {
+		/* noop */
+	}
+}
+
+export function getCaptured(): FlagState {
+	return loadState();
+}
+
+export async function sha256(input: string): Promise<string> {
+	const data = new TextEncoder().encode(input);
+	const hash = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(hash))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
+
+export interface SubmitResult {
+	ok: boolean;
+	id?: string;
+	already?: boolean;
+	message: string;
+}
+
+export async function submitFlag(input: string): Promise<SubmitResult> {
+	const trimmed = input.trim();
+	if (!trimmed.startsWith('flag{') || !trimmed.endsWith('}')) {
+		return {
+			ok: false,
+			message: 'expected something shaped like flag{...}, but got something else.',
+		};
+	}
+	const digest = await sha256(trimmed);
+	const match = challenges.find((c) => c.digest === digest);
+	if (!match) {
+		return { ok: false, message: 'wrong flag. or just not a flag i know about.' };
+	}
+	const state = loadState();
+	if (state[match.id]) {
+		return {
+			ok: true,
+			id: match.id,
+			already: true,
+			message: `already captured "${match.title}". no double-credit, sorry.`,
+		};
+	}
+	state[match.id] = Date.now();
+	saveState(state);
+	notifyCapture(match);
+	return {
+		ok: true,
+		id: match.id,
+		message: `🎉 captured "${match.title}" (${match.difficulty}).`,
+	};
+}
+
+/**
+ * Mark a flag captured by id directly. Used by side-channel triggers (konami,
+ * console listeners, etc.) where the user doesn't type the flag string.
+ */
+export function captureById(id: string): boolean {
+	const match = challenges.find((c) => c.id === id);
+	if (!match) return false;
+	const state = loadState();
+	if (state[id]) return false;
+	state[id] = Date.now();
+	saveState(state);
+	notifyCapture(match);
+	return true;
+}
+
+function notifyCapture(c: Challenge): void {
+	const evt = new CustomEvent('mills:flag-captured', { detail: c });
+	window.dispatchEvent(evt);
+	toast(`flag captured: ${c.title}`);
+}
+
+function toast(message: string): void {
+	let host = document.querySelector<HTMLDivElement>('.flag-toast-host');
+	if (!host) {
+		host = document.createElement('div');
+		host.className = 'flag-toast-host';
+		host.setAttribute('aria-live', 'polite');
+		document.body.appendChild(host);
+	}
+	const el = document.createElement('div');
+	el.className = 'flag-toast';
+	el.textContent = message;
+	host.appendChild(el);
+	requestAnimationFrame(() => el.classList.add('flag-toast--in'));
+	setTimeout(() => {
+		el.classList.remove('flag-toast--in');
+		setTimeout(() => el.remove(), 400);
+	}, 3500);
+}
+
+/**
+ * Console banner + flag #2 ("console").
+ * The flag literal is here on purpose — the puzzle is "look at console", not "find a string".
+ */
+export function consoleBanner(): void {
+	const big = `
+%c
+        ┌─────────────────────────────────────┐
+        │  mills.exe  ·  v0.1                 │
+        │  finder of bugs, breaker of things  │
+        │  ──                                 │
+        │  if you're reading this, try:       │
+        │  >  flag submit flag{console_log_warriors_unite}
+        │  in the terminal app on this site.  │
+        └─────────────────────────────────────┘
+%c
+`;
+	console.log(
+		big,
+		'color: #e62b8c; font-family: monospace; font-size: 13px; font-weight: bold;',
+		'',
+	);
+}
+
+/**
+ * Konami code listener. Captures the konami flag on the full sequence.
+ */
+export function konami(): void {
+	const sequence = [
+		'ArrowUp',
+		'ArrowUp',
+		'ArrowDown',
+		'ArrowDown',
+		'ArrowLeft',
+		'ArrowRight',
+		'ArrowLeft',
+		'ArrowRight',
+		'b',
+		'a',
+	];
+	let idx = 0;
+	window.addEventListener('keydown', (e) => {
+		const expected = sequence[idx];
+		const got = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+		if (got === expected) {
+			idx += 1;
+			if (idx === sequence.length) {
+				idx = 0;
+				captureById('konami');
+			}
+		} else {
+			idx = got === sequence[0] ? 1 : 0;
+		}
+	});
+}
