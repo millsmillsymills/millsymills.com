@@ -158,10 +158,26 @@ class WindowManager {
 
 	private restore() {
 		// Reopen windows that were open in the previous session, in their saved
-		// positions and z-order.
+		// positions and z-order. Then honor any ?open=<id1>,<id2> deep-link
+		// from the URL — those land on top of the restored stack so a
+		// shareable link wins.
 		const open = [...this.state.open];
 		this.state.open = [];
 		open.forEach((id) => this.open(id, { skipPosition: false }));
+
+		try {
+			const params = new URLSearchParams(window.location.search);
+			const requested = params.get('open');
+			if (requested) {
+				requested
+					.split(',')
+					.map((s) => s.trim())
+					.filter(Boolean)
+					.forEach((id) => this.open(id));
+			}
+		} catch {
+			/* SSR / no-window — ignore */
+		}
 	}
 
 	// ----------------------------------------------------------------

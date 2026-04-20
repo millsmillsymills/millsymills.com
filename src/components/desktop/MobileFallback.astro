@@ -6,11 +6,12 @@ import Mail from './apps/Mail.astro';
 import Flags from './apps/Flags.astro';
 import Music from './apps/Music.astro';
 import Memes from './apps/Memes.astro';
+import Trash from './apps/Trash.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
 
-// Same icon set as the desktop, minus terminal (no real keyboard) and
-// trash (a desktop-only joke). Order intentionally mirrors desktop.
+// Same icon set as the desktop, minus terminal (no real keyboard).
+// Order intentionally mirrors desktop.
 const apps = [
 	{ id: 'about', label: 'about', glyph: '🪪', title: 'about.exe', component: 'about' },
 	{ id: 'resume', label: 'resume', glyph: '📄', title: 'resume.txt', component: 'resume' },
@@ -20,6 +21,7 @@ const apps = [
 	{ id: 'terminal', label: 'terminal', glyph: '⌨️', title: 'terminal', component: 'terminal' },
 	{ id: 'music', label: 'music', glyph: '💿', title: 'winamp.exe', component: 'music' },
 	{ id: 'memes', label: 'memes', glyph: '🗂️', title: 'memes/', component: 'memes' },
+	{ id: 'trash', label: 'trash', glyph: '🗑️', title: 'recycle.bin', component: 'trash' },
 ];
 ---
 
@@ -74,6 +76,7 @@ const apps = [
 						{a.component === 'mail' && <Mail />}
 						{a.component === 'music' && <Music />}
 						{a.component === 'memes' && <Memes />}
+						{a.component === 'trash' && <Trash />}
 						{a.component === 'terminal' && (
 							<Stub
 								title="terminal"

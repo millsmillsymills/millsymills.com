@@ -63,8 +63,16 @@ class MobileShell {
 			this.show(next, /* fromPop */ true);
 		});
 
-		// initial render — restore last-open app
-		this.show(this.state.current, /* fromPop */ true);
+		// initial render: prefer ?open=<id> deep-link over last-session
+		// state, since a shareable URL should win.
+		let initial: string | null = this.state.current;
+		try {
+			const requested = new URLSearchParams(window.location.search).get('open');
+			if (requested) initial = requested.split(',')[0]?.trim() || initial;
+		} catch {
+			/* noop */
+		}
+		this.show(initial, /* fromPop */ true);
 	}
 
 	private bindLaunchers(): void {
