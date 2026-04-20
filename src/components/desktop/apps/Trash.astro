@@ -107,7 +107,7 @@
 	</li>
 	<li
 		class="trash__row trash__row--clickable"
-		data-trash-target="garbage-file"
+		data-trash-target
 		role="button"
 		tabindex="0"
 		aria-label="open garbage.dat"
@@ -125,7 +125,7 @@
 	</li>
 </ul>
 
-<pre id="garbage-file" class="trash__viewer" hidden>
+<pre class="trash__viewer" hidden>
 00000000  4f 5a 4f 4e 45 5f 33 2e  35 5f 4d 4f 44 49 46 49  |OZONE_3.5_MODIFI|
 00000010  45 44 5f 53 41 4d 50 4c  45 5f 43 30 30 4c 5f 44  |ED_SAMPLE_C00L_D|
 00000020  41 5f 56 49 4e 43 49 5f  56 49 52 55 53 5f 30 30  |A_VINCI_VIRUS_00|
@@ -154,13 +154,15 @@
 <script>
 	function init() {
 		document.querySelectorAll<HTMLElement>('[data-trash-target]').forEach((row) => {
-			const id = row.dataset.trashTarget;
-			if (!id) return;
-			const target = document.getElementById(id);
-			if (!target) return;
+			// Find the viewer in the same Trash component instance — getElementById
+			// would collide because Desktop and MobileFallback both render Trash,
+			// putting two `.trash__viewer` elements on the page.
+			const list = row.closest<HTMLElement>('ul.trash__list');
+			const viewer = list?.nextElementSibling as HTMLElement | null;
+			if (!viewer || !viewer.matches('.trash__viewer')) return;
 			const toggle = () => {
-				target.hidden = !target.hidden;
-				if (!target.hidden) target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+				viewer.hidden = !viewer.hidden;
+				if (!viewer.hidden) viewer.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 			};
 			row.addEventListener('click', toggle);
 			row.addEventListener('keydown', (e) => {
