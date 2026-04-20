@@ -2,6 +2,7 @@
 import DesktopLayout from '../layouts/DesktopLayout.astro';
 import Desktop from '../components/desktop/Desktop.astro';
 import MobileFallback from '../components/desktop/MobileFallback.astro';
+import CommandPalette from '../components/desktop/CommandPalette.astro';
 import { profile } from '../data/profile';
 ---
 
@@ -9,7 +10,9 @@ import { profile } from '../data/profile';
 	title={profile.handle}
 	description={`${profile.title} @ ${profile.currentEmployer}. portfolio + links.`}
 	canonical="https://millsymills.com/"
+	ogUrl="https://millsymills.com/"
 >
 	<Desktop />
 	<MobileFallback />
+	<CommandPalette />
 </DesktopLayout>

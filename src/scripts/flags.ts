@@ -85,6 +85,13 @@ export const challenges: Challenge[] = [
 		digest: 'f987ffc2f0ad0547b78ca656ae87b2d199d99cee1f13dc29f42547b4270255ab',
 		tag: 'discoverability',
 	},
+	{
+		id: 'palette',
+		title: 'command-K for the spirit',
+		hint: 'press the power-user shortcut. ask for the thing you should not need to ask for.',
+		difficulty: 'medium',
+		digest: '5ceddd3df10d3eacac036d599fe4bf10c5bdb34faa7810129d4a197ff5d96834',
+	},
 ];
 /* eslint-enable max-len */
 
