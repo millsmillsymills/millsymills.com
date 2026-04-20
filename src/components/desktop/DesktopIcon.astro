@@ -3,14 +3,21 @@ interface Props {
 	target: string;
 	label: string;
 	glyph: string;
+	iconUrl?: string;
 }
 
-const { target, label, glyph } = Astro.props;
+const { target, label, glyph, iconUrl } = Astro.props;
 ---
 
 <li>
 	<button type="button" class="desktop-icon" data-open-window={target}>
-		<span class="desktop-icon__glyph" aria-hidden="true">{glyph}</span>
+		{
+			iconUrl ? (
+				<img class="desktop-icon__icon" src={iconUrl} alt="" aria-hidden="true" />
+			) : (
+				<span class="desktop-icon__glyph" aria-hidden="true">{glyph}</span>
+			)
+		}
 		<span class="desktop-icon__label">{label}</span>
 	</button>
 </li>
