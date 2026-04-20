@@ -39,10 +39,10 @@ terraform apply      # deploy infrastructure
 
 One-shot cutover checklist. Do these roughly in order; the email steps (Proton) can run in parallel with the web steps.
 
-1. **State bucket.** Create the S3 bucket for Terraform state (default name `millsymills-terraform-state`) in the AWS console — versioning on, SSE-S3 on, public access blocked. Uncomment the `backend "s3"` block in `infra/main.tf`.
+1. **State bucket.** Create the S3 bucket for Terraform state (default name `millsymills-terraform-state`) in the AWS console — versioning on, SSE-S3 on, public access blocked. The `backend "s3" {}` block in `infra/main.tf` is already activated as an empty block; all fields (bucket, key, region, encrypt, use_lockfile) are supplied per-stack via `infra/stacks/<stack>.backend.hcl` at `terraform init` time.
 2. **Hosted zone.** In Route53, create a public hosted zone for `millsymills.com`. Do **not** update registrar nameservers yet.
 3. **tfvars.** Copy `infra/terraform.tfvars.example` → `infra/terraform.tfvars` and fill in `github_repo` (required) and any Proton values you already have.
-4. **First apply.** `cd infra && terraform init && terraform apply`. Creates S3 buckets, CloudFront, ACM cert (DNS-validated via Route53), IAM deploy role, email DNS records, etc. Takes ~15–20 min mostly waiting on CloudFront to deploy.
+4. **First apply.** From the repo root: `./scripts/tf.sh millsymills init` then `./scripts/tf.sh millsymills apply`. Creates S3 buckets, CloudFront, ACM cert (DNS-validated via Route53), IAM deploy role, email DNS records, etc. Takes ~15–20 min mostly waiting on CloudFront to deploy. See `infra/stacks/` for the per-stack config; `./scripts/tf.sh` is the stack-aware wrapper and refuses to touch the wrong state by mistake.
 5. **Smoke test via CloudFront domain.** `terraform output cloudfront_domain` gives you `d1234abcd.cloudfront.net`. Put a single test file at `s3://millsymills.com/index.html` (or build + `aws s3 sync`) and confirm `https://d1234abcd.cloudfront.net/` serves it. Validates CloudFront + OAC + S3 before DNS cutover.
 6. **Wire up GitHub Actions.** Configure the `production` environment with required reviewers, set the four repo variables (see "Deploy workflow" below), push to `main`, approve the run. Confirm `dist/` is live at the CloudFront domain.
 7. **Registrar cutover.** At the domain registrar, replace the nameserver records with the four NS records from `terraform output` (or from the Route53 hosted zone page). This is the point of no return. Downtime window depends on the OLD nameserver TTL; for squarespace.com → Route53, usually <1 hour.
@@ -53,6 +53,13 @@ One-shot cutover checklist. Do these roughly in order; the email steps (Proton) 
    - `curl -I https://millsymills.com/` shows HSTS, CSP, X-Content-Type-Options, Referrer-Policy.
 9. **Email activation.** Follow the ProtonMail runbook below — independent of web, can happen before or after.
 10. **Decommission Squarespace.** Cancel the plan once you're happy with the new site + email for at least a billing cycle.
+
+## Dress rehearsal on p41m0n.com
+
+Before running the migration above on millsymills.com, the same runbook is rehearsed end-to-end against `p41m0n.com`. See `docs/superpowers/specs/2026-04-19-p41m0n-dress-rehearsal-design.md` for the plan. Key lessons the rehearsal locks in for the real cutover:
+
+- **Parent-zone delegation TTL governs NS rollback**, not record TTLs. A bad NS flip takes up to ~48h to fully roll back for `.com` — plan to fix-forward rather than flip-back. Validate exhaustively before the real flip.
+- Run `./scripts/tf.sh p41m0n ...` for the rehearsal stack, `./scripts/tf.sh millsymills ...` for the real one. Never pass a stack name the wrapper doesn't recognize.
 
 ## Email (ProtonMail)
 
