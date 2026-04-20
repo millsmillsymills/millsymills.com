@@ -989,3 +989,171 @@ body.mshell-app-open {
 	font-size: 9px;
 	color: var(--ink-soft);
 }
+
+/* ------------------------------------------------------------------ */
+/* "?" help overlay                                                   */
+/* ------------------------------------------------------------------ */
+
+.help {
+	position: fixed;
+	inset: 0;
+	z-index: 10003;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	background: rgba(16, 6, 20, 0.55);
+	backdrop-filter: blur(4px);
+}
+
+.help[hidden] {
+	display: none;
+}
+
+.help__panel {
+	width: min(560px, 100%);
+	max-height: min(80vh, 700px);
+	background: var(--cream);
+	border: 2px solid var(--border);
+	border-radius: 10px;
+	box-shadow: var(--window-shadow);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.help__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	background: var(--titlebar-bg);
+	color: var(--titlebar-fg);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	border-bottom: 2px solid var(--border);
+}
+
+.help__close {
+	all: unset;
+	cursor: pointer;
+	width: 24px;
+	height: 24px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 4px;
+	font-family: var(--font-pixel);
+	font-size: 10px;
+}
+
+.help__close:active {
+	transform: translate(1px, 1px);
+}
+
+.help__body {
+	padding: 14px 18px;
+	overflow-y: auto;
+	font-family: var(--font-screen);
+	font-size: 18px;
+	color: var(--ink);
+}
+
+.help__body h3 {
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	color: var(--pink-600);
+	margin: 14px 0 6px;
+	letter-spacing: 0.5px;
+}
+
+.help__body h3:first-of-type {
+	margin-top: 0;
+}
+
+.help__body dl {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 6px 14px;
+	margin: 0 0 10px;
+}
+
+.help__body dt {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	color: var(--ink-soft);
+	white-space: nowrap;
+}
+
+.help__body dd {
+	margin: 0;
+}
+
+.help__body kbd {
+	display: inline-block;
+	padding: 1px 6px;
+	background: var(--lilac-100);
+	border: 1px solid var(--border);
+	border-radius: 3px;
+	font-family: var(--font-pixel);
+	font-size: 9px;
+}
+
+.help__body code {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	background: var(--lilac-100);
+	border: 1px solid var(--lilac-300);
+	border-radius: 3px;
+	padding: 1px 4px;
+}
+
+.help__note {
+	margin: 0;
+	font-size: 16px;
+	color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------------ */
+/* now-playing badge in the taskbar                                   */
+/* ------------------------------------------------------------------ */
+
+.now-playing {
+	display: none;
+	align-items: center;
+	gap: 6px;
+	padding: 0 12px;
+	margin-right: 6px;
+	background: var(--lilac-100);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 6px;
+	font-family: var(--font-pixel);
+	font-size: 9px;
+	letter-spacing: 0.5px;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.now-playing--on {
+	display: inline-flex;
+}
+
+.now-playing__note {
+	color: var(--pink-500);
+	animation: np-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes np-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.3;
+	}
+}

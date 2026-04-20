@@ -17,8 +17,42 @@ const { menu } = Astro.props;
 		<span>start</span>
 	</button>
 	<ul class="taskbar__items" aria-label="open windows"></ul>
+	<span class="now-playing" data-now-playing aria-live="polite" hidden>
+		<span class="now-playing__note" aria-hidden="true">♪</span>
+		<span data-now-playing-text>—</span>
+	</span>
 	<span class="taskbar__clock" aria-label="current time">--:--</span>
 </nav>
+
+<script>
+	// Wire the now-playing badge to mills:now-playing events from music.ts.
+	function initNowPlaying() {
+		const badge = document.querySelector<HTMLElement>('[data-now-playing]');
+		const text = document.querySelector<HTMLElement>('[data-now-playing-text]');
+		if (!badge || !text) return;
+		window.addEventListener('mills:now-playing', (e) => {
+			const detail = (e as CustomEvent).detail as {
+				playing: boolean;
+				title: string;
+				artist: string;
+			};
+			if (!detail?.playing) {
+				badge.classList.remove('now-playing--on');
+				badge.hidden = true;
+				return;
+			}
+			const label = detail.title + (detail.artist ? ' — ' + detail.artist : '');
+			text.textContent = label;
+			badge.hidden = false;
+			badge.classList.add('now-playing--on');
+		});
+	}
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initNowPlaying);
+	} else {
+		initNowPlaying();
+	}
+</script>
 
 <div class="start-menu" hidden role="menu" aria-label="start menu">
 	<div class="start-menu__header">mills@millsymills:~$</div>

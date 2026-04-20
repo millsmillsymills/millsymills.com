@@ -7,11 +7,12 @@ interface Props {
 	description?: string;
 	canonical?: string;
 	ogUrl?: string;
+	ogImage?: string;
 	/** App id to auto-open on load (overrides localStorage + ?open=). */
 	initialOpen?: string;
 }
 
-const { title, description, canonical, ogUrl, initialOpen } = Astro.props;
+const { title, description, canonical, ogUrl, ogImage, initialOpen } = Astro.props;
 
 const jsonLd = {
 	'@context': 'https://schema.org',
@@ -55,6 +56,12 @@ const jsonLd = {
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="millsymills.com" />
 		{ogUrl && <meta property="og:url" content={ogUrl} />}
+		{ogImage && <meta property="og:image" content={ogImage} />}
+		{ogImage && <meta property="og:image:width" content="1200" />}
+		{ogImage && <meta property="og:image:height" content="630" />}
+
+		{/* for agents + devtools spelunkers — decode the token, submit the flag. */}
+		<meta name="x-mills-token" content="ZmxhZ3tiYXNlX3NpeHR5X2ZvdXJfaXNfYV9jbGFzc2ljfQ==" />
 
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
