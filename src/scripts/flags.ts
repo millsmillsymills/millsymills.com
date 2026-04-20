@@ -69,6 +69,22 @@ export const challenges: Challenge[] = [
 		digest: '7ed8cd3de6664045c6019faa963233411a6a111a56d62434b6599e5a50e38b7e',
 		tag: 'hackers',
 	},
+	{
+		id: 'llms',
+		title: 'agent-friendly',
+		hint: 'agents see a different view of this site. fetch what they see.',
+		difficulty: 'easy',
+		digest: 'aa8f91574f010b739febae2d81c1b3969fc6f8285d8d46e6f2b626871b74c1d8',
+		tag: 'discoverability',
+	},
+	{
+		id: 'robots',
+		title: 'please ignore me',
+		hint: 'disallowed paths are sometimes an invitation.',
+		difficulty: 'medium',
+		digest: 'f987ffc2f0ad0547b78ca656ae87b2d199d99cee1f13dc29f42547b4270255ab',
+		tag: 'discoverability',
+	},
 ];
 /* eslint-enable max-len */
 

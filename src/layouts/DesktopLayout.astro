@@ -1,5 +1,6 @@
 ---
 import '../styles/desktop.css';
+import { profile } from '../data/profile';
 
 interface Props {
 	title: string;
@@ -11,6 +12,33 @@ interface Props {
 }
 
 const { title, description, canonical, ogUrl, initialOpen } = Astro.props;
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@graph': [
+		{
+			'@type': 'Person',
+			'@id': 'https://millsymills.com/#mills',
+			name: profile.name,
+			alternateName: profile.handle,
+			jobTitle: profile.title,
+			worksFor: { '@type': 'Organization', name: profile.currentEmployer },
+			address: { '@type': 'PostalAddress', addressLocality: 'Seattle', addressRegion: 'WA' },
+			email: `mailto:${profile.email}`,
+			url: 'https://millsymills.com/',
+			sameAs: [profile.github],
+		},
+		{
+			'@type': 'WebSite',
+			'@id': 'https://millsymills.com/#website',
+			url: 'https://millsymills.com/',
+			name: 'millsymills.com',
+			description: 'mills — corporate security engineer. portfolio + links.',
+			author: { '@id': 'https://millsymills.com/#mills' },
+			license: 'https://github.com/millsmillsymills/millsymills.com/blob/main/LICENSE',
+		},
+	],
+};
 ---
 
 <html lang="en">
@@ -34,6 +62,13 @@ const { title, description, canonical, ogUrl, initialOpen } = Astro.props;
 			rel="stylesheet"
 			href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
 		/>
+
+		{/* Agent-readable side-channels (Cloudflare isitagentready.com pattern) */}
+		<link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt summary" />
+		<link rel="alternate" type="text/markdown" href="/llms-full.txt" title="llms-full.txt (full content)" />
+		<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+		<script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
 		<title>{title}</title>
 	</head>

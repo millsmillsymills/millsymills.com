@@ -1,0 +1,165 @@
+# mills — full site content
+
+This is the full serialized content of <https://millsymills.com>
+as markdown, intended for LLM consumption. The canonical HTML UI
+is a Y2K-pink retro desktop with draggable windows; this file is
+the content behind it, flattened.
+
+---
+
+## about
+
+Andrew Mills (`mills`). Pronouns: he/him. Based in Seattle, WA
+and works remote. Corporate Security Engineer at Trail of Bits.
+
+Certifications: A+, Network+, Security+, CEH.
+
+Short bio: Corporate Security Engineer with 10+ years of
+experience in IT and security, specializing in identity and
+access management, endpoint security, and security automation.
+Replaces costly vendor functionality with in-house automations,
+hardens fleets at scale, and tests every internal security tool
+personally before rollout — files bugs, gives feedback, breaks
+things on purpose.
+
+Contact: <mailto:mills@millsymills.com>. GitHub:
+<https://github.com/millsmillsymills>.
+
+---
+
+## resume (summary)
+
+Full resume markdown: <https://millsymills.com/files/resume.md>.
+
+### core skills
+
+- Identity & Access Management — Okta, Google Workspace, Azure AD
+  / Entra ID, SSO/SAML, SCIM provisioning, LDAPS, identity
+  lifecycle.
+- Endpoint & Device Security — Jamf, CrowdStrike Falcon, Google
+  Context-Aware Access, fleet administration.
+- Zero Trust & Network Access — Tailscale (ZTNA), 802.1X/RADIUS,
+  Conditional Access, VLAN segmentation.
+- Scripting & Automation — Python, Bash, Terraform, Docker /
+  Compose, n8n, Slack workflows, cron, CI/CD, Google Cloud Run,
+  AWS Lambda.
+
+### experience
+
+- Corporate Security Engineer — Trail of Bits (2023 – present).
+- Associate Security Consultant — Leviathan Security Group
+  (2022 – 2023).
+- Security Architect — RealSelf (2017 – 2022).
+- Level 3 Support Engineer — Commonwealth Financial Network
+  (2013 – 2017).
+
+### notable war stories
+
+- Patched a Zoom RCE 0-day with a custom mitigation 8 hours
+  before the vendor released their fix.
+- Solved an internal hardware theft case by correlating MAC
+  address movement across Meraki access points with RADIUS
+  logs, video feeds, and badge access logs.
+- Performed an emergency data exfiltration for a VIP whose
+  beachfront Florida office was about to be destroyed by
+  Hurricane Irma. Beat the storm.
+- Hot-swapped a Zoom environment from Okta's pre-built
+  integration to a custom SAML integration with zero downtime,
+  zero complaints, and no lost data.
+- Replaced a $50k/year SOC-as-a-service vendor with n8n
+  automations and enriched Slack alerts.
+- Managed intelligence sharing between organizations targeted
+  by ELUSIVE COMET; hardened endpoints against Zoom remote-
+  control social-engineering attacks and authored the
+  public blog post.
+
+---
+
+## photos
+
+A small gallery of cat photos. Three cats; captions include
+names once the owner fills them in (currently placeholder).
+
+---
+
+## terminal
+
+A mock zsh-ish REPL embedded as an app window. Commands:
+
+- `help`, `man <cmd>`, `whoami`, `pwd`, `cd`, `ls`, `cat`,
+  `echo`, `clear`, `history`, `date`, `exit`.
+- `ifconfig`, `ping <host>`, `nmap [target|subnet]`,
+  `curl <url>`, `ssh <user>@<host>`.
+- `sudo <cmd>` — accepts the word "password" as password (on
+  purpose).
+- `flag submit <flag{...}>`, `flag status`, `flag hints [<id>]`.
+- `fortune`, `cowsay`, `uname`, hidden `sl`.
+
+Fake /24 subnet at 192.168.1.0 with 5 hosts. `lab.local` hosts a
+little CTF breadcrumb trail in its HTTP banner.
+
+Terminal is desktop-only; phones without real keyboards get a
+friendly stub.
+
+---
+
+## flags (CTF)
+
+Juice-Shop-style challenge set. Eight flags scattered across
+the site at varied difficulty. Submit via `flags.exe` (the
+scoreboard window) or the terminal's `flag submit` command.
+
+Client-side verification uses SHA-256 of the submitted string
+vs. baked-in digests, so view-sourcing the JS bundle doesn't
+leak canonical flag strings for most challenges.
+
+### flag hints
+
+1. `view-source` (easy) — somewhere in the HTML, comments are
+   still a thing.
+2. `console` (easy) — open devtools and have a look at what we
+   logged for you.
+3. `sudo` (medium) — a frequent and very common password used
+   by lazy admins.
+4. `nmap` (medium) — try scanning the local /24 from the
+   terminal.
+5. `konami` (medium) — old school cheat codes still work, even
+   on the modern web.
+6. `garbage` (easy) — rent is too damn high. dade. cereal. burn.
+7. `llms` (easy) — agents see a different view of this site.
+   fetch what they see. [bonus: the flag is right here in this
+   file: **flag{read_the_llms_dot_txt}**]
+8. `robots` (medium) — disallowed paths are sometimes an
+   invitation.
+
+---
+
+## mail
+
+Contact the human: <mailto:mills@millsymills.com>. Open an
+issue or PR on the repo: <https://github.com/millsmillsymills>.
+
+---
+
+## tech stack / infrastructure
+
+- Frontend: Astro 6, static output. No JS frameworks for app
+  logic; small vanilla-TS modules for window management,
+  terminal REPL, mobile shell, flag tracking, music player,
+  boot animation.
+- Hosting: AWS S3 + CloudFront (with OAC + CloudFront Function
+  for `/path/` → `/path/index.html` rewriting) + Route53 + ACM.
+- Email: ProtonMail custom-domain with SPF, DKIM (three
+  selectors), DMARC `p=reject; adkim=s; aspf=s`.
+- Infra: Terraform with S3 state (encrypt + use_lockfile) and
+  GitHub-Actions OIDC deploy role.
+- CI/CD: `./scripts/ci-local.sh` mirrors the hosted workflow
+  step-for-step.
+- License: MIT.
+
+---
+
+## legal
+
+Copyright (c) 2026 mills. Released under the MIT License.
+See <https://github.com/millsmillsymills/millsymills.com/blob/main/LICENSE>.
