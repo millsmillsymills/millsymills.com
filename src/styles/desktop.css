@@ -1157,3 +1157,118 @@ body.mshell-app-open {
 		opacity: 0.3;
 	}
 }
+
+/* ------------------------------------------------------------------ */
+/* reset-confirm modal                                                */
+/* ------------------------------------------------------------------ */
+
+.reset-confirm {
+	position: fixed;
+	inset: 0;
+	z-index: 10004;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	background: rgba(16, 6, 20, 0.6);
+	backdrop-filter: blur(4px);
+}
+
+.reset-confirm[hidden] {
+	display: none;
+}
+
+.reset-confirm__panel {
+	width: min(440px, 100%);
+	background: var(--cream);
+	border: 2px solid var(--border);
+	border-radius: 10px;
+	box-shadow: var(--window-shadow);
+	overflow: hidden;
+}
+
+.reset-confirm__header {
+	padding: 10px 14px;
+	background: var(--titlebar-bg);
+	color: var(--titlebar-fg);
+	font-family: var(--font-pixel);
+	font-size: 12px;
+	letter-spacing: 1px;
+	border-bottom: 2px solid var(--border);
+}
+
+.reset-confirm__body {
+	padding: 14px 18px;
+	font-family: var(--font-screen);
+	font-size: 17px;
+	color: var(--ink);
+}
+
+.reset-confirm__body p {
+	margin: 0 0 8px;
+}
+
+.reset-confirm__body ul {
+	margin: 0 0 12px;
+	padding-left: 1.2em;
+}
+
+.reset-confirm__note {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--pink-600);
+}
+
+.reset-confirm__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding: 10px 14px;
+	background: var(--lilac-100);
+	border-top: 1px solid var(--lilac-300);
+}
+
+.reset-confirm__btn {
+	all: unset;
+	cursor: pointer;
+	padding: 6px 14px;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 4px;
+	font-family: var(--font-pixel);
+	font-size: 10px;
+	letter-spacing: 0.5px;
+}
+
+.reset-confirm__btn:hover,
+.reset-confirm__btn:focus-visible {
+	background: var(--pink-100);
+}
+
+.reset-confirm__btn:active {
+	transform: translate(1px, 1px);
+}
+
+.reset-confirm__btn--yes {
+	background: var(--pink-300);
+}
+
+.reset-confirm__btn--yes:hover {
+	background: var(--pink-400);
+	color: var(--cream);
+}
+
+.start-menu__sep {
+	height: 1px;
+	background: var(--lilac-300);
+	margin: 6px 0;
+}
+
+.start-menu__item--danger {
+	color: var(--pink-600);
+}
+
+.start-menu__item--danger:hover,
+.start-menu__item--danger:focus-visible {
+	background: var(--pink-200);
+}
