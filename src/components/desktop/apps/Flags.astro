@@ -134,6 +134,17 @@ import { challenges } from '../../../scripts/flags';
 
 <p class="flags__msg" data-flags-msg></p>
 
+<p style="margin: 0 0 14px; text-align: right">
+	<button
+		type="button"
+		data-reset-trigger
+		style="all: unset; cursor: pointer; font-family: var(--font-pixel); font-size: 9px; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px"
+		title="clear all flag progress (and all other client-side state)"
+	>
+		⟲ reset progress
+	</button>
+</p>
+
 <ul class="flags__list">
 	{
 		challenges.map((c) => (

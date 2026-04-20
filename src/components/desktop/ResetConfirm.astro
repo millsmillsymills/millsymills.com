@@ -1,0 +1,29 @@
+<div class="reset-confirm" role="alertdialog" aria-modal="true" aria-labelledby="reset-confirm-title" hidden>
+	<div class="reset-confirm__panel">
+		<header class="reset-confirm__header" id="reset-confirm-title">⚠ reset desktop?</header>
+		<div class="reset-confirm__body">
+			<p>this will permanently clear:</p>
+			<ul>
+				<li>open windows + saved positions</li>
+				<li>captured CTF flags (all of them)</li>
+				<li>last-open mobile app</li>
+				<li>boot-animation skip</li>
+			</ul>
+			<p class="reset-confirm__note">
+				there is no undo. you'll have to find every flag again. continue?
+			</p>
+		</div>
+		<footer class="reset-confirm__actions">
+			<button type="button" class="reset-confirm__btn reset-confirm__btn--no" data-reset-no>
+				cancel
+			</button>
+			<button type="button" class="reset-confirm__btn reset-confirm__btn--yes" data-reset-yes>
+				yes, wipe it
+			</button>
+		</footer>
+	</div>
+</div>
+
+<script>
+	import '../../scripts/reset';
+</script>
