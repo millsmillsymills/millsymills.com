@@ -3,6 +3,7 @@ import DesktopLayout from '../layouts/DesktopLayout.astro';
 import Desktop from '../components/desktop/Desktop.astro';
 import MobileFallback from '../components/desktop/MobileFallback.astro';
 import CommandPalette from '../components/desktop/CommandPalette.astro';
+import HelpOverlay from '../components/desktop/HelpOverlay.astro';
 import { profile } from '../data/profile';
 ---
 
@@ -15,4 +16,5 @@ import { profile } from '../data/profile';
 	<Desktop />
 	<MobileFallback />
 	<CommandPalette />
+	<HelpOverlay />
 </DesktopLayout>

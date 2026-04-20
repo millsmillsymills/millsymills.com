@@ -3,6 +3,7 @@ import DesktopLayout from '../layouts/DesktopLayout.astro';
 import Desktop from '../components/desktop/Desktop.astro';
 import MobileFallback from '../components/desktop/MobileFallback.astro';
 import CommandPalette from '../components/desktop/CommandPalette.astro';
+import HelpOverlay from '../components/desktop/HelpOverlay.astro';
 import { apps, findApp } from '../data/apps';
 import { profile } from '../data/profile';
 
@@ -17,6 +18,7 @@ if (!app) throw new Error(`Unknown app: ${appId}`);
 const pageTitle = `${app.title} — ${profile.handle}`;
 const description = app.ogDescription;
 const canonical = `https://millsymills.com/${app.id}/`;
+const ogImage = `https://millsymills.com/og/${app.id}.svg`;
 ---
 
 <DesktopLayout
@@ -24,9 +26,11 @@ const canonical = `https://millsymills.com/${app.id}/`;
 	description={description}
 	canonical={canonical}
 	ogUrl={canonical}
+	ogImage={ogImage}
 	initialOpen={app.id}
 >
 	<Desktop />
 	<MobileFallback />
 	<CommandPalette />
+	<HelpOverlay />
 </DesktopLayout>
