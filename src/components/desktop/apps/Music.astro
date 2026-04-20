@@ -1,0 +1,206 @@
+---
+import { playlist } from '../../../data/playlist';
+---
+
+<style>
+	.winamp {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		font-family: var(--font-pixel);
+	}
+
+	.winamp__display {
+		padding: 12px 14px;
+		background: #0e0214;
+		color: #ffd6ec;
+		border: 2px solid var(--border);
+		border-radius: 6px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		letter-spacing: 0.5px;
+		min-height: 64px;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 4px;
+	}
+
+	.winamp__title {
+		font-family: var(--font-pixel);
+		font-size: 11px;
+		color: #ff7ec0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.winamp__artist {
+		font-family: var(--font-screen);
+		font-size: 16px;
+		color: #c8a8ff;
+	}
+
+	.winamp__time {
+		display: flex;
+		justify-content: space-between;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: #9a7fb8;
+	}
+
+	.winamp__bar {
+		appearance: none;
+		width: 100%;
+		height: 8px;
+		background: var(--lilac-100);
+		border: 2px solid var(--border);
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	.winamp__bar::-webkit-slider-thumb {
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		background: var(--pink-500);
+		border: 2px solid var(--border);
+		border-radius: 50%;
+	}
+
+	.winamp__bar::-moz-range-thumb {
+		width: 14px;
+		height: 14px;
+		background: var(--pink-500);
+		border: 2px solid var(--border);
+		border-radius: 50%;
+	}
+
+	.winamp__controls {
+		display: flex;
+		gap: 6px;
+		flex-wrap: wrap;
+	}
+
+	.winamp__btn {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 36px;
+		padding: 6px 10px;
+		background: var(--cream);
+		color: var(--ink);
+		border: 2px solid var(--border);
+		border-radius: 4px;
+		font-family: var(--font-pixel);
+		font-size: 11px;
+	}
+
+	.winamp__btn:hover,
+	.winamp__btn:focus-visible {
+		background: var(--pink-100);
+	}
+
+	.winamp__btn:active {
+		transform: translate(1px, 1px);
+	}
+
+	.winamp__playlist {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		max-height: 180px;
+		overflow-y: auto;
+		border: 2px solid var(--border);
+		border-radius: 4px;
+	}
+
+	.winamp__track {
+		display: flex;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 8px 12px;
+		font-family: var(--font-screen);
+		font-size: 16px;
+		cursor: pointer;
+		border-bottom: 1px solid var(--lilac-300);
+	}
+
+	.winamp__track:last-child {
+		border-bottom: none;
+	}
+
+	.winamp__track:hover {
+		background: var(--pink-100);
+	}
+
+	.winamp__track--current {
+		background: var(--pink-200);
+		color: var(--ink);
+	}
+
+	.winamp__track__num {
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		color: var(--ink-soft);
+		flex-shrink: 0;
+	}
+</style>
+
+<div class="winamp">
+	<div class="winamp__display">
+		<span class="winamp__title" data-music-title>(no track loaded)</span>
+		<span class="winamp__artist" data-music-artist>—</span>
+		<div class="winamp__time">
+			<span data-music-current>00:00</span>
+			<span data-music-status>idle</span>
+			<span data-music-duration>00:00</span>
+		</div>
+	</div>
+
+	<input
+		type="range"
+		min="0"
+		max="100"
+		value="0"
+		step="0.1"
+		class="winamp__bar"
+		data-music-seek
+		aria-label="seek"
+	/>
+
+	<div class="winamp__controls">
+		<button type="button" class="winamp__btn" data-music-prev aria-label="previous">⏮</button>
+		<button type="button" class="winamp__btn" data-music-play aria-label="play / pause">▶</button>
+		<button type="button" class="winamp__btn" data-music-next aria-label="next">⏭</button>
+		<button type="button" class="winamp__btn" data-music-mute aria-label="mute / unmute">🔊</button>
+	</div>
+
+	<ol class="winamp__playlist">
+		{
+			playlist.map((t, i) => (
+				<li
+					class="winamp__track"
+					data-music-track={t.id}
+					data-music-src={t.src}
+					data-music-track-title={t.title}
+					data-music-track-artist={t.artist}
+				>
+					<span class="winamp__track__num">{String(i + 1).padStart(2, '0')}</span>
+					<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+						{t.title}
+					</span>
+					<span style="font-size:13px;color:var(--ink-soft)">{t.artist}</span>
+				</li>
+			))
+		}
+	</ol>
+
+	<audio data-music-audio preload="none"></audio>
+</div>
+
+<script>
+	import '../../../scripts/music';
+</script>

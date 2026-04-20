@@ -1,0 +1,93 @@
+---
+import { memes } from '../../../data/memes';
+---
+
+<style>
+	.memes__intro {
+		font-family: var(--font-screen);
+		font-size: 17px;
+		color: var(--ink-soft);
+		margin: 0 0 16px;
+	}
+
+	.memes__grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 12px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.memes__tile {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.memes__img-wrap {
+		position: relative;
+		aspect-ratio: 1 / 1;
+		background: var(--lilac-100);
+		border: 2px solid var(--border);
+		border-radius: 6px;
+		overflow: hidden;
+	}
+
+	.memes__img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	.memes__placeholder {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		text-align: center;
+		color: var(--ink-soft);
+		padding: 8px;
+	}
+
+	.memes__caption {
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		color: var(--ink-soft);
+		text-align: center;
+		text-transform: lowercase;
+	}
+</style>
+
+<h1>memes/</h1>
+
+<p class="memes__intro">
+	a small but earnest collection. drop more into <code>public/images/memes/</code> and add
+	entries in <code>src/data/memes.ts</code>.
+</p>
+
+<ul class="memes__grid">
+	{
+		memes.map((m) => (
+			<li class="memes__tile">
+				<div class="memes__img-wrap">
+					<img
+						class="memes__img"
+						src={m.src}
+						alt={m.alt}
+						loading="lazy"
+						onerror="this.style.display='none';this.nextElementSibling.removeAttribute('hidden')"
+					/>
+					<div class="memes__placeholder" hidden>
+						{m.id}.jpg pending — drop into <br />public/images/memes/
+					</div>
+				</div>
+				<span class="memes__caption">{m.caption}</span>
+			</li>
+		))
+	}
+</ul>
