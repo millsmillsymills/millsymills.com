@@ -159,8 +159,9 @@ class WindowManager {
 	private restore() {
 		// Reopen windows that were open in the previous session, in their saved
 		// positions and z-order. Then honor any ?open=<id1>,<id2> deep-link
-		// from the URL — those land on top of the restored stack so a
-		// shareable link wins.
+		// from the URL, and finally any initial-open baked into the server-
+		// rendered <body data-initial-open="..."> (per-app permalink routes).
+		// Later sources land on top of earlier ones.
 		const open = [...this.state.open];
 		this.state.open = [];
 		open.forEach((id) => this.open(id, { skipPosition: false }));
@@ -178,6 +179,9 @@ class WindowManager {
 		} catch {
 			/* SSR / no-window — ignore */
 		}
+
+		const bodyInitial = document.body?.dataset.initialOpen;
+		if (bodyInitial) this.open(bodyInitial);
 	}
 
 	// ----------------------------------------------------------------

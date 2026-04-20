@@ -5,9 +5,12 @@ interface Props {
 	title: string;
 	description?: string;
 	canonical?: string;
+	ogUrl?: string;
+	/** App id to auto-open on load (overrides localStorage + ?open=). */
+	initialOpen?: string;
 }
 
-const { title, description, canonical } = Astro.props;
+const { title, description, canonical, ogUrl, initialOpen } = Astro.props;
 ---
 
 <html lang="en">
@@ -22,6 +25,8 @@ const { title, description, canonical } = Astro.props;
 		<meta property="og:title" content={title} />
 		{description && <meta property="og:description" content={description} />}
 		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="millsymills.com" />
+		{ogUrl && <meta property="og:url" content={ogUrl} />}
 
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -32,16 +37,24 @@ const { title, description, canonical } = Astro.props;
 
 		<title>{title}</title>
 	</head>
-	<body>
+	<body data-initial-open={initialOpen}>
 		<!-- flag{html_comments_have_no_secrets} -->
 		<slot />
+		<div class="boot-overlay" aria-hidden="true"></div>
 		<script>
 			import '../scripts/window-manager';
-			import { consoleBanner, konami, submitFlag, getCaptured, captureById } from '../scripts/flags';
+			import '../scripts/boot';
+			import {
+				consoleBanner,
+				konami,
+				submitFlag,
+				getCaptured,
+				captureById,
+			} from '../scripts/flags';
 			consoleBanner();
 			konami();
 			// Expose a tiny API so devtools-savvy visitors can play with flags
-			// before the terminal app ships. Read-only by intent.
+			// outside the terminal. Read-only by intent.
 			(window as unknown as { mills: unknown }).mills = {
 				flag: { submit: submitFlag, status: getCaptured, capture: captureById },
 			};
