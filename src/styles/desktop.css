@@ -850,3 +850,142 @@ body.mshell-app-open {
 		min-height: 100vh;
 	}
 }
+
+/* ------------------------------------------------------------------ */
+/* command palette                                                    */
+/* ------------------------------------------------------------------ */
+
+.cmdp {
+	position: fixed;
+	inset: 0;
+	z-index: 10002;
+	display: grid;
+	place-items: start center;
+	padding: min(18vh, 120px) 16px 16px;
+	background: rgba(16, 6, 20, 0.55);
+	backdrop-filter: blur(4px);
+}
+
+.cmdp[hidden] {
+	display: none;
+}
+
+.cmdp__panel {
+	width: min(560px, 100%);
+	background: var(--cream);
+	border: 2px solid var(--border);
+	border-radius: 10px;
+	box-shadow: var(--window-shadow);
+	font-family: var(--font-screen);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.cmdp__header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	background: var(--titlebar-bg);
+	color: var(--titlebar-fg);
+	border-bottom: 2px solid var(--border);
+}
+
+.cmdp__prompt {
+	font-family: var(--font-mono);
+	font-size: 16px;
+	color: var(--cream);
+}
+
+.cmdp__input {
+	flex: 1;
+	background: transparent;
+	border: none;
+	outline: none;
+	color: var(--cream);
+	font-family: var(--font-mono);
+	font-size: 16px;
+	caret-color: var(--cream);
+	padding: 2px 0;
+}
+
+.cmdp__input::placeholder {
+	color: rgba(255, 249, 243, 0.55);
+}
+
+.cmdp__kbd {
+	font-family: var(--font-pixel);
+	font-size: 9px;
+	padding: 2px 6px;
+	background: var(--cream);
+	color: var(--ink);
+	border: 2px solid var(--border);
+	border-radius: 4px;
+}
+
+.cmdp__list {
+	list-style: none;
+	margin: 0;
+	padding: 4px 0;
+	max-height: 50vh;
+	overflow-y: auto;
+	background: var(--cream);
+}
+
+.cmdp__item {
+	display: grid;
+	grid-template-columns: 28px 1fr auto;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 14px;
+	cursor: pointer;
+	color: var(--ink);
+	font-size: 17px;
+}
+
+.cmdp__item:hover {
+	background: var(--pink-100);
+}
+
+.cmdp__item--active {
+	background: var(--pink-200);
+}
+
+.cmdp__glyph {
+	text-align: center;
+	font-size: 20px;
+}
+
+.cmdp__label {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cmdp__hint {
+	font-family: var(--font-pixel);
+	font-size: 9px;
+	color: var(--ink-soft);
+}
+
+.cmdp__empty {
+	padding: 14px 18px;
+	color: var(--ink-soft);
+	font-family: var(--font-mono);
+	font-size: 14px;
+}
+
+.cmdp__footer {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 14px;
+	padding: 8px 14px;
+	background: var(--lilac-100);
+	border-top: 1px solid var(--lilac-300);
+	font-family: var(--font-pixel);
+	font-size: 9px;
+	color: var(--ink-soft);
+}
