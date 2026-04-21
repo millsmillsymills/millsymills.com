@@ -1,20 +1,14 @@
 ---
 import { chimera, gear } from '../../../data/uses';
-import { tools, toolCategoryTitles, type ToolCategory } from '../../../data/tools';
+import { tools, toolCategoryTitles, toolCategoryOrder } from '../../../data/tools';
 
-const toolCategoryOrder: ToolCategory[] = [
-	'basics',
-	'agent-native',
-	'environment',
-	'ai-coding',
-	'security',
-	'editor-infra',
-];
-const toolsByCategory = toolCategoryOrder.map((cat) => ({
-	cat,
-	title: toolCategoryTitles[cat],
-	items: tools.filter((t) => t.category === cat),
-}));
+const toolsByCategory = toolCategoryOrder
+	.map((cat) => ({
+		cat,
+		title: toolCategoryTitles[cat],
+		items: tools.filter((t) => t.category === cat),
+	}))
+	.filter((group) => group.items.length > 0); // skip empty categories (matches terminal behavior)
 ---
 
 <style>

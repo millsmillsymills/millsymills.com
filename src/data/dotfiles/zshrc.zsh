@@ -61,11 +61,6 @@ if [ -f "$BREW_PREFIX/share/google-cloud-sdk/completion.zsh.inc" ]; then
   source "$BREW_PREFIX/share/google-cloud-sdk/completion.zsh.inc"
 fi
 
-# ─── gam (Google Apps Manager) ───────────────────────────
-# gam7 is the modern rewrite of gam — shim to the specific binary so
-# `gam --version` always reports from the right install even if PATH drifts.
-alias gam="/home/mills/bin/gam7/gam"
-
 # ─── pnpm ────────────────────────────────────────────────
 # pnpm over npm/yarn: content-addressable store, no node_modules duplication.
 export PNPM_HOME="$HOME/Library/pnpm"

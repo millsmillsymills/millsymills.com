@@ -2,7 +2,14 @@ import { register, listCommands, lookup, type Context } from '../registry';
 import { incidents } from '../../../data/incidents';
 import { pgp } from '../../../data/pgp';
 import pgpArmored from '../../../../public/pgp.asc?raw';
-import { tools, findTool, toolCategoryTitles, type Tool, type ToolCategory } from '../../../data/tools';
+import {
+	tools,
+	findTool,
+	toolCategoryTitles,
+	toolCategoryOrder,
+	type Tool,
+	type ToolCategory,
+} from '../../../data/tools';
 
 const DOTFILE_INDEX: Array<[string, string]> = [
 	['.zshrc', 'zsh — starship, atuin, eza/bat/fd/rg, direnv'],
@@ -255,7 +262,6 @@ type WriteFn = (line: string, cls?: string) => void;
 function printToolOverview(out: WriteFn): void {
 	out('ai-native cli stack — chosen for machine-parseable output + determinism.', 't-dim');
 	out('');
-	const order: ToolCategory[] = ['basics', 'agent-native', 'environment', 'ai-coding', 'security', 'editor-infra'];
 	const byCat = new Map<ToolCategory, Tool[]>();
 	for (const t of tools) {
 		const arr = byCat.get(t.category) ?? [];
@@ -263,7 +269,7 @@ function printToolOverview(out: WriteFn): void {
 		byCat.set(t.category, arr);
 	}
 	const idWidth = Math.max(...tools.map((t) => t.id.length));
-	for (const cat of order) {
+	for (const cat of toolCategoryOrder) {
 		const entries = byCat.get(cat);
 		if (!entries || entries.length === 0) continue;
 		out(`  ${toolCategoryTitles[cat]}`, 't-dim');

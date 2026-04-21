@@ -52,6 +52,16 @@ export const toolCategoryTitles: Record<ToolCategory, string> = {
 	'editor-infra': 'editor + infra',
 };
 
+/** Canonical render order for categories — shared by Uses.astro + terminal. */
+export const toolCategoryOrder: readonly ToolCategory[] = [
+	'basics',
+	'agent-native',
+	'environment',
+	'ai-coding',
+	'security',
+	'editor-infra',
+];
+
 export const tools: readonly Tool[] = [
 	// ─── basics ──────────────────────────────────────────
 	{
@@ -374,7 +384,19 @@ export const tools: readonly Tool[] = [
 	},
 ];
 
-export function findTool(id: string): Tool | undefined {
-	const normalized = id.toLowerCase();
-	return tools.find((t) => t.id === normalized);
+/**
+ * Look up a tool by id or by any alias. Aliases may include parenthetical
+ * explanations (e.g. `'grep (aliased)'`) — we match only the leading bare
+ * token, so `tools grep` and `tools rg` both resolve to ripgrep.
+ */
+export function findTool(query: string): Tool | undefined {
+	const normalized = query.toLowerCase().trim();
+	if (!normalized) return undefined;
+	return tools.find((t) => {
+		if (t.id === normalized) return true;
+		return (t.aliases ?? []).some((alias) => {
+			const bare = alias.toLowerCase().split(/[\s(]/)[0];
+			return bare === normalized;
+		});
+	});
 }
