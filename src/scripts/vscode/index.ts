@@ -23,6 +23,17 @@ export function initVscode(root: HTMLElement): void {
 
 	const nodes = buildTree();
 	let state = loadState();
+	// Scrub stale paths: the tree can change between sessions (dotfiles
+	// added/removed), so any persisted openTab that no longer exists in the
+	// current tree is dropped. Same for activeTab — null it if gone.
+	const prevOpenCount = state.openTabs.length;
+	const openTabs = state.openTabs.filter((p) => nodes.has(p));
+	const activeTab = state.activeTab && nodes.has(state.activeTab) ? state.activeTab : (openTabs[openTabs.length - 1] ?? null);
+	if (openTabs.length !== prevOpenCount) {
+		console.warn(`[vscode] dropped ${prevOpenCount - openTabs.length} stale tab path(s) missing from current tree`);
+	}
+	state = { ...state, openTabs, activeTab };
+
 	const expanded = new Set<string>(['/project', '/home', '/home/mills', '/etc']);
 
 	function refreshAll() {

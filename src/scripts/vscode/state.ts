@@ -16,27 +16,44 @@ export function loadState(): TabState {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return emptyState();
 		const parsed = JSON.parse(raw) as Partial<TabState>;
-		if (parsed.version !== 1 || !Array.isArray(parsed.openTabs)) return emptyState();
+		if (parsed.version !== 1 || !Array.isArray(parsed.openTabs)) {
+			console.warn('[vscode] discarded persisted tab state — version or shape mismatch');
+			return emptyState();
+		}
 		// Cap tabs to MAX_OPEN_TABS, dropping oldest first (index 0 is oldest).
+		if (parsed.openTabs.length > MAX_OPEN_TABS) {
+			console.warn(
+				`[vscode] trimmed ${parsed.openTabs.length - MAX_OPEN_TABS} oldest tab(s) from persisted state (cap ${MAX_OPEN_TABS})`,
+			);
+		}
 		const openTabs = parsed.openTabs.slice(-MAX_OPEN_TABS);
 		const activeTab = typeof parsed.activeTab === 'string' && openTabs.includes(parsed.activeTab)
 			? parsed.activeTab
 			: (openTabs[openTabs.length - 1] ?? null);
 		return { version: 1, openTabs, activeTab };
-	} catch {
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		console.warn(`[vscode] discarded persisted tab state — ${msg}`);
 		return emptyState();
 	}
 }
 
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
+let warnedWriteFail = false;
 
 export function saveState(state: TabState): void {
 	if (writeTimer) clearTimeout(writeTimer);
 	writeTimer = setTimeout(() => {
 		try {
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-		} catch {
-			// ignore — private mode or quota exceeded
+		} catch (err) {
+			// Private mode / disabled cookies / quota exceeded. Log once per session
+			// so the debounce doesn't spam, but make it diagnosable.
+			if (!warnedWriteFail) {
+				warnedWriteFail = true;
+				const msg = err instanceof Error ? err.message : String(err);
+				console.warn(`[vscode] failed to persist tab state — ${msg} (further failures suppressed)`);
+			}
 		}
 	}, STORAGE_DEBOUNCE_MS);
 }
