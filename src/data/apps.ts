@@ -2,24 +2,24 @@
 // per-app dynamic route for OG-tag / shareable-URL rendering.
 
 export interface AppDef {
-	id: string;
-	label: string;
-	glyph: string;
+	readonly id: string;
+	readonly label: string;
+	readonly glyph: string;
 	/** Path under public/ to a PNG icon. When set, replaces glyph in the UI. */
-	iconUrl?: string;
-	title: string;
+	readonly iconUrl?: string;
+	readonly title: string;
 	/** Hint copy for the per-app OG description. Keep under ~150 chars. */
-	ogDescription: string;
+	readonly ogDescription: string;
 	/** Default window geometry on desktop. */
-	x: number;
-	y: number;
-	width: number;
-	height: number;
+	readonly x: number;
+	readonly y: number;
+	readonly width: number;
+	readonly height: number;
 	/** If true, skip from the mobile shell (desktop-only apps). */
-	desktopOnly?: boolean;
+	readonly desktopOnly?: boolean;
 }
 
-export const apps: AppDef[] = [
+export const apps: readonly AppDef[] = [
 	{
 		id: 'about',
 		label: 'about.me',
