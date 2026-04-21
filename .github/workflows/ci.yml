@@ -34,6 +34,8 @@ jobs:
         run: npm run check
 
       - name: Build
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
         run: npm run build
 
   terraform:

@@ -18,8 +18,9 @@ if (!app) throw new Error(`Unknown app: ${appId}`);
 
 const pageTitle = `${app.title} — ${profile.handle}`;
 const description = app.ogDescription;
-const canonical = `https://millsymills.com/${app.id}/`;
-const ogImage = `https://millsymills.com/og/${app.id}.svg`;
+const siteHref = Astro.site?.href ?? 'https://millsymills.com/';
+const canonical = `${siteHref}${app.id}/`;
+const ogImage = `${siteHref}og/${app.id}.svg`;
 ---
 
 <DesktopLayout
