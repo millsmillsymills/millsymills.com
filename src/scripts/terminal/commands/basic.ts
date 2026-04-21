@@ -3,6 +3,15 @@ import { incidents } from '../../../data/incidents';
 import { pgp } from '../../../data/pgp';
 import pgpArmored from '../../../../public/pgp.asc?raw';
 
+const DOTFILE_INDEX: Array<[string, string]> = [
+	['.zshrc', 'zsh — starship, atuin, eza/bat/fd/rg, direnv'],
+	['.tmux.conf', '(stub) — mills does not use tmux'],
+	['.config/nvim/init.lua', '(stub) — mills does not use nvim; primary editor is vscode'],
+	['.config/git/config', 'git — signed commits, autosquash, zdiff3 merges'],
+	['.dotfiles/README.md', 'intro + source-of-truth link'],
+	['.dotfiles/CLAUDE.md', 'claude-code operating contract (plugins, guardrails)'],
+];
+
 function resolvePath(cwd: string, target: string | undefined): string {
 	if (!target || target === '~' || target === '~/') return '/home/mills';
 	if (target.startsWith('~/')) return '/home/mills/' + target.slice(2);
@@ -143,6 +152,20 @@ register(
 			for (const line of pgpArmored.split('\n')) {
 				out(line);
 			}
+		},
+	},
+	{
+		name: 'dotfiles',
+		summary: 'list files under ~/.dotfiles/',
+		handler: ({ out }) => {
+			out('~/.dotfiles/ — mills\'s config files', 't-dim');
+			out('');
+			const width = Math.max(...DOTFILE_INDEX.map(([name]) => name.length));
+			for (const [name, desc] of DOTFILE_INDEX) {
+				out(`  ${name.padEnd(width + 2)}${desc}`);
+			}
+			out('');
+			out('use `cat ~/<file>` or `cat ~/.dotfiles/<file>` to view.', 't-dim');
 		},
 	},
 	{

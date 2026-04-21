@@ -1,0 +1,7 @@
+-- not yet published — mills is not a vim person
+--
+-- primary editor is vscode (see vscode.exe on this desktop).
+-- if vim-flavored editing ever returns to the workflow, content
+-- lands here.
+--
+-- see ~/.dotfiles/README.md for the full tool list.
