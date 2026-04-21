@@ -84,6 +84,10 @@ const jsonLd = {
 		<link rel="alternate" type="text/markdown" href="/llms-full.txt" title="llms-full.txt (full content)" />
 		<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
+		{/* Preload Clippy's idle sprite — first paint right after boot needs it
+		    and the boot animation gives the network a head-start. */}
+		<link rel="preload" as="image" href="/clippy/idle.png" />
+
 		<script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
 		<title>{title}</title>

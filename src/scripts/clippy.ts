@@ -12,8 +12,7 @@ type Pose =
 	| 'think'
 	| 'sleep'
 	| 'cool'
-	| 'tired'
-	| 'point-right';
+	| 'tired';
 
 const POSE_DURATIONS_MS: Record<Pose, number> = {
 	idle: 2400,
@@ -23,7 +22,6 @@ const POSE_DURATIONS_MS: Record<Pose, number> = {
 	sleep: 9000,
 	cool: 3500,
 	tired: 8000,
-	'point-right': 2200,
 };
 
 const IDLE_THINK_MS = 30_000;
@@ -56,6 +54,11 @@ function getCurrentAppId(): string | undefined {
 	// Heuristic: the topmost open window in the desktop's z-stack is the
 	// "current" app for quip context. Falls back to undefined (default pool)
 	// when no windows are open.
+	//
+	// FRAGILE COUPLING: relies on `window-manager.ts` writing z-index as an
+	// inline `style.zIndex` (see `applyZ()` in that file). If WM ever moves
+	// z-index management to a CSS class, this sort collapses to DOM-order.
+	// If you change WM's z-index strategy, update both call sites together.
 	const visible = Array.from(
 		document.querySelectorAll<HTMLElement>('.window:not([hidden])'),
 	).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0));
@@ -116,15 +119,29 @@ function closeDismissPopover(): void {
 	if (popover) popover.hidden = true;
 }
 
+function isDismissed(): boolean {
+	try {
+		if (localStorage.getItem(STORAGE_KEY) === 'forever') return true;
+	} catch {
+		// localStorage disabled — fall through.
+	}
+	try {
+		if (sessionStorage.getItem(STORAGE_KEY) === 'session') return true;
+	} catch {
+		// sessionStorage disabled — fall through.
+	}
+	return false;
+}
+
 function dismiss(scope: 'session' | 'forever'): void {
 	closeDismissPopover();
 	setPose('leave');
-	if (scope === 'forever') {
-		try {
-			localStorage.setItem(STORAGE_KEY, 'forever');
-		} catch {
-			// localStorage disabled — silently fall back to session-only.
-		}
+	const store = scope === 'forever' ? localStorage : sessionStorage;
+	try {
+		store.setItem(STORAGE_KEY, scope);
+	} catch {
+		// Storage disabled — Clippy hides for this page-view, but in-tab
+		// navigation will resurrect it. Acceptable degradation.
 	}
 	// After the leave animation finishes, hide the aside entirely.
 	window.setTimeout(() => {
@@ -141,11 +158,7 @@ function init(): void {
 
 	// Render guards.
 	if (window.matchMedia('(hover: none)').matches) return;
-	try {
-		if (localStorage.getItem(STORAGE_KEY) === 'forever') return;
-	} catch {
-		// localStorage disabled — proceed anyway; dismiss becomes session-only.
-	}
+	if (isDismissed()) return;
 
 	// Find DOM nodes.
 	aside = document.getElementById('clippy');
