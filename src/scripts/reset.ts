@@ -91,6 +91,10 @@ function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElemen
 			e.preventDefault();
 			closeModal();
 		} else if (e.key === 'Enter') {
+			// Only confirm if focus is inside the modal. A future surface
+			// that focuses an <input> while the modal is open (e.g. flag
+			// submit) shouldn't have its Enter wipe state.
+			if (!activeOverlay?.contains(document.activeElement)) return;
 			e.preventDefault();
 			onYesClick();
 		}
@@ -121,7 +125,16 @@ function closeModal(): void {
 	overlay.hidden = true;
 	activeOverlay = null;
 	activeOpts = {};
-	triggerEl?.focus();
+	if (triggerEl) {
+		if (document.contains(triggerEl)) {
+			triggerEl.focus();
+		} else {
+			// Trigger was removed from the DOM while the modal was open
+			// (window closed, route change). Focus falls back to <body>;
+			// log so we notice during dev.
+			console.debug('[reset] trigger gone; focus restored to <body>');
+		}
+	}
 	triggerEl = null;
 }
 
@@ -139,6 +152,15 @@ export function resetAll(opts: ResetOptions = {}): void {
 }
 
 function init(): void {
+	// Idempotency guard. If init() runs twice (HMR, dual bundle, multiple
+	// inline <script> tags) without this, every trigger click would dispatch
+	// through two delegated handlers — openModal's `if (activeOverlay)` masks
+	// the symptom but the underlying double-bind is still wrong.
+	const w = window as unknown as {
+		mills?: Record<string, unknown> & { __resetInit?: true };
+	};
+	if (w.mills?.__resetInit) return;
+
 	// Event delegation handles dynamically-mounted triggers (e.g. windows that
 	// hydrate after DOMContentLoaded) without requiring re-binding on every
 	// app open.
@@ -156,8 +178,7 @@ function init(): void {
 		openModal(overlay, {}, trigger);
 	});
 
-	const w = window as unknown as { mills?: Record<string, unknown> };
-	Object.assign((w.mills ??= {}), { reset: resetAll });
+	Object.assign((w.mills ??= {}), { reset: resetAll, __resetInit: true });
 }
 
 if (typeof window !== 'undefined') {

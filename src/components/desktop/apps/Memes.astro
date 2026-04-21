@@ -75,7 +75,7 @@ import { memes } from '../../../data/memes';
 		memes.map((m) => (
 			<li class="memes__tile">
 				<div class="memes__img-wrap">
-					<img class="memes__img" src={m.src} alt={m.alt} loading="lazy" />
+					<img class="memes__img" src={m.src} alt={m.alt} loading="lazy" decoding="async" />
 					<div class="memes__placeholder" hidden>
 						{m.id}.jpg pending — drop into <br />public/images/memes/
 					</div>

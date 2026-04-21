@@ -1,6 +1,7 @@
 ---
 import '../styles/desktop.css';
 import { profile } from '../data/profile';
+import Clippy from '../components/desktop/Clippy.astro';
 
 interface Props {
 	title: string;
@@ -90,6 +91,7 @@ const jsonLd = {
 	<body data-initial-open={initialOpen}>
 		<!-- flag{html_comments_have_no_secrets} -->
 		<slot />
+		<Clippy />
 		<div class="boot-overlay" aria-hidden="true"></div>
 		<script>
 			import '../scripts/window-manager';
