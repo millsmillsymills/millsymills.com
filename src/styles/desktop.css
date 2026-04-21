@@ -705,19 +705,20 @@ a {
 	align-items: center;
 	justify-content: space-between;
 	padding: 6px 14px;
-	background: var(--pink-500);
-	color: var(--cream);
-	border-bottom: 2px solid var(--border);
+	background: var(--bg-deep);
+	color: var(--neon-cyan);
+	border-bottom: 2px solid var(--neon-pink);
 	font-family: var(--font-pixel);
 	font-size: 10px;
 	letter-spacing: 0.5px;
+	text-transform: lowercase;
 	min-height: 28px;
 	padding-top: max(6px, env(safe-area-inset-top));
 }
 
 .mshell__sparkles {
 	letter-spacing: 4px;
-	color: var(--pink-100);
+	color: var(--neon-cyan);
 }
 
 .mshell__clock {
@@ -731,23 +732,23 @@ a {
 
 .mshell__home-hero {
 	margin: 8px 4px 24px;
-	color: var(--cream);
+	color: var(--ink-primary);
 	font-family: var(--font-pixel);
 }
 
 .mshell__home-hero h1 {
 	margin: 0 0 6px;
 	font-size: 26px;
-	text-shadow: 2px 2px 0 var(--border);
+	text-shadow: 2px 2px 0 var(--neon-pink);
 	letter-spacing: 1px;
+	text-transform: lowercase;
 }
 
 .mshell__home-hero p {
 	margin: 0;
 	font-family: var(--font-screen);
 	font-size: 17px;
-	color: var(--cream);
-	text-shadow: 1px 1px 0 var(--border);
+	color: var(--ink-muted);
 }
 
 .mshell__grid {
@@ -774,16 +775,16 @@ a {
 	gap: 6px;
 	padding: 6px 2px;
 	border-radius: 12px;
-	color: var(--cream);
+	color: var(--neon-cyan);
 	text-align: center;
 	font-family: var(--font-pixel);
 	font-size: 9px;
 	letter-spacing: 0.5px;
-	text-shadow: 1px 1px 0 var(--border);
+	text-shadow: 1px 1px 0 var(--bg-void);
 }
 
 .mshell-icon:active {
-	background: rgba(255, 255, 255, 0.18);
+	background: rgba(255, 79, 168, 0.18);
 	transform: scale(0.96);
 }
 
@@ -795,19 +796,19 @@ a {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--cream);
-	border: 2px solid var(--border);
+	background: var(--bg-raised);
+	border: 2px solid var(--neon-cyan);
 	border-radius: 14px;
-	box-shadow: 2px 2px 0 0 var(--border);
+	box-shadow: 2px 2px 0 0 var(--neon-pink);
 }
 
 .mshell-icon__icon {
 	width: 56px;
 	height: 56px;
-	background: var(--cream);
-	border: 2px solid var(--border);
+	background: var(--bg-raised);
+	border: 2px solid var(--neon-cyan);
 	border-radius: 14px;
-	box-shadow: 2px 2px 0 0 var(--border);
+	box-shadow: 2px 2px 0 0 var(--neon-pink);
 	object-fit: contain;
 	padding: 6px;
 }
@@ -832,12 +833,13 @@ a {
 	align-items: center;
 	gap: 10px;
 	padding: 10px 12px;
-	background: var(--titlebar-bg);
-	color: var(--titlebar-fg);
-	border-bottom: 2px solid var(--border);
+	background: var(--bg-deep);
+	color: var(--ink-primary);
+	border-bottom: 2px solid var(--neon-pink);
 	font-family: var(--font-pixel);
 	font-size: 11px;
 	letter-spacing: 0.5px;
+	text-transform: lowercase;
 }
 
 .mshell__chrome-back {
@@ -847,9 +849,9 @@ a {
 	align-items: center;
 	gap: 4px;
 	padding: 4px 8px;
-	background: var(--cream);
-	color: var(--ink);
-	border: 2px solid var(--border);
+	background: var(--bg-raised);
+	color: var(--neon-cyan);
+	border: 2px solid var(--neon-cyan);
 	border-radius: 6px;
 	font-family: var(--font-pixel);
 	font-size: 10px;
@@ -868,8 +870,8 @@ a {
 
 .mshell__app-body {
 	padding: 18px 18px max(24px, env(safe-area-inset-bottom));
-	background: var(--window-bg);
-	color: var(--ink);
+	background: var(--bg-deep);
+	color: var(--ink-primary);
 	min-height: calc(100vh - 80px);
 	font-family: var(--font-screen);
 	font-size: 18px;
@@ -878,21 +880,21 @@ a {
 .mshell__app-body h1 {
 	font-family: var(--font-pixel);
 	font-size: 18px;
-	color: var(--pink-600);
+	color: var(--neon-pink);
 	margin: 0 0 12px;
 }
 
 .mshell__app-body h2 {
 	font-family: var(--font-pixel);
 	font-size: 13px;
-	color: var(--pink-600);
+	color: var(--neon-cyan);
 	margin: 16px 0 8px;
 }
 
 .mshell__app-body h3 {
 	font-family: var(--font-pixel);
 	font-size: 11px;
-	color: var(--ink-soft);
+	color: var(--neon-lilac);
 	margin: 12px 0 6px;
 }
 
@@ -900,14 +902,15 @@ a {
 .mshell__app-body pre {
 	font-family: var(--font-mono);
 	font-size: 14px;
-	background: var(--lilac-100);
-	border: 1px solid var(--lilac-300);
+	background: var(--bg-raised);
+	border: 1px solid var(--neon-lilac);
 	border-radius: 4px;
+	color: var(--neon-cyan);
 	padding: 1px 4px;
 }
 
 .mshell__app-body a {
-	color: var(--pink-500);
+	color: var(--neon-cyan);
 	text-decoration: underline;
 }
 
@@ -916,7 +919,7 @@ a {
 }
 
 body.mshell-app-open {
-	background: var(--window-bg);
+	background: var(--bg-deep);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1052,14 +1055,8 @@ body.mshell-app-open {
 	html,
 	body {
 		overflow: auto;
-		background: var(--pink-300);
-		background-image:
-			linear-gradient(135deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
-			linear-gradient(225deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
-			linear-gradient(315deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
-			linear-gradient(45deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%);
-		background-size: 24px 24px;
-		background-attachment: fixed;
+		background: var(--bg-void);
+		background-image: linear-gradient(180deg, var(--bg-void) 0%, var(--bg-deep) 100%);
 	}
 
 	.desktop {
