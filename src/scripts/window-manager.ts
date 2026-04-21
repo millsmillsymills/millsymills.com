@@ -226,6 +226,11 @@ class WindowManager {
 	private toggleMax(id: string) {
 		const el = this.windows.get(id);
 		if (!el) return;
+		// Capture the current geometry BEFORE toggling so unmaximize has
+		// somewhere to return to. Without this, a maximize-then-unmaximize on
+		// a window that hadn't been moved/dragged yet falls back to CSS
+		// defaults (window jumps to a stranger position).
+		if (!this.state.windows[id]) this.savePosition(id, el);
 		el.classList.toggle('window--maximized');
 		const ws = this.state.windows[id];
 		if (ws) ws.maximized = el.classList.contains('window--maximized');
