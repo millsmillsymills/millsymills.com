@@ -1,5 +1,5 @@
 ---
-import { copy, localStorageKeys } from '../../../data/privacy-copy';
+import { copy, browserStorageKeys } from '../../../data/privacy-copy';
 
 const gitShaFull = import.meta.env.PUBLIC_GIT_SHA ?? 'unknown';
 const gitShaShort = gitShaFull.slice(0, 7);
@@ -23,9 +23,12 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 		<h3>{copy.localStorage.heading}</h3>
 		<p>{copy.localStorage.preamble}</p>
 		<dl class="ls-keys">
-			{localStorageKeys.map((k) => (
+			{browserStorageKeys.map((k) => (
 				<>
-					<dt><code>{k.key}</code></dt>
+					<dt>
+						<code>{k.key}</code>
+						<span class="storage-tag">{k.storage}</span>
+					</dt>
 					<dd>{k.purpose}</dd>
 				</>
 			))}
@@ -46,7 +49,7 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 		<h3>{copy.licenseAndSource.heading}</h3>
 		<p>
 			{copy.licenseAndSource.body}{' '}
-			<a href={repoUrl} rel="noopener">{repoUrl}</a>
+			<a href={repoUrl} target="_blank" rel="noopener">{repoUrl}</a>
 		</p>
 	</section>
 
@@ -93,6 +96,17 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 	}
 	.privacy .ls-keys dt code {
 		font-size: 0.85rem;
+	}
+	.privacy .storage-tag {
+		display: inline-block;
+		font-size: 0.7rem;
+		padding: 0.05rem 0.35rem;
+		margin-left: 0.35rem;
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 2px;
+		color: var(--ink-soft);
+		font-family: var(--font-pixel);
 	}
 	.privacy .ls-keys dd {
 		margin: 0;

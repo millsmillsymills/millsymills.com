@@ -7,16 +7,18 @@
  * than shipping no page at all.
  */
 
-export interface LocalStorageKey {
+export interface BrowserStorageKey {
 	key: string;
+	/** which web-storage API holds it */
+	storage: 'local' | 'session';
 	purpose: string;
 }
 
-export const localStorageKeys: LocalStorageKey[] = [
-	{ key: 'mills.desktop.v1', purpose: 'open windows, positions, last-open app' },
-	{ key: 'mills.flags.v1', purpose: 'captured CTF flags' },
-	{ key: 'mills.mobile.v1', purpose: 'mobile-shell state' },
-	{ key: 'mills.boot.played', purpose: '"played boot sequence already" flag' },
+export const browserStorageKeys: BrowserStorageKey[] = [
+	{ key: 'mills.desktop.v1', storage: 'local', purpose: 'open windows, positions, last-open app' },
+	{ key: 'mills.flags.v1', storage: 'local', purpose: 'captured CTF flags' },
+	{ key: 'mills.mobile.v1', storage: 'local', purpose: 'mobile-shell state' },
+	{ key: 'mills.boot.played', storage: 'session', purpose: '"played boot sequence already" flag' },
 ];
 
 export const copy = {
@@ -30,9 +32,8 @@ export const copy = {
 		body: 'when you load a page: html, css, images, the two self-hosted fonts (Press Start 2P, VT323), and the javascript bundle for the desktop ui. that\'s it. zero third-party fetches. no google fonts, no cdn libraries, no analytics beacons.',
 	},
 	localStorage: {
-		heading: 'localStorage',
-		preamble: 'a handful of keys keep your ui state between visits. everything is client-side, never sent anywhere:',
-		// keys rendered from localStorageKeys above
+		heading: 'browser storage',
+		preamble: 'a handful of keys keep your ui state between visits. everything is client-side, never sent anywhere. two storage types — `localStorage` persists across browser restarts, `sessionStorage` clears when you close the tab:',
 	},
 	serverLogs: {
 		heading: 'server logs',
