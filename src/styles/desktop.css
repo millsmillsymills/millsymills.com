@@ -319,8 +319,9 @@ a {
 	max-width: calc(100vw - 32px);
 	max-height: calc(100vh - 96px);
 	background: var(--window-bg);
-	border: 2px solid var(--border);
-	border-radius: 8px;
+	color: var(--ink-primary);
+	border: var(--chrome-border-width) solid var(--neon-cyan);
+	border-radius: var(--chrome-radius-window);
 	box-shadow: var(--window-shadow);
 	overflow: hidden;
 }
@@ -343,15 +344,14 @@ a {
 	padding: 8px 10px;
 	background: var(--titlebar-bg);
 	color: var(--titlebar-fg);
-	/* Tahoma is the actual XP titlebar font — bumped to 13px because
-	 * Tahoma at 11px reads smaller than Press Start 2P did. */
-	font-family: var(--font-xp-ui);
-	font-size: 13px;
+	font-family: var(--font-pixel);
+	font-size: 10px;
 	font-weight: 700;
 	letter-spacing: 0.3px;
+	text-transform: lowercase;
 	cursor: var(--c-grab);
 	user-select: none;
-	border-bottom: 2px solid var(--border);
+	border-bottom: 2px solid var(--bg-void);
 }
 
 .window__titlebar:active {
@@ -378,20 +378,26 @@ a {
 	justify-content: center;
 	width: 22px;
 	height: 22px;
-	background: var(--cream);
-	color: var(--ink);
-	border: 2px solid var(--border);
-	border-radius: 4px;
-	font-family: var(--font-pixel);
-	font-size: 9px;
-	line-height: 1;
+	padding: 2px;
+	background: var(--bg-void);
+	color: var(--ink-primary);
+	border: 2px solid var(--bg-void);
+	border-radius: var(--chrome-radius-button);
 	transition: background 80ms ease, transform 80ms ease;
+}
+
+.window-control__icon {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	image-rendering: auto;
 }
 
 .window-control:hover,
 .window-control:focus-visible {
-	background: var(--pink-100);
-	outline: 2px solid var(--cream);
+	background: var(--neon-pink);
+	outline: 2px solid var(--neon-cyan);
 	outline-offset: 1px;
 }
 
@@ -400,8 +406,7 @@ a {
 }
 
 .window-control--close:hover {
-	background: var(--pink-400);
-	color: var(--cream);
+	background: var(--neon-pink-lo);
 }
 
 .window__body {
@@ -410,8 +415,8 @@ a {
 	padding: 16px 18px;
 	font-family: var(--font-screen);
 	font-size: 20px;
-	color: var(--ink);
-	background: var(--window-bg);
+	color: var(--ink-primary);
+	background: var(--bg-deep);
 }
 
 .window__body h1,
@@ -419,7 +424,7 @@ a {
 .window__body h3 {
 	font-family: var(--font-pixel);
 	font-weight: normal;
-	color: var(--pink-600);
+	color: var(--neon-pink);
 	letter-spacing: 0.5px;
 }
 
@@ -436,7 +441,7 @@ a {
 .window__body h3 {
 	font-size: 12px;
 	margin: 12px 0 6px;
-	color: var(--ink-soft);
+	color: var(--neon-lilac);
 }
 
 .window__body p {
@@ -452,9 +457,10 @@ a {
 .window__body pre {
 	font-family: var(--font-mono);
 	font-size: 14px;
-	background: var(--lilac-100);
-	border: 1px solid var(--lilac-300);
+	background: var(--bg-raised);
+	border: 1px solid var(--neon-lilac);
 	border-radius: 4px;
+	color: var(--neon-cyan);
 	padding: 1px 4px;
 }
 
@@ -464,13 +470,13 @@ a {
 }
 
 .window__body a {
-	color: var(--pink-500);
+	color: var(--neon-cyan);
 	text-decoration: underline;
 	text-underline-offset: 2px;
 }
 
 .window__body a:hover {
-	color: var(--pink-600);
+	color: var(--neon-pink);
 }
 
 /* ------------------------------------------------------------------ */
