@@ -20,6 +20,7 @@ Personal/portfolio website. Currently hosted on Squarespace; this repo is the re
 - **Motif utilities** (`.motif-scanlines` + `.motif-scanlines--soft`, `.motif-grain`, `.motif-chrom`) are opt-in texture classes in `desktop.css`. Grain is mounted once via `<div class="motif-grain">` in `DesktopLayout.astro` so it paints above windows but below the taskbar.
 - **Hero apps** (Terminal, Music, Memes, Photos) have bespoke scoped chrome in their component `<style>` blocks; info-dense apps (About, Projects, Resume, Uses, Flags, Mail, Trash) inherit the base window chrome unchanged.
 - **Full spec:** `docs/superpowers/specs/2026-04-21-vaporwave-chrome-design.md`.
+- **`*/` in CSS block comments terminates the comment early in PostCSS.** When documenting token globs like `--pink-*` / `--lilac-*` inside `/* ... */`, space around the asterisks (`--pink-* / --lilac-*`) or the production build fails with "Unknown word".
 
 ## Key commands
 
@@ -30,6 +31,8 @@ npm run build        # build to dist/
 npm run preview      # preview the built site
 npm run check        # astro check (typecheck .astro + .ts)
 ```
+
+`npm run check` only typechecks .astro + .ts — it does NOT run PostCSS. For any CSS edit, run `npm run build` to catch parse errors.
 
 ```bash
 ./scripts/tf.sh millsymills init    # first-time or after provider changes
@@ -123,3 +126,8 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
 1. `SITE_URL=https://millsymills.com npm run build` — outputs static files to `dist/`
 2. `aws s3 sync dist/ s3://millsymills.com --delete`
 3. `aws cloudfront create-invalidation --distribution-id <ID> --paths "/*"`
+
+### PR + merge convention
+
+- PRs merge via **squash** (`gh pr merge <N> --squash`). Commit messages on `main` follow `<type>(<scope>): <summary> (#<pr>)` as a single squashed line.
+- Before filing a PR from a long-lived feature branch: `git merge origin/main` into the branch first so any upstream changes that landed against your work get reviewed + fixed in the same PR, not as a follow-up.
