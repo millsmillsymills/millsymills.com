@@ -28,6 +28,7 @@ npm install          # install dependencies
 npm run dev          # local dev server (localhost:4321)
 npm run build        # build to dist/
 npm run preview      # preview the built site
+npm run check        # astro check (typecheck .astro + .ts)
 ```
 
 ```bash
@@ -46,7 +47,7 @@ npm run preview      # preview the built site
 - ACM certificate must be provisioned in us-east-1 (CloudFront requirement) — handled via the `aws.us_east_1` provider alias in `main.tf`
 - Route53 hosted zone for millsymills.com must exist before running `terraform apply` (data source lookup, not managed)
 - S3 bucket is private; CloudFront accesses it via Origin Access Control (OAC). Because OAC talks to the S3 REST endpoint (not the S3 website endpoint), the REST endpoint does not auto-resolve `/some/path/` to `/some/path/index.html`. A CloudFront Function (`infra/cloudfront_function_index.js`, attached as a viewer-request association in `cloudfront.tf`) rewrites directory URIs before they reach the origin — otherwise every non-root Astro route would 404.
-- Backend S3 bucket for state (`millsymills-terraform-state`) must be created manually before uncommenting the `backend` block in `main.tf`. Enable bucket versioning and SSE-S3 on it. The backend uses `encrypt = true` and S3-native state locking (`use_lockfile = true`), which requires Terraform >= 1.10.
+- Backend S3 bucket for state (`millsymills-terraform-state`) must be created manually with versioning + SSE-S3 enabled. The `backend "s3" {}` block in `main.tf` is intentionally empty — all fields (bucket, key, region, encrypt, use_lockfile) come from `infra/stacks/<stack>.backend.hcl` via `terraform init -backend-config=...`, wired up by `scripts/tf.sh`. Uses `encrypt = true` and S3-native state locking (`use_lockfile = true`), requiring Terraform >= 1.10.
 
 ## Migration runbook (Squarespace → AWS)
 
@@ -91,6 +92,8 @@ DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip t
 
 Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the workflow targets the `production` GitHub Environment, which **must be configured with required reviewers**. GitHub holds each run in a "Waiting" state until a human approves it — so nothing ships to AWS without an explicit click, even if a push lands on `main`.
 
+The parallel `deploy-rehearsal.yml` workflow ships the same build to the `p41m0n` rehearsal stack via the `rehearsal` environment. Keep the two workflows in sync when changing CI — the rehearsal exists to catch deploy-pipeline bugs before they hit prod.
+
 The OIDC trust policy pins each stack's role to a specific workflow file via the `deploy_workflow` Terraform variable. Default is `deploy.yml`; the rehearsal stack overrides to `deploy-rehearsal.yml` in `infra/stacks/p41m0n.tfvars`. **If you add a new deploy workflow, add a matching `deploy_workflow = "<file>.yml"` line to the relevant stack's tfvars and `terraform apply` BEFORE pushing the workflow** — otherwise the new workflow's `AssumeRoleWithWebIdentity` call will fail. `ci-local.sh` checks the referenced workflow file exists; a typo there is caught locally.
 
 ### One-time setup
@@ -109,6 +112,11 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
    - `SITE_DOMAIN` — `millsymills.com`.
    - `CLOUDFRONT_DISTRIBUTION_ID` — from `terraform output cloudfront_distribution_id`.
    - `SITE_URL` — `https://millsymills.com` (or equivalent for the `rehearsal` environment: `https://p41m0n.com`). **Required** — `astro.config.mjs` refuses CI builds that do not set `SITE_URL`.
+
+### Build-time env vars
+
+- `SITE_URL` (required in CI) — the canonical site URL baked into the build. Must be a valid URL.
+- `NO_INDEX=true` — adds noindex to the build. `astro.config.mjs` refuses to build if `NO_INDEX=true` is combined with a `SITE_URL` containing `millsymills.com`, to prevent accidentally shipping a noindexed prod build.
 
 ### Manual deploy (fallback)
 
