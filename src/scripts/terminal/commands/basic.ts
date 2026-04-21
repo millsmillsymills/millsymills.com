@@ -131,8 +131,8 @@ register(
 		handler: ({ out }) => {
 			out('tl;dr — no tracking, no cookies, no third-party scripts.', 't-dim');
 			out('');
-			out('  - localStorage only (window positions, flag progress, boot flag)');
-			out('  - CloudFront access logs — 90d retention, non-PII');
+			out('  - localStorage + sessionStorage only (window positions, flag progress, boot flag)');
+			out('  - CloudFront access logs — 90d retention (ip, ua, url, status, timestamp)');
 			out('  - MIT licensed, source on GitHub');
 			out('');
 			out('full policy:  /privacy/');

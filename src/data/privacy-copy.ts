@@ -41,7 +41,7 @@ export const copy = {
 	},
 	botsAndAi: {
 		heading: 'bots / AI',
-		body: 'the site publishes `/robots.txt` and `/.well-known/ai.txt` (cloudflare content-signals). both describe our stance for crawlers and ai training. respect them or don\'t — we\'re not going to litigate either way.',
+		body: 'the site publishes `/robots.txt`, and that file carries a `Content-Signal:` header (the cloudflare content-signals extension) stating our stance on crawlers and ai training. respect it or don\'t — we\'re not going to litigate either way.',
 	},
 	licenseAndSource: {
 		heading: 'license + source',

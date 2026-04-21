@@ -7,20 +7,21 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 ---
 
 <article class="privacy">
+	<h1>privacy.txt</h1>
 	<p class="lede">{copy.intro}</p>
 
 	<section>
-		<h3>{copy.whatWeCollect.heading}</h3>
+		<h2>{copy.whatWeCollect.heading}</h2>
 		<p>{copy.whatWeCollect.body}</p>
 	</section>
 
 	<section>
-		<h3>{copy.whatsOnTheWire.heading}</h3>
+		<h2>{copy.whatsOnTheWire.heading}</h2>
 		<p>{copy.whatsOnTheWire.body}</p>
 	</section>
 
 	<section>
-		<h3>{copy.localStorage.heading}</h3>
+		<h2>{copy.localStorage.heading}</h2>
 		<p>{copy.localStorage.preamble}</p>
 		<dl class="ls-keys">
 			{browserStorageKeys.map((k) => (
@@ -36,17 +37,17 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 	</section>
 
 	<section>
-		<h3>{copy.serverLogs.heading}</h3>
+		<h2>{copy.serverLogs.heading}</h2>
 		<p>{copy.serverLogs.body}</p>
 	</section>
 
 	<section>
-		<h3>{copy.botsAndAi.heading}</h3>
+		<h2>{copy.botsAndAi.heading}</h2>
 		<p>{copy.botsAndAi.body}</p>
 	</section>
 
 	<section>
-		<h3>{copy.licenseAndSource.heading}</h3>
+		<h2>{copy.licenseAndSource.heading}</h2>
 		<p>
 			{copy.licenseAndSource.body}{' '}
 			<a href={repoUrl} target="_blank" rel="noopener">{repoUrl}</a>
@@ -77,7 +78,7 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 	.privacy section {
 		margin-bottom: 1rem;
 	}
-	.privacy h3 {
+	.privacy h2 {
 		font-family: var(--font-screen, monospace);
 		font-size: 1.1rem;
 		color: var(--pink-600);
