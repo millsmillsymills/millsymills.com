@@ -17,21 +17,31 @@ interface State {
 }
 
 function loadState(): State {
+	let raw: string | null;
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return { current: null };
-		const parsed = JSON.parse(raw);
-		return { current: typeof parsed?.current === 'string' ? parsed.current : null };
-	} catch {
+		raw = localStorage.getItem(STORAGE_KEY);
+	} catch (err) {
+		console.warn('[mills.mobile] localStorage.getItem failed', err);
 		return { current: null };
 	}
+	if (!raw) return { current: null };
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (err) {
+		console.warn('[mills.mobile] state JSON parse failed; resetting', err);
+		return { current: null };
+	}
+	const current = (parsed as { current?: unknown } | null)?.current;
+	return { current: typeof current === 'string' ? current : null };
 }
 
 function saveState(state: State): void {
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-	} catch {
-		/* noop */
+	} catch (err) {
+		console.warn('[mills.mobile] save failed; last-app won\'t persist', err);
 	}
 }
 
@@ -74,8 +84,8 @@ class MobileShell {
 			try {
 				const requested = new URLSearchParams(window.location.search).get('open');
 				if (requested) initial = requested.split(',')[0]?.trim() || initial;
-			} catch {
-				/* noop */
+			} catch (err) {
+				console.warn('[mills.mobile] failed to read ?open= query param', err);
 			}
 		}
 		this.show(initial, /* fromPop */ true);
