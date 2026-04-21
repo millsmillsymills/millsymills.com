@@ -18,5 +18,22 @@ export const memes: Meme[] = [
 		alt: 'meme man, hooded, "hac"',
 		caption: 'hac',
 	},
-	// add more as you collect them
+	{
+		id: 'hacker-knows-my-address',
+		src: '/images/memes/hacker-knows-my-address.jpg',
+		alt: 'bane and pink-suit guy: "hacker saying he knows my address" / "me who\'s known it for a long time"',
+		caption: 'threat model: realistic',
+	},
+	{
+		id: 'cyberpunk-dystopia',
+		src: '/images/memes/cyberpunk-dystopia.jpg',
+		alt: 'man in glowing visor and wide-brim hat: "you best start believing in cyberpunk dystopias / you\'re in one"',
+		caption: 'you\'re in one',
+	},
+	{
+		id: 'not-now-sweaty',
+		src: '/images/memes/not-now-sweaty.png',
+		alt: 'sims-style screenshot: "not now sweaty, mommy\'s cyber bullying"',
+		caption: 'mommy\'s cyber bullying',
+	},
 ];
