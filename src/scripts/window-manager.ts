@@ -55,13 +55,6 @@ function isValidWindowState(v: unknown): v is WindowState {
 	return false;
 }
 
-/**
- * Migrate the legacy `{x, y, w, h, maximized}` shape (mills.desktop.v1
- * before this PR) to the discriminated-union shape. Old persistence is
- * upgraded in place on the next save; nothing is lost. Returns null for
- * shapes that are neither legacy nor current — those get dropped with a
- * warn at the call site.
- */
 function rectOfElement(el: HTMLElement): Rect {
 	const r = el.getBoundingClientRect();
 	return { x: r.left, y: r.top, w: r.width, h: r.height };
@@ -74,6 +67,13 @@ function applyRect(el: HTMLElement, rect: Rect): void {
 	if (rect.h) el.style.height = `${rect.h}px`;
 }
 
+/**
+ * Migrate the legacy `{x, y, w, h, maximized}` shape (mills.desktop.v1
+ * before this PR) to the discriminated-union shape. Old persistence is
+ * upgraded in place on the next save; nothing is lost. Returns null for
+ * shapes that are neither legacy nor current — those get dropped with a
+ * warn at the call site.
+ */
 function migrateLegacyWindowState(v: unknown): WindowState | null {
 	if (!v || typeof v !== 'object') return null;
 	const s = v as Record<string, unknown>;
