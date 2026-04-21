@@ -5,13 +5,13 @@
 // tile until the real file lands.
 
 export interface Meme {
-	id: string;
-	src: string;
-	alt: string;
-	caption: string;
+	readonly id: string;
+	readonly src: string;
+	readonly alt: string;
+	readonly caption: string;
 }
 
-export const memes: Meme[] = [
+export const memes: readonly Meme[] = [
 	{
 		id: 'hac',
 		src: '/images/memes/hac.jpg',

@@ -5,13 +5,13 @@
 // 404. License + attribution should live alongside whatever you ship.
 
 export interface Track {
-	id: string;
-	title: string;
-	artist: string;
-	src: string;
+	readonly id: string;
+	readonly title: string;
+	readonly artist: string;
+	readonly src: string;
 }
 
-export const playlist: Track[] = [
+export const playlist: readonly Track[] = [
 	{
 		id: 'placeholder-1',
 		title: '(track 1 placeholder)',
