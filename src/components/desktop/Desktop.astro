@@ -13,6 +13,7 @@ import Memes from './apps/Memes.astro';
 import Trash from './apps/Trash.astro';
 import Projects from './apps/Projects.astro';
 import Uses from './apps/Uses.astro';
+import Privacy from './apps/Privacy.astro';
 import { apps } from '../../data/apps';
 
 const contentFor = (id: string) => {
@@ -39,6 +40,8 @@ const contentFor = (id: string) => {
 			return Projects;
 		case 'uses':
 			return Uses;
+		case 'privacy':
+			return Privacy;
 		default:
 			return null;
 	}

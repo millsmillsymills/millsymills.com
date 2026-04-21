@@ -140,6 +140,17 @@ export const apps: readonly AppDef[] = [
 		height: 300,
 	},
 	{
+		id: 'privacy',
+		label: 'privacy',
+		glyph: '🔒',
+		title: 'privacy.txt',
+		ogDescription: 'the site\'s data posture — no tracking, no cookies, no third-party scripts. a privacy page you can verify.',
+		x: 200,
+		y: 140,
+		width: 620,
+		height: 520,
+	},
+	{
 		id: 'trash',
 		label: 'trash',
 		glyph: '🗑️',
