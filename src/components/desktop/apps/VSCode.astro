@@ -1,0 +1,44 @@
+---
+import '../../../styles/vscode.css';
+
+const gitSha = import.meta.env.PUBLIC_GIT_SHA ?? 'unknown';
+const gitShaShort = gitSha.slice(0, 7);
+---
+
+<div class="vscode" data-vscode-root>
+	<aside class="vscode-activitybar" aria-label="activity bar">
+		<button type="button" class="vscode-activity-btn active" aria-label="files" title="files">🗎</button>
+		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="search" disabled>🔍</button>
+		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="source control" disabled>⎇</button>
+		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="debug" disabled>🐞</button>
+		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="extensions" disabled>🧩</button>
+	</aside>
+
+	<aside class="vscode-sidebar">
+		<div class="vscode-sidebar-heading">EXPLORER</div>
+		<div class="vscode-sidebar-tree"></div>
+	</aside>
+
+	<section class="vscode-main">
+		<div class="vscode-tabs" role="tablist"></div>
+		<div class="vscode-editor"></div>
+	</section>
+
+	<footer class="vscode-status">
+		<span class="vscode-status-seg">⎇ main</span>
+		<span class="vscode-status-seg"><code>{gitShaShort}</code></span>
+		<span class="vscode-status-seg" data-status="line">Ln 1, Col 1</span>
+		<span class="vscode-status-seg">UTF-8</span>
+		<span class="vscode-status-seg" data-status="lang">plain text</span>
+	</footer>
+</div>
+
+<script>
+	import { initVscode } from '../../../scripts/vscode';
+
+	function boot() {
+		document.querySelectorAll<HTMLElement>('[data-vscode-root]').forEach((root) => initVscode(root));
+	}
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+	else boot();
+</script>
