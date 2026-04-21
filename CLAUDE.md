@@ -17,7 +17,7 @@ Personal/portfolio website. Currently hosted on Squarespace; this repo is the re
   - `public/images/vaporwave-ui/buttons/` — Music transport buttons (prev, play, pause, next, mute, unmute)
   - `public/images/vaporwave-ui/misc/` — occasional decorative icons
   - `public/images/noise.png` — tileable grain for the `.motif-grain` overlay
-- **Motif utilities** (`.motif-scanlines`, `.motif-grain`, `.motif-chrom`) are opt-in texture classes in `desktop.css`. Grain is mounted once via `<div class="motif-grain">` in `DesktopLayout.astro` so it paints above windows but below the taskbar.
+- **Motif utilities** (`.motif-scanlines` + `.motif-scanlines--soft`, `.motif-grain`, `.motif-chrom`) are opt-in texture classes in `desktop.css`. Grain is mounted once via `<div class="motif-grain">` in `DesktopLayout.astro` so it paints above windows but below the taskbar.
 - **Hero apps** (Terminal, Music, Memes, Photos) have bespoke scoped chrome in their component `<style>` blocks; info-dense apps (About, Projects, Resume, Uses, Flags, Mail, Trash) inherit the base window chrome unchanged.
 - **Full spec:** `docs/superpowers/specs/2026-04-21-vaporwave-chrome-design.md`.
 
