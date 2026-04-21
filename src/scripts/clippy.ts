@@ -46,6 +46,7 @@ let bubbleHideTimer: number | null = null;
 let idleThinkTimer: number | null = null;
 let idleTiredTimer: number | null = null;
 let idleSleepTimer: number | null = null;
+let clickTimes: number[] = [];
 
 function clearTimer(id: number | null): void {
 	if (id !== null) window.clearTimeout(id);
@@ -175,9 +176,24 @@ function init(): void {
 		speak(pickQuip(getCurrentAppId(), 'flag'));
 	});
 
-	// Sprite click → open dismiss popover. (Click-streak suppression for the
-	// CTF flag is layered on in Task 9.)
-	sprite.addEventListener('click', openDismissPopover);
+	// Sprite click — track for the 11th CTF flag, suppress popover during a
+	// streak so the user can keep clicking, otherwise open the popover.
+	sprite.addEventListener('click', () => {
+		const now = Date.now();
+		clickTimes = clickTimes.filter((t) => now - t < CLICK_STREAK_WINDOW_MS);
+		clickTimes.push(now);
+		if (clickTimes.length >= CLICK_STREAK_THRESHOLD) {
+			captureById('clippy');
+			setPose('cool');
+			clickTimes = [];
+			return;
+		}
+		// Streak active — suppress the popover so the click run isn't interrupted.
+		if (clickTimes.length >= 2) {
+			return;
+		}
+		openDismissPopover();
+	});
 
 	// Popover button wiring.
 	popover
@@ -208,7 +224,3 @@ if (typeof window !== 'undefined') {
 	}
 }
 
-// Wired in Tasks 8-9.
-void captureById;
-void CLICK_STREAK_WINDOW_MS;
-void CLICK_STREAK_THRESHOLD;
