@@ -5,6 +5,8 @@
  * the user prefers reduced motion.
  */
 
+import { dispatchBootDone } from './util/events';
+
 const SESSION_KEY = 'mills.boot.played';
 
 function shouldPlay(): boolean {
@@ -43,7 +45,7 @@ function init(): void {
 		// Even when the boot animation is suppressed (already-played in this
 		// session, or prefers-reduced-motion), the desktop is interactive.
 		// Subscribers (e.g. Clippy) need to know.
-		window.dispatchEvent(new CustomEvent('mills:boot-done'));
+		dispatchBootDone();
 		return;
 	}
 
@@ -54,7 +56,7 @@ function init(): void {
 		overlay.classList.add('boot-overlay--done');
 		// Notify subscribers (e.g. Clippy) that the boot animation is finished
 		// and the desktop is interactive.
-		window.dispatchEvent(new CustomEvent('mills:boot-done'));
+		dispatchBootDone();
 		setTimeout(() => overlay.remove(), 600);
 	};
 

@@ -12,6 +12,7 @@
 
 import { apps } from '../data/apps';
 import { captureById } from './flags';
+import { escapeHtml } from './util/html';
 
 const SECRET_QUERIES = ['hack', 'hackers', 'hack the planet', 'mills'];
 
@@ -204,13 +205,6 @@ class CommandPalette {
 	}
 }
 
-function escapeHtml(s: string): string {
-	return s
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;');
-}
 
 function init(): void {
 	const root = document.querySelector<HTMLElement>('.cmdp');
