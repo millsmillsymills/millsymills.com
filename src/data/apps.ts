@@ -19,7 +19,12 @@ export interface AppDef {
 	readonly desktopOnly?: boolean;
 }
 
-export const apps: readonly AppDef[] = [
+// Two-layer pattern: the const tuple `_APPS_DATA` keeps the literal types
+// (used to derive AppId below); the public `apps` export widens to
+// `readonly AppDef[]` so consumers can access optional fields like
+// `iconUrl` on every entry without TS narrowing them away on entries that
+// happen to omit the field.
+const _APPS_DATA = [
 	{
 		id: 'about',
 		label: 'about.me',
@@ -162,7 +167,21 @@ export const apps: readonly AppDef[] = [
 		width: 520,
 		height: 460,
 	},
-];
+] as const satisfies readonly AppDef[];
+
+export const apps: readonly AppDef[] = _APPS_DATA;
+
+/**
+ * Literal-union type derived from the `apps` array. A typo like
+ * `[data-open-window="trsh"]` becomes a TypeScript error at the call site
+ * instead of a silent no-op at runtime.
+ */
+export type AppId = (typeof _APPS_DATA)[number]['id'];
+
+/** Runtime guard for narrowing route-param / DOM-attribute strings to AppId. */
+export function isAppId(value: string | undefined | null): value is AppId {
+	return typeof value === 'string' && apps.some((a) => a.id === value);
+}
 
 export function findApp(id: string): AppDef | undefined {
 	return apps.find((a) => a.id === id);
