@@ -40,7 +40,16 @@ register(
 					const restoredFs = ctx.fs;
 					const elevated: typeof ctx.fs = {};
 					for (const [k, v] of Object.entries(restoredFs)) elevated[k] = { ...v, priv: false };
-					await cmd.handler({ ...ctx, args: args.slice(1), fs: elevated });
+					// Inherit from ctx via prototype so accessor properties
+					// (notably the `get cwd()` installed by the REPL — see
+					// repl.ts:91) survive. A naive { ...ctx, ... } spread
+					// would copy cwd as a static value at spread time and
+					// silently break sudo's view of the live cwd.
+					const elevatedCtx: typeof ctx = Object.assign(Object.create(ctx), {
+						args: args.slice(1),
+						fs: elevated,
+					});
+					await cmd.handler(elevatedCtx);
 					return;
 				}
 				attempts += 1;
