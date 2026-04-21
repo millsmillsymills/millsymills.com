@@ -1,5 +1,16 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { execFileSync } from 'node:child_process';
+
+function readGitSha() {
+	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+	try {
+		return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+	} catch {
+		return 'unknown';
+	}
+}
+const gitSha = readGitSha();
 
 const siteUrl = process.env.SITE_URL ?? 'https://millsymills.com';
 const noIndex = process.env.NO_INDEX === 'true';
@@ -29,6 +40,7 @@ export default defineConfig({
 	vite: {
 		define: {
 			'import.meta.env.NO_INDEX': JSON.stringify(noIndex ? 'true' : 'false'),
+			'import.meta.env.PUBLIC_GIT_SHA': JSON.stringify(gitSha),
 		},
 	},
 });
