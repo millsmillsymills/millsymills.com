@@ -104,6 +104,14 @@ export const challenges: Challenge[] = [
 		digest: '152e75c2cd7d9b5347368c06fb7a4d7bc18f5a4afc2373a8cb6d1556f5eb266e',
 		tag: 'discoverability',
 	},
+	{
+		id: 'clippy',
+		title: 'office space',
+		hint: 'click vigorously on the helpful one in the corner',
+		difficulty: 'easy',
+		digest: '7c4472a13cd7a2ab2b8bc08de2a7f294bd45989da767b07149546f04d4c0ea9d',
+		tag: 'delight',
+	},
 ];
 /* eslint-enable max-len */
 
