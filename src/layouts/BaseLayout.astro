@@ -7,6 +7,7 @@ interface Props {
 }
 
 const { title, description, noindex, canonical } = Astro.props;
+const forceNoIndex = import.meta.env.NO_INDEX === 'true';
 ---
 
 <html lang="en">
@@ -17,7 +18,7 @@ const { title, description, noindex, canonical } = Astro.props;
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		{description && <meta name="description" content={description} />}
-		{noindex && <meta name="robots" content="noindex" />}
+		{(noindex || forceNoIndex) && <meta name="robots" content="noindex,nofollow" />}
 		{canonical && <link rel="canonical" href={canonical} />}
 		<meta property="og:title" content={title} />
 		{description && <meta property="og:description" content={description} />}
