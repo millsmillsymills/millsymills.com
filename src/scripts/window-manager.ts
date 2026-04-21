@@ -63,6 +63,7 @@ class WindowManager {
 		this.bindWindows();
 		this.bindStartMenu();
 		this.bindClock();
+		this.bindExternalCloseEvent();
 		this.restore();
 	}
 
@@ -117,6 +118,17 @@ class WindowManager {
 					this.toggleMax(id);
 				},
 			);
+		});
+	}
+
+	// External callers (e.g. terminal `exit` command) request a close via this
+	// event so they don't have to hold a reference to the WindowManager
+	// instance — and so the taskbar / state.open are kept in sync. Mutating
+	// .hidden directly leaves stale entries; #51.
+	private bindExternalCloseEvent() {
+		document.addEventListener('mills:close-window', (ev) => {
+			const id = (ev as CustomEvent<{ id?: string }>).detail?.id;
+			if (typeof id === 'string') this.close(id);
 		});
 	}
 
