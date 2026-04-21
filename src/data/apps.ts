@@ -178,6 +178,17 @@ const _APPS_DATA = [
 		width: 520,
 		height: 460,
 	},
+	{
+		id: 'vscode',
+		label: 'vscode',
+		glyph: '🆅',
+		title: 'vscode.exe',
+		ogDescription: 'an evocative, pink-tinted vscode reskin. browse real dotfiles and snippets of the site\'s own source.',
+		x: 140,
+		y: 80,
+		width: 900,
+		height: 620,
+	},
 ] as const satisfies readonly AppDef[];
 
 export const apps: readonly AppDef[] = _APPS_DATA;
