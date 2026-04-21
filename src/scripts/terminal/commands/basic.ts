@@ -125,6 +125,19 @@ register(
 		summary: 'close the terminal window',
 		handler: ({ exit }) => exit(),
 	},
+	{
+		name: 'privacy',
+		summary: 'print the site\'s privacy posture',
+		handler: ({ out }) => {
+			out('tl;dr — no tracking, no cookies, no third-party scripts.', 't-dim');
+			out('');
+			out('  - localStorage only (window positions, flag progress, boot flag)');
+			out('  - CloudFront access logs — 90d retention, non-PII');
+			out('  - MIT licensed, source on GitHub');
+			out('');
+			out('full policy:  /privacy/');
+		},
+	},
 );
 
 export function _resolvePath(cwd: string, target: string | undefined): string {
