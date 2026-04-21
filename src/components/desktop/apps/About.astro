@@ -58,6 +58,8 @@ import { profile } from '../../../data/profile';
 		class="about__avatar"
 		src="/images/headshot.jpg"
 		alt={`${profile.name} headshot`}
+		loading="lazy"
+		decoding="async"
 	/>
 	<div class="about__avatar about__avatar--placeholder" hidden>
 		headshot.jpg pending — drop into public/images/

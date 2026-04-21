@@ -26,6 +26,12 @@ variable "deploy_branch" {
   default     = "main"
 }
 
+variable "deploy_workflow" {
+  description = "Workflow filename (under `.github/workflows/`) allowed to mint the OIDC token for this stack. Pins the IAM trust policy's `job_workflow_ref` condition so a different (or tampered) workflow on the same branch can't assume the deploy role."
+  type        = string
+  default     = "deploy.yml"
+}
+
 variable "protonmail_verification_token" {
   description = "ProtonMail domain-verification token (from Proton admin after adding the domain). Blank means email is not yet active: DNS deploys null MX + sender-free SPF so the domain is unspoofable."
   type        = string
