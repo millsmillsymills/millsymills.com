@@ -10,35 +10,73 @@ import { playlist } from '../../../data/playlist';
 		font-family: var(--font-pixel);
 	}
 
-	.winamp__display {
-		padding: 12px 14px;
-		background: #0e0214;
-		color: #ffd6ec;
-		border: 2px solid var(--border);
+	.winamp__cassette {
+		display: grid;
+		grid-template-columns: 60px 1fr 60px;
+		gap: 12px;
+		align-items: center;
+		padding: 14px 16px;
+		background: linear-gradient(180deg, #1a0e3f 0%, #0a0320 100%);
+		border: 2px solid var(--neon-lilac);
 		border-radius: 6px;
-		font-family: var(--font-mono);
-		font-size: 13px;
-		letter-spacing: 0.5px;
-		min-height: 64px;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		gap: 4px;
+	}
+
+	.winamp__reel {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+		background:
+			radial-gradient(
+				circle at center,
+				var(--bg-void) 0% 20%,
+				var(--neon-pink) 20% 28%,
+				var(--bg-raised) 28% 80%,
+				var(--neon-cyan) 80% 90%,
+				var(--bg-raised) 90% 100%
+			);
+		box-shadow: 0 0 0 2px var(--neon-cyan);
+		animation: winamp-reel-spin 4s linear infinite;
+		animation-play-state: paused;
+	}
+
+	.winamp__reel--right {
+		animation-direction: reverse;
+	}
+
+	.winamp__cassette[data-music-state='playing'] .winamp__reel {
+		animation-play-state: running;
+	}
+
+	@keyframes winamp-reel-spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.winamp__label {
+		text-align: center;
+		font-family: var(--font-pixel);
+		color: var(--neon-cyan);
+		font-size: 9px;
+		letter-spacing: 1px;
+		text-transform: lowercase;
 	}
 
 	.winamp__title {
+		display: block;
 		font-family: var(--font-pixel);
 		font-size: 11px;
-		color: #ff7ec0;
+		color: var(--neon-pink-hi);
+		margin-top: 4px;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
 	.winamp__artist {
+		display: block;
 		font-family: var(--font-screen);
 		font-size: 16px;
-		color: #c8a8ff;
+		color: var(--neon-lilac);
+		margin-top: 2px;
 	}
 
 	.winamp__time {
@@ -46,15 +84,54 @@ import { playlist } from '../../../data/playlist';
 		justify-content: space-between;
 		font-family: var(--font-mono);
 		font-size: 11px;
-		color: #9a7fb8;
+		color: var(--ink-dim);
+		margin-top: 4px;
+	}
+
+	.winamp__vu {
+		display: flex;
+		gap: 3px;
+		align-items: flex-end;
+		height: 30px;
+		padding: 6px 8px;
+		background: var(--bg-void);
+		border: 1px solid var(--bg-edge);
+		border-radius: 3px;
+	}
+
+	.winamp__vu span {
+		display: block;
+		flex: 1;
+		max-width: 6px;
+		height: 100%;
+		transform-origin: bottom;
+		transform: scaleY(0.5);
+		background: linear-gradient(0deg, var(--neon-cyan), var(--neon-pink));
+		border-radius: 1px;
+		animation: winamp-vu 0.8s ease-in-out infinite alternate;
+		animation-play-state: paused;
+	}
+
+	.winamp__vu span:nth-child(2) { animation-delay: 0.1s; }
+	.winamp__vu span:nth-child(3) { animation-delay: 0.2s; }
+	.winamp__vu span:nth-child(4) { animation-delay: 0.05s; }
+	.winamp__vu span:nth-child(5) { animation-delay: 0.15s; }
+
+	.winamp__cassette[data-music-state='playing'] ~ .winamp__vu span {
+		animation-play-state: running;
+	}
+
+	@keyframes winamp-vu {
+		from { transform: scaleY(0.2); }
+		to   { transform: scaleY(1); }
 	}
 
 	.winamp__bar {
 		appearance: none;
 		width: 100%;
-		height: 8px;
-		background: var(--lilac-100);
-		border: 2px solid var(--border);
+		height: 10px;
+		background: var(--bg-raised);
+		border: 1px solid var(--neon-lilac);
 		border-radius: 4px;
 		cursor: var(--c-pointer);
 	}
@@ -63,22 +140,22 @@ import { playlist } from '../../../data/playlist';
 		appearance: none;
 		width: 14px;
 		height: 14px;
-		background: var(--pink-500);
-		border: 2px solid var(--border);
+		background: var(--neon-pink);
+		border: 2px solid var(--bg-void);
 		border-radius: 50%;
 	}
 
 	.winamp__bar::-moz-range-thumb {
 		width: 14px;
 		height: 14px;
-		background: var(--pink-500);
-		border: 2px solid var(--border);
+		background: var(--neon-pink);
+		border: 2px solid var(--bg-void);
 		border-radius: 50%;
 	}
 
 	.winamp__controls {
 		display: flex;
-		gap: 6px;
+		gap: 8px;
 		flex-wrap: wrap;
 	}
 
@@ -88,22 +165,18 @@ import { playlist } from '../../../data/playlist';
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-width: 36px;
-		padding: 6px 10px;
-		background: var(--cream);
-		color: var(--ink);
-		border: 2px solid var(--border);
-		border-radius: 4px;
-		font-family: var(--font-pixel);
-		font-size: 11px;
+		min-width: 40px;
+		height: 32px;
+		padding: 0;
 	}
 
-	.winamp__btn:hover,
-	.winamp__btn:focus-visible {
-		background: var(--pink-100);
+	.winamp__btn img {
+		height: 32px;
+		width: auto;
+		display: block;
 	}
 
-	.winamp__btn:active {
+	.winamp__btn:active img {
 		transform: translate(1px, 1px);
 	}
 
@@ -113,7 +186,8 @@ import { playlist } from '../../../data/playlist';
 		padding: 0;
 		max-height: 180px;
 		overflow-y: auto;
-		border: 2px solid var(--border);
+		background: var(--bg-deep);
+		border: 1px solid var(--bg-edge);
 		border-radius: 4px;
 	}
 
@@ -124,40 +198,58 @@ import { playlist } from '../../../data/playlist';
 		padding: 8px 12px;
 		font-family: var(--font-screen);
 		font-size: 16px;
+		color: var(--ink-primary);
 		cursor: var(--c-pointer);
-		border-bottom: 1px solid var(--lilac-300);
+		border-bottom: 1px solid var(--bg-edge);
 	}
 
-	.winamp__track:last-child {
-		border-bottom: none;
-	}
+	.winamp__track:last-child { border-bottom: none; }
 
 	.winamp__track:hover {
-		background: var(--pink-100);
+		background: var(--bg-raised);
 	}
 
 	.winamp__track--current {
-		background: var(--pink-200);
-		color: var(--ink);
+		background: var(--bg-raised);
+		color: var(--neon-cyan);
 	}
 
 	.winamp__track__num {
 		font-family: var(--font-pixel);
 		font-size: 9px;
-		color: var(--ink-soft);
+		color: var(--ink-dim);
 		flex-shrink: 0;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.winamp__reel,
+		.winamp__vu span {
+			animation: none !important;
+		}
+		.winamp__reel {
+			transform: rotate(45deg);
+		}
 	}
 </style>
 
 <div class="winamp">
-	<div class="winamp__display">
-		<span class="winamp__title" data-music-title>(no track loaded)</span>
-		<span class="winamp__artist" data-music-artist>—</span>
-		<div class="winamp__time">
-			<span data-music-current>00:00</span>
-			<span data-music-status>idle</span>
-			<span data-music-duration>00:00</span>
+	<div class="winamp__cassette" data-music-state="paused">
+		<div class="winamp__reel winamp__reel--left" aria-hidden="true"></div>
+		<div class="winamp__label">
+			◉ now playing
+			<span class="winamp__title" data-music-title>(no track loaded)</span>
+			<span class="winamp__artist" data-music-artist>—</span>
+			<div class="winamp__time">
+				<span data-music-current>00:00</span>
+				<span data-music-status>idle</span>
+				<span data-music-duration>00:00</span>
+			</div>
 		</div>
+		<div class="winamp__reel winamp__reel--right" aria-hidden="true"></div>
+	</div>
+
+	<div class="winamp__vu" aria-hidden="true">
+		<span></span><span></span><span></span><span></span><span></span>
 	</div>
 
 	<input
@@ -172,10 +264,18 @@ import { playlist } from '../../../data/playlist';
 	/>
 
 	<div class="winamp__controls">
-		<button type="button" class="winamp__btn" data-music-prev aria-label="previous">⏮</button>
-		<button type="button" class="winamp__btn" data-music-play aria-label="play / pause">▶</button>
-		<button type="button" class="winamp__btn" data-music-next aria-label="next">⏭</button>
-		<button type="button" class="winamp__btn" data-music-mute aria-label="mute / unmute">🔊</button>
+		<button type="button" class="winamp__btn" data-music-prev aria-label="previous">
+			<img src="/images/vaporwave-ui/buttons/prev.png" alt="" aria-hidden="true" />
+		</button>
+		<button type="button" class="winamp__btn" data-music-play aria-label="play / pause">
+			<img src="/images/vaporwave-ui/buttons/play.png" alt="" aria-hidden="true" />
+		</button>
+		<button type="button" class="winamp__btn" data-music-next aria-label="next">
+			<img src="/images/vaporwave-ui/buttons/next.png" alt="" aria-hidden="true" />
+		</button>
+		<button type="button" class="winamp__btn" data-music-mute aria-label="mute / unmute">
+			<img src="/images/vaporwave-ui/buttons/unmute.png" alt="" aria-hidden="true" />
+		</button>
 	</div>
 
 	<ol class="winamp__playlist">
@@ -192,7 +292,7 @@ import { playlist } from '../../../data/playlist';
 					<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 						{t.title}
 					</span>
-					<span style="font-size:13px;color:var(--ink-soft)">{t.artist}</span>
+					<span style="font-size:13px;color:var(--ink-muted)">{t.artist}</span>
 				</li>
 			))
 		}
