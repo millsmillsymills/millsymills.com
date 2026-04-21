@@ -118,21 +118,44 @@ export const challenges: Challenge[] = [
 export type FlagState = Record<string, number>; // id -> capture epoch ms
 
 function loadState(): FlagState {
+	let raw: string | null;
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return {};
-		const parsed = JSON.parse(raw);
-		return parsed && typeof parsed === 'object' ? parsed : {};
-	} catch {
+		raw = localStorage.getItem(STORAGE_KEY);
+	} catch (err) {
+		console.warn('[mills.flags] localStorage.getItem failed', err);
 		return {};
 	}
+	if (!raw) return {};
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (err) {
+		console.warn('[mills.flags] state JSON parse failed; CTF progress reset', err);
+		return {};
+	}
+	if (!parsed || typeof parsed !== 'object') return {};
+
+	// Validate shape: Record<string, number-epoch-ms>. Drop bad entries
+	// so a corrupted timestamp doesn't surface as a "captured" UI badge.
+	const valid: FlagState = {};
+	for (const [id, ts] of Object.entries(parsed as Record<string, unknown>)) {
+		if (typeof ts === 'number' && Number.isFinite(ts)) {
+			valid[id] = ts;
+		} else {
+			console.warn('[mills.flags] dropping invalid capture[%s]', id, ts);
+		}
+	}
+	return valid;
 }
 
 function saveState(state: FlagState): void {
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-	} catch {
-		/* noop */
+	} catch (err) {
+		// Quota error here = silent CTF progress loss on next reload. Loud
+		// breadcrumb so devtools surfaces the cause.
+		console.warn('[mills.flags] save failed; capture won\'t persist', err);
 	}
 }
 
