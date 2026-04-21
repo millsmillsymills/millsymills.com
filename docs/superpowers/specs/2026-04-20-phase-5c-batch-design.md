@@ -39,7 +39,7 @@ These defaults were proposed in brainstorming and approved:
 | B.4 | Ship security.txt | Yes, 12-month `Expires:` |
 | D | Incidents route | `/incidents/` |
 | E.1 | Google Fonts | Self-host |
-| E.2 | CF log retention | 30 days (verify existing Terraform first) |
+| E.2 | CF log retention | 90 days — existing `infra/s3.tf:137`; privacy page text matches reality |
 | 1 | PR strategy | One PR per issue |
 | 2 | Worktree strategy | One worktree (`.worktrees/phase-5c-batch`), five feature branches |
 | 3 | Command names | `dotfiles`, `pubkey`, `privacy`, `incidents` — ship as-is |
@@ -286,7 +286,7 @@ Calendar reminder for expiry refresh — Terraform auto-rolling is premature.
    - `mills.boot.played` — "played boot sequence already" flag
 
    **Honesty constraint:** this list MUST describe what actually exists at deploy time. The vscode `mills.vscode.v1` key only gets added to `privacy-copy.ts` in PR 6 when vscode.exe itself ships. Until then, the privacy page does not list it.
-4. **server logs** — CloudFront standard access logs v2 → S3, retention 30 days (confirm during implementation), no PII
+4. **server logs** — CloudFront standard access logs v2 → S3, retention 90 days (per `infra/s3.tf`), no PII
 5. **bots / AI** — links to `/robots.txt` + CF Content-Signals
 6. **license + source** — MIT, GitHub URL, "fork it, run your own"
 7. **attestation footer** — `served from commit <short-sha>` pulled from `PUBLIC_GIT_SHA` — monospace small-text block
@@ -299,7 +299,7 @@ Calendar reminder for expiry refresh — Terraform auto-rolling is premature.
 - Update the CSP in CloudFront / Astro integration (remove `fonts.googleapis.com` and `fonts.gstatic.com` from `font-src` and `style-src`)
 - Verify no other site surfaces pull Google-hosted fonts
 
-**CloudFront log retention** — audit step before the PR lands: read current Terraform, confirm 30-day lifecycle exists on the logs bucket, add one if it doesn't.
+**CloudFront log retention** — audited during plan-writing: `infra/s3.tf:127-144` sets 90-day expiration on the logs bucket. Privacy page copy says 90 days to match reality.
 
 **`privacy` command output**
 
