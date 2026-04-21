@@ -6,7 +6,16 @@ function readGitSha() {
 	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
 	try {
 		return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-	} catch {
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		if (process.env.CI === 'true') {
+			throw new Error(
+				`astro.config: could not resolve git SHA in CI (GITHUB_SHA unset, git fallback failed: ${msg}). Refusing to ship an unverifiable build — the /privacy/ attestation footer depends on this.`,
+			);
+		}
+		console.warn(
+			`[astro.config] git rev-parse failed (${msg}); PUBLIC_GIT_SHA='unknown' for local dev.`,
+		);
 		return 'unknown';
 	}
 }

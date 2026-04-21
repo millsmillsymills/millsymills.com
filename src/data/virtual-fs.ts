@@ -13,7 +13,7 @@ export interface Entry {
 	content?: string;
 	/** if true, requires sudo to read in terminal; hidden from vscode.exe tree */
 	priv?: boolean;
-	/** optional language hint for vscode.exe status bar ('zsh' | 'lua' | 'markdown' | 'text') */
+	/** optional free-form language hint consumed by vscode.exe's status bar */
 	language?: string;
 }
 
