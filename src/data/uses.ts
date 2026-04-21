@@ -4,15 +4,15 @@
 // running in your rack. Update when it changes.
 
 export interface GearItem {
-	name: string;
-	detail?: string;
-	url?: string;
-	why?: string;
+	readonly name: string;
+	readonly detail?: string;
+	readonly url?: string;
+	readonly why?: string;
 }
 
 export interface GearGroup {
-	title: string;
-	items: GearItem[];
+	readonly title: string;
+	readonly items: readonly GearItem[];
 }
 
 export const chimera = {
@@ -35,7 +35,7 @@ export const chimera = {
 	],
 } as const;
 
-export const gear: GearGroup[] = [
+export const gear: readonly GearGroup[] = [
 	{
 		title: 'battlestation',
 		items: [

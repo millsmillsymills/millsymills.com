@@ -13,23 +13,25 @@
  * localStorage so progress survives reloads.
  */
 
+import { dispatchFlagCaptured } from './util/events';
+
 const STORAGE_KEY = 'mills.flags.v1';
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
 
 export interface Challenge {
-	id: string;
-	title: string;
-	hint: string; // gentle nudge; deeper hint via the terminal `flag hints <id>` command
-	difficulty: Difficulty;
-	digest: string; // SHA-256 of the canonical `flag{...}` string, lowercase hex
-	tag?: string; // optional thematic group
+	readonly id: string;
+	readonly title: string;
+	readonly hint: string; // gentle nudge; deeper hint via the terminal `flag hints <id>` command
+	readonly difficulty: Difficulty;
+	readonly digest: string; // SHA-256 of the canonical `flag{...}` string, lowercase hex
+	readonly tag?: string; // optional thematic group
 }
 
 /* eslint-disable max-len */
 // digests below are SHA-256 of the canonical flag strings.
 // Generated locally; do not regenerate in CI.
-export const challenges: Challenge[] = [
+export const challenges = [
 	{
 		id: 'view-source',
 		title: 'view source, hacker',
@@ -112,27 +114,67 @@ export const challenges: Challenge[] = [
 		digest: '7c4472a13cd7a2ab2b8bc08de2a7f294bd45989da767b07149546f04d4c0ea9d',
 		tag: 'delight',
 	},
-];
+] as const satisfies readonly Challenge[];
 /* eslint-enable max-len */
 
-export type FlagState = Record<string, number>; // id -> capture epoch ms
+/**
+ * Literal-union type derived from `challenges`. A typo at a `captureById('xyz')`
+ * call site is now a TS error instead of a silent no-op at runtime.
+ */
+export type ChallengeId = (typeof challenges)[number]['id'];
+
+/** Runtime guard for narrowing arbitrary strings to ChallengeId. */
+export function isChallengeId(value: string | undefined | null): value is ChallengeId {
+	return typeof value === 'string' && challenges.some((c) => c.id === value);
+}
+
+export type FlagState = Partial<Record<ChallengeId, number>>; // id -> capture epoch ms
 
 function loadState(): FlagState {
+	let raw: string | null;
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return {};
-		const parsed = JSON.parse(raw);
-		return parsed && typeof parsed === 'object' ? parsed : {};
-	} catch {
+		raw = localStorage.getItem(STORAGE_KEY);
+	} catch (err) {
+		console.warn('[mills.flags] localStorage.getItem failed', err);
 		return {};
 	}
+	if (!raw) return {};
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (err) {
+		console.warn('[mills.flags] state JSON parse failed; CTF progress reset', err);
+		return {};
+	}
+	if (!parsed || typeof parsed !== 'object') return {};
+
+	// Validate shape: Partial<Record<ChallengeId, number>>. Drop bad entries
+	// so a corrupted timestamp doesn't surface as a "captured" UI badge.
+	// Also drop ids that don't match a real challenge (e.g. a renamed flag
+	// in an old localStorage) — they'd otherwise be unaddressable from code.
+	const valid: FlagState = {};
+	for (const [id, ts] of Object.entries(parsed as Record<string, unknown>)) {
+		if (!isChallengeId(id)) {
+			console.warn('[mills.flags] dropping unknown capture[%s]', id);
+			continue;
+		}
+		if (typeof ts === 'number' && Number.isFinite(ts)) {
+			valid[id] = ts;
+		} else {
+			console.warn('[mills.flags] dropping invalid capture[%s]', id, ts);
+		}
+	}
+	return valid;
 }
 
 function saveState(state: FlagState): void {
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-	} catch {
-		/* noop */
+	} catch (err) {
+		// Quota error here = silent CTF progress loss on next reload. Loud
+		// breadcrumb so devtools surfaces the cause.
+		console.warn('[mills.flags] save failed; capture won\'t persist', err);
 	}
 }
 
@@ -191,7 +233,7 @@ export async function submitFlag(input: string): Promise<SubmitResult> {
  * Mark a flag captured by id directly. Used by side-channel triggers (konami,
  * console listeners, etc.) where the user doesn't type the flag string.
  */
-export function captureById(id: string): boolean {
+export function captureById(id: ChallengeId): boolean {
 	const match = challenges.find((c) => c.id === id);
 	if (!match) return false;
 	const state = loadState();
@@ -203,8 +245,7 @@ export function captureById(id: string): boolean {
 }
 
 function notifyCapture(c: Challenge): void {
-	const evt = new CustomEvent('mills:flag-captured', { detail: c });
-	window.dispatchEvent(evt);
+	dispatchFlagCaptured(c);
 	toast(`flag captured: ${c.title}`);
 }
 

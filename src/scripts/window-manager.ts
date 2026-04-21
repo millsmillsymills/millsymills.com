@@ -15,39 +15,134 @@
 const STORAGE_KEY = 'mills.desktop.v1';
 const Z_BASE = 100;
 
-type WindowState = {
+// Window geometry as a pair (always present together).
+interface Rect {
 	x: number;
 	y: number;
 	w: number;
 	h: number;
-	maximized: boolean;
-};
+}
+
+// Discriminated union: a window is either at its restored geometry, or
+// maximized with the prior geometry tucked away so unmaximize knows where
+// to return to. The boolean+geometry pairing the previous shape used
+// allowed `{maximized: true, x:0, y:0, w:0, h:0}` to mean nothing in
+// particular; the ADT shape rejects that at the type level. (#57 sub-3)
+type WindowState =
+	| { kind: 'restored'; rect: Rect }
+	| { kind: 'maximized'; prior: Rect };
 
 type DesktopState = {
 	open: string[]; // currently-open window ids in z-order (last = top)
 	windows: Record<string, WindowState>;
 };
 
+function isFiniteNumber(v: unknown): v is number {
+	return typeof v === 'number' && Number.isFinite(v);
+}
+
+function isValidRect(v: unknown): v is Rect {
+	if (!v || typeof v !== 'object') return false;
+	const r = v as Record<string, unknown>;
+	return isFiniteNumber(r.x) && isFiniteNumber(r.y) && isFiniteNumber(r.w) && isFiniteNumber(r.h);
+}
+
+function isValidWindowState(v: unknown): v is WindowState {
+	if (!v || typeof v !== 'object') return false;
+	const s = v as Record<string, unknown>;
+	if (s.kind === 'restored') return isValidRect(s.rect);
+	if (s.kind === 'maximized') return isValidRect(s.prior);
+	return false;
+}
+
+function rectOfElement(el: HTMLElement): Rect {
+	const r = el.getBoundingClientRect();
+	return { x: r.left, y: r.top, w: r.width, h: r.height };
+}
+
+function applyRect(el: HTMLElement, rect: Rect): void {
+	el.style.left = `${clamp(rect.x, 0, window.innerWidth - 80)}px`;
+	el.style.top = `${clamp(rect.y, 0, window.innerHeight - 60)}px`;
+	if (rect.w) el.style.width = `${rect.w}px`;
+	if (rect.h) el.style.height = `${rect.h}px`;
+}
+
+/**
+ * Migrate the legacy `{x, y, w, h, maximized}` shape (mills.desktop.v1
+ * before this PR) to the discriminated-union shape. Old persistence is
+ * upgraded in place on the next save; nothing is lost. Returns null for
+ * shapes that are neither legacy nor current — those get dropped with a
+ * warn at the call site.
+ */
+function migrateLegacyWindowState(v: unknown): WindowState | null {
+	if (!v || typeof v !== 'object') return null;
+	const s = v as Record<string, unknown>;
+	if (
+		isFiniteNumber(s.x) &&
+		isFiniteNumber(s.y) &&
+		isFiniteNumber(s.w) &&
+		isFiniteNumber(s.h) &&
+		typeof s.maximized === 'boolean'
+	) {
+		const rect: Rect = { x: s.x, y: s.y, w: s.w, h: s.h };
+		return s.maximized ? { kind: 'maximized', prior: rect } : { kind: 'restored', rect };
+	}
+	return null;
+}
+
 function loadState(): DesktopState {
+	let raw: string | null;
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return { open: [], windows: {} };
-		const parsed = JSON.parse(raw) as DesktopState;
-		if (!parsed || typeof parsed !== 'object') return { open: [], windows: {} };
-		return {
-			open: Array.isArray(parsed.open) ? parsed.open : [],
-			windows: parsed.windows && typeof parsed.windows === 'object' ? parsed.windows : {},
-		};
-	} catch {
+		raw = localStorage.getItem(STORAGE_KEY);
+	} catch (err) {
+		console.warn('[mills.desktop] localStorage.getItem failed', err);
 		return { open: [], windows: {} };
 	}
+	if (!raw) return { open: [], windows: {} };
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (err) {
+		console.warn('[mills.desktop] state JSON parse failed; resetting', err);
+		return { open: [], windows: {} };
+	}
+	if (!parsed || typeof parsed !== 'object') {
+		return { open: [], windows: {} };
+	}
+
+	const p = parsed as { open?: unknown; windows?: unknown };
+	const open = Array.isArray(p.open) ? p.open.filter((id): id is string => typeof id === 'string') : [];
+
+	// Validate each WindowState. Drop entries with non-finite numerics or
+	// unrecognized shape; old `{x,y,w,h,maximized}` entries (pre-#57 sub-3)
+	// are migrated to the new discriminated-union shape on the fly.
+	const windows: Record<string, WindowState> = {};
+	if (p.windows && typeof p.windows === 'object') {
+		for (const [id, val] of Object.entries(p.windows as Record<string, unknown>)) {
+			if (isValidWindowState(val)) {
+				windows[id] = val;
+				continue;
+			}
+			const migrated = migrateLegacyWindowState(val);
+			if (migrated) {
+				windows[id] = migrated;
+			} else {
+				console.warn('[mills.desktop] dropping invalid windows[%s]', id, val);
+			}
+		}
+	}
+	return { open, windows };
 }
 
 function saveState(state: DesktopState): void {
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-	} catch {
-		/* localStorage might be disabled — silently ignore */
+	} catch (err) {
+		// QuotaExceededError, Safari ITP, private browsing — visible state
+		// changes won't persist across reloads. Loud breadcrumb so devtools
+		// shows the actual cause.
+		console.warn('[mills.desktop] localStorage.setItem failed', err);
 	}
 }
 
@@ -63,6 +158,7 @@ class WindowManager {
 		this.bindWindows();
 		this.bindStartMenu();
 		this.bindClock();
+		this.bindExternalCloseEvent();
 		this.restore();
 	}
 
@@ -117,6 +213,17 @@ class WindowManager {
 					this.toggleMax(id);
 				},
 			);
+		});
+	}
+
+	// External callers (e.g. terminal `exit` command) request a close via this
+	// event so they don't have to hold a reference to the WindowManager
+	// instance — and so the taskbar / state.open are kept in sync. Mutating
+	// .hidden directly leaves stale entries; #51. Event shape is declared in
+	// util/events.ts so the callback parameter is auto-typed.
+	private bindExternalCloseEvent() {
+		document.addEventListener('mills:close-window', (ev) => {
+			this.close(ev.detail.id);
 		});
 	}
 
@@ -176,8 +283,8 @@ class WindowManager {
 					.filter(Boolean)
 					.forEach((id) => this.open(id));
 			}
-		} catch {
-			/* SSR / no-window — ignore */
+		} catch (err) {
+			console.warn('[mills.desktop] failed to read ?open= query param', err);
 		}
 
 		const bodyInitial = document.body?.dataset.initialOpen;
@@ -226,9 +333,20 @@ class WindowManager {
 	private toggleMax(id: string) {
 		const el = this.windows.get(id);
 		if (!el) return;
-		el.classList.toggle('window--maximized');
-		const ws = this.state.windows[id];
-		if (ws) ws.maximized = el.classList.contains('window--maximized');
+		const current = this.state.windows[id];
+		if (current && current.kind === 'maximized') {
+			// Restore: pop the prior rect, drop the maximized class.
+			el.classList.remove('window--maximized');
+			this.state.windows[id] = { kind: 'restored', rect: current.prior };
+			applyRect(el, current.prior);
+		} else {
+			// Maximize: capture current geometry as the prior, set kind. If we
+			// don't have a saved rect (never moved/dragged), capture from the
+			// live element first so unmaximize has somewhere to return to.
+			const prior = current ? current.rect : rectOfElement(el);
+			this.state.windows[id] = { kind: 'maximized', prior };
+			el.classList.add('window--maximized');
+		}
 		this.persist();
 	}
 
@@ -307,25 +425,27 @@ class WindowManager {
 	}
 
 	private savePosition(id: string, el: HTMLElement) {
-		const rect = el.getBoundingClientRect();
-		this.state.windows[id] = {
-			x: rect.left,
-			y: rect.top,
-			w: rect.width,
-			h: rect.height,
-			maximized: el.classList.contains('window--maximized'),
-		};
+		// Drag/resize only updates 'restored' geometry. While maximized, the
+		// stored 'prior' rect is the unmaximize target — savePosition is a
+		// no-op (we don't want a maximized window's full-screen rect to
+		// overwrite the prior position). The drag handler doesn't fire on
+		// maximized windows (startDrag bails early), so this is the
+		// programmatic-write path only.
+		const current = this.state.windows[id];
+		if (current?.kind === 'maximized') return;
+		this.state.windows[id] = { kind: 'restored', rect: rectOfElement(el) };
 		this.persist();
 	}
 
 	private restorePosition(id: string, el: HTMLElement) {
 		const ws = this.state.windows[id];
 		if (ws) {
-			el.style.left = `${clamp(ws.x, 0, window.innerWidth - 80)}px`;
-			el.style.top = `${clamp(ws.y, 0, window.innerHeight - 60)}px`;
-			if (ws.w) el.style.width = `${ws.w}px`;
-			if (ws.h) el.style.height = `${ws.h}px`;
-			if (ws.maximized) el.classList.add('window--maximized');
+			// Apply the restored rect either way — maximized state still has a
+			// prior rect so the underlying element keeps a sensible size when
+			// the maximize class is later toggled off.
+			const rect = ws.kind === 'restored' ? ws.rect : ws.prior;
+			applyRect(el, rect);
+			if (ws.kind === 'maximized') el.classList.add('window--maximized');
 			return;
 		}
 

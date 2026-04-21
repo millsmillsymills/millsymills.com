@@ -5,18 +5,23 @@
  * the user prefers reduced motion.
  */
 
+import { dispatchBootDone } from './util/events';
+
 const SESSION_KEY = 'mills.boot.played';
 
 function shouldPlay(): boolean {
 	try {
 		if (sessionStorage.getItem(SESSION_KEY)) return false;
-	} catch {
+	} catch (err) {
+		// Storage disabled / private browsing — degrade safe: skip the
+		// animation rather than risk replaying it on every navigation.
+		console.warn('[mills.boot] sessionStorage unavailable; skipping intro', err);
 		return false;
 	}
 	try {
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-	} catch {
-		/* noop */
+	} catch (err) {
+		console.warn('[mills.boot] matchMedia unavailable', err);
 	}
 	return true;
 }
@@ -24,8 +29,10 @@ function shouldPlay(): boolean {
 function markPlayed(): void {
 	try {
 		sessionStorage.setItem(SESSION_KEY, '1');
-	} catch {
-		/* noop */
+	} catch (err) {
+		// Marker won't persist — boot animation will replay on next load
+		// in the same session. Visible regression but not a data-loss bug.
+		console.warn('[mills.boot] markPlayed failed; intro may replay', err);
 	}
 }
 
@@ -38,7 +45,7 @@ function init(): void {
 		// Even when the boot animation is suppressed (already-played in this
 		// session, or prefers-reduced-motion), the desktop is interactive.
 		// Subscribers (e.g. Clippy) need to know.
-		window.dispatchEvent(new CustomEvent('mills:boot-done'));
+		dispatchBootDone();
 		return;
 	}
 
@@ -49,7 +56,7 @@ function init(): void {
 		overlay.classList.add('boot-overlay--done');
 		// Notify subscribers (e.g. Clippy) that the boot animation is finished
 		// and the desktop is interactive.
-		window.dispatchEvent(new CustomEvent('mills:boot-done'));
+		dispatchBootDone();
 		setTimeout(() => overlay.remove(), 600);
 	};
 

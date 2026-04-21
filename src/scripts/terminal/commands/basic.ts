@@ -1,4 +1,5 @@
 import { register, listCommands, lookup, type Context } from '../registry';
+import { incidents } from '../../../data/incidents';
 
 function resolvePath(cwd: string, target: string | undefined): string {
 	if (!target || target === '~' || target === '~/') return '/home/mills';
@@ -124,6 +125,61 @@ register(
 		name: 'exit',
 		summary: 'close the terminal window',
 		handler: ({ exit }) => exit(),
+	},
+	{
+		name: 'privacy',
+		summary: 'print the site\'s privacy posture',
+		handler: ({ out }) => {
+			out('tl;dr — no tracking, no cookies, no third-party scripts.', 't-dim');
+			out('');
+			out('  - localStorage + sessionStorage only (window positions, flag progress, boot flag)');
+			out('  - CloudFront access logs — 90d retention (ip, ua, url, status, timestamp)');
+			out('  - MIT licensed, source on GitHub');
+			out('');
+			out('full policy:  /privacy/');
+		},
+	},
+	{
+		name: 'incidents',
+		summary: 'list security incidents and CVEs',
+		usage: 'incidents [year]',
+		handler: ({ args, out }) => {
+			let yearArg: number | null = null;
+			if (args[0] !== undefined) {
+				const parsed = Number(args[0]);
+				if (!Number.isInteger(parsed) || parsed < 2000 || parsed > 2100) {
+					return out(`incidents: invalid year: ${args[0]}`, 't-err');
+				}
+				yearArg = parsed;
+			}
+			const filtered = yearArg !== null
+				? incidents.filter((i) => i.year === yearArg)
+				: incidents;
+
+			if (filtered.length === 0) {
+				out(`no incidents${yearArg !== null ? ` in ${yearArg}` : ''}.`, 't-dim');
+				return;
+			}
+
+			const sevClass: Record<string, string> = {
+				critical: 't-err',
+				high: 't-err',
+				med: 't-dim',
+				low: 't-ok',
+				info: 't-dim',
+			};
+
+			for (const i of filtered) {
+				const sev = i.severity.toUpperCase().padEnd(9);
+				out(`  ${i.year}  ${sev} ${i.title}`, sevClass[i.severity] ?? '');
+			}
+			out('');
+			out(`  ${filtered.length} incident${filtered.length === 1 ? '' : 's'}${yearArg !== null ? ` in ${yearArg}` : ''}`, 't-dim');
+			if (yearArg === null) {
+				out('  filter by year:  incidents <year>', 't-dim');
+				out('  full wall:  /incidents/', 't-dim');
+			}
+		},
 	},
 );
 

@@ -72,17 +72,14 @@ const jsonLd = {
 		{/* for agents + devtools spelunkers — decode the token, submit the flag. */}
 		<meta name="x-mills-token" content="ZmxhZ3tiYXNlX3NpeHR5X2ZvdXJfaXNfYV9jbGFzc2ljfQ==" />
 
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			rel="stylesheet"
-			href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
-		/>
-
 		{/* Agent-readable side-channels (Cloudflare isitagentready.com pattern) */}
 		<link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt summary" />
 		<link rel="alternate" type="text/markdown" href="/llms-full.txt" title="llms-full.txt (full content)" />
 		<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+		{/* Preload Clippy's idle sprite — first paint right after boot needs it
+		    and the boot animation gives the network a head-start. */}
+		<link rel="preload" as="image" href="/clippy/idle.png" />
 
 		<script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 

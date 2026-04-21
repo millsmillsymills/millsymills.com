@@ -12,6 +12,7 @@
 
 import { apps } from '../data/apps';
 import { captureById } from './flags';
+import { escapeHtml } from './util/html';
 
 const SECRET_QUERIES = ['hack', 'hackers', 'hack the planet', 'mills'];
 
@@ -171,8 +172,10 @@ class CommandPalette {
 			const li = document.createElement('li');
 			li.className = 'cmdp__item' + (i === this.activeIdx ? ' cmdp__item--active' : '');
 			li.dataset.cmdpIdx = String(i);
+			// Glyphs are emoji today and authored in apps.ts, but escape anyway —
+			// a future contributor adding `<` would land XSS via this innerHTML.
 			li.innerHTML = `
-				<span class="cmdp__glyph" aria-hidden="true">${e.glyph}</span>
+				<span class="cmdp__glyph" aria-hidden="true">${escapeHtml(e.glyph)}</span>
 				<span class="cmdp__label">${escapeHtml(e.label)}</span>
 				<span class="cmdp__hint">${escapeHtml(e.hint)}</span>
 			`;
@@ -202,13 +205,6 @@ class CommandPalette {
 	}
 }
 
-function escapeHtml(s: string): string {
-	return s
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;');
-}
 
 function init(): void {
 	const root = document.querySelector<HTMLElement>('.cmdp');

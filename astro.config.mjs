@@ -1,5 +1,25 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { execFileSync } from 'node:child_process';
+
+function readGitSha() {
+	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+	try {
+		return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		if (process.env.CI === 'true') {
+			throw new Error(
+				`astro.config: could not resolve git SHA in CI (GITHUB_SHA unset, git fallback failed: ${msg}). Refusing to ship an unverifiable build — the /privacy/ attestation footer depends on this.`,
+			);
+		}
+		console.warn(
+			`[astro.config] git rev-parse failed (${msg}); PUBLIC_GIT_SHA='unknown' for local dev.`,
+		);
+		return 'unknown';
+	}
+}
+const gitSha = readGitSha();
 
 const siteUrl = process.env.SITE_URL ?? 'https://millsymills.com';
 const noIndex = process.env.NO_INDEX === 'true';
@@ -29,6 +49,7 @@ export default defineConfig({
 	vite: {
 		define: {
 			'import.meta.env.NO_INDEX': JSON.stringify(noIndex ? 'true' : 'false'),
+			'import.meta.env.PUBLIC_GIT_SHA': JSON.stringify(gitSha),
 		},
 	},
 });

@@ -7,17 +7,17 @@
  */
 
 export interface Port {
-	port: number;
-	service: string;
-	banner: string;
-	httpBody?: string;
+	readonly port: number;
+	readonly service: string;
+	readonly banner: string;
+	readonly httpBody?: string;
 }
 
 export interface Host {
-	ip: string;
-	name: string;
-	os: string;
-	ports: Port[];
+	readonly ip: string;
+	readonly name: string;
+	readonly os: string;
+	readonly ports: readonly Port[];
 }
 
 const labFlagBody = `<!doctype html>
@@ -29,7 +29,7 @@ const labFlagBody = `<!doctype html>
 <p><small>...except in the source.</small></p>
 </body></html>`;
 
-export const HOSTS: Host[] = [
+export const HOSTS: readonly Host[] = [
 	{
 		ip: '192.168.1.1',
 		name: 'gateway.local',

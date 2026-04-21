@@ -2,24 +2,29 @@
 // per-app dynamic route for OG-tag / shareable-URL rendering.
 
 export interface AppDef {
-	id: string;
-	label: string;
-	glyph: string;
+	readonly id: string;
+	readonly label: string;
+	readonly glyph: string;
 	/** Path under public/ to a PNG icon. When set, replaces glyph in the UI. */
-	iconUrl?: string;
-	title: string;
+	readonly iconUrl?: string;
+	readonly title: string;
 	/** Hint copy for the per-app OG description. Keep under ~150 chars. */
-	ogDescription: string;
+	readonly ogDescription: string;
 	/** Default window geometry on desktop. */
-	x: number;
-	y: number;
-	width: number;
-	height: number;
+	readonly x: number;
+	readonly y: number;
+	readonly width: number;
+	readonly height: number;
 	/** If true, skip from the mobile shell (desktop-only apps). */
-	desktopOnly?: boolean;
+	readonly desktopOnly?: boolean;
 }
 
-export const apps: AppDef[] = [
+// Two-layer pattern: the const tuple `_APPS_DATA` keeps the literal types
+// (used to derive AppId below); the public `apps` export widens to
+// `readonly AppDef[]` so consumers can access optional fields like
+// `iconUrl` on every entry without TS narrowing them away on entries that
+// happen to omit the field.
+const _APPS_DATA = [
 	{
 		id: 'about',
 		label: 'about.me',
@@ -128,6 +133,17 @@ export const apps: AppDef[] = [
 		height: 460,
 	},
 	{
+		id: 'incidents',
+		label: 'incidents',
+		glyph: '🚨',
+		title: 'incidents.log',
+		ogDescription: 'notable security incidents and CVEs mills has personally responded to. structured war stories, not resume bullets.',
+		x: 260,
+		y: 120,
+		width: 640,
+		height: 560,
+	},
+	{
 		id: 'mail',
 		label: 'mail',
 		glyph: '✉️',
@@ -138,6 +154,17 @@ export const apps: AppDef[] = [
 		y: 160,
 		width: 460,
 		height: 300,
+	},
+	{
+		id: 'privacy',
+		label: 'privacy',
+		glyph: '🔒',
+		title: 'privacy.txt',
+		ogDescription: 'the site\'s data posture — no tracking, no cookies, no third-party scripts. a privacy page you can verify.',
+		x: 200,
+		y: 140,
+		width: 620,
+		height: 520,
 	},
 	{
 		id: 'trash',
@@ -151,7 +178,21 @@ export const apps: AppDef[] = [
 		width: 520,
 		height: 460,
 	},
-];
+] as const satisfies readonly AppDef[];
+
+export const apps: readonly AppDef[] = _APPS_DATA;
+
+/**
+ * Literal-union type derived from the `apps` array. A typo like
+ * `[data-open-window="trsh"]` becomes a TypeScript error at the call site
+ * instead of a silent no-op at runtime.
+ */
+export type AppId = (typeof _APPS_DATA)[number]['id'];
+
+/** Runtime guard for narrowing route-param / DOM-attribute strings to AppId. */
+export function isAppId(value: string | undefined | null): value is AppId {
+	return typeof value === 'string' && apps.some((a) => a.id === value);
+}
 
 export function findApp(id: string): AppDef | undefined {
 	return apps.find((a) => a.id === id);
