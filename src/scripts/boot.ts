@@ -35,6 +35,10 @@ function init(): void {
 
 	if (!shouldPlay()) {
 		overlay.remove();
+		// Even when the boot animation is suppressed (already-played in this
+		// session, or prefers-reduced-motion), the desktop is interactive.
+		// Subscribers (e.g. Clippy) need to know.
+		window.dispatchEvent(new CustomEvent('mills:boot-done'));
 		return;
 	}
 
