@@ -274,23 +274,36 @@ class WindowManager {
 		titlebar.setPointerCapture(e.pointerId);
 
 		const onMove = (ev: PointerEvent) => {
+			// Filter by pointerId — document-bound listeners can otherwise
+			// receive events from a second concurrent pointer (multitouch).
+			if (ev.pointerId !== e.pointerId) return;
 			const x = clamp(ev.clientX - offsetX, 0, window.innerWidth - 80);
 			const y = clamp(ev.clientY - offsetY, 0, window.innerHeight - 60);
 			el.style.left = `${x}px`;
 			el.style.top = `${y}px`;
 		};
 
-		const onUp = () => {
-			titlebar.releasePointerCapture(e.pointerId);
-			titlebar.removeEventListener('pointermove', onMove);
-			titlebar.removeEventListener('pointerup', onUp);
-			titlebar.removeEventListener('pointercancel', onUp);
+		const onUp = (ev: PointerEvent) => {
+			if (ev.pointerId !== e.pointerId) return;
+			// Capture may already have been lost (devtools open, alt-tab,
+			// some Safari edge cases). Calling releasePointerCapture without
+			// hasPointerCapture throws InvalidStateError; guard explicitly.
+			if (titlebar.hasPointerCapture(e.pointerId)) {
+				titlebar.releasePointerCapture(e.pointerId);
+			}
+			document.removeEventListener('pointermove', onMove);
+			document.removeEventListener('pointerup', onUp);
+			document.removeEventListener('pointercancel', onUp);
 			this.savePosition(id, el);
 		};
 
-		titlebar.addEventListener('pointermove', onMove);
-		titlebar.addEventListener('pointerup', onUp);
-		titlebar.addEventListener('pointercancel', onUp);
+		// Bind on document, not titlebar. setPointerCapture usually keeps
+		// events flowing to the titlebar, but if the browser releases capture
+		// early the user-visible symptom is a window stuck to the cursor with
+		// no pointerup ever firing. document-bound listeners survive that.
+		document.addEventListener('pointermove', onMove);
+		document.addEventListener('pointerup', onUp);
+		document.addEventListener('pointercancel', onUp);
 	}
 
 	private savePosition(id: string, el: HTMLElement) {
