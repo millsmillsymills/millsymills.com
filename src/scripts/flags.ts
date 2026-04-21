@@ -18,18 +18,18 @@ const STORAGE_KEY = 'mills.flags.v1';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
 
 export interface Challenge {
-	id: string;
-	title: string;
-	hint: string; // gentle nudge; deeper hint via the terminal `flag hints <id>` command
-	difficulty: Difficulty;
-	digest: string; // SHA-256 of the canonical `flag{...}` string, lowercase hex
-	tag?: string; // optional thematic group
+	readonly id: string;
+	readonly title: string;
+	readonly hint: string; // gentle nudge; deeper hint via the terminal `flag hints <id>` command
+	readonly difficulty: Difficulty;
+	readonly digest: string; // SHA-256 of the canonical `flag{...}` string, lowercase hex
+	readonly tag?: string; // optional thematic group
 }
 
 /* eslint-disable max-len */
 // digests below are SHA-256 of the canonical flag strings.
 // Generated locally; do not regenerate in CI.
-export const challenges: Challenge[] = [
+export const challenges: readonly Challenge[] = [
 	{
 		id: 'view-source',
 		title: 'view source, hacker',
