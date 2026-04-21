@@ -284,7 +284,8 @@ Calendar reminder for expiry refresh — Terraform auto-rolling is premature.
    - `mills.flags.v1` — captured CTF flags
    - `mills.mobile.v1` — mobile-shell state
    - `mills.boot.played` — "played boot sequence already" flag
-   - `mills.vscode.v1` — vscode.exe tabs + active tab (new)
+
+   **Honesty constraint:** this list MUST describe what actually exists at deploy time. The vscode `mills.vscode.v1` key only gets added to `privacy-copy.ts` in PR 6 when vscode.exe itself ships. Until then, the privacy page does not list it.
 4. **server logs** — CloudFront standard access logs v2 → S3, retention 30 days (confirm during implementation), no PII
 5. **bots / AI** — links to `/robots.txt` + CF Content-Signals
 6. **license + source** — MIT, GitHub URL, "fork it, run your own"
@@ -382,6 +383,7 @@ Severity is color-coded using existing terminal classes (`t-err`, `t-warn`, etc.
 **Files modified**
 
 - `src/data/apps.ts` — entry `id: 'vscode'`, `glyph: '🆅'` (or icon pack), `title: 'vscode.exe'`, `label: 'vscode'`, generous geometry `x: 140, y: 80, width: 900, height: 620`
+- `src/data/privacy-copy.ts` — add `mills.vscode.v1` to the localStorage-keys section (keeps the privacy page accurate once vscode.exe actually writes to storage)
 
 **Layout (desktop)**
 
