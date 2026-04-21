@@ -137,8 +137,8 @@ register(
 			out(`Created:     ${pgp.createdAt}`);
 			out(`Expires:     ${pgp.expiresAt}`);
 			out('');
-			out('fetch the full key:', 't-dim');
-			out(`  curl ${pgp.downloadPath}`, 't-dim');
+			out('fetch the full key from this site:', 't-dim');
+			out(`  ${pgp.downloadPath}`, 't-dim');
 			out('');
 			for (const line of pgpArmored.split('\n')) {
 				out(line);

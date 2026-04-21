@@ -6,16 +6,21 @@ import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = ({ site }) => {
 	const origin = (site?.origin ?? 'https://millsymills.com').replace(/\/$/, '');
+	// Derive Contact email domain from origin so rehearsal builds don't emit
+	// a mixed-domain doc (Canonical: p41m0n.com, Contact: millsymills.com).
+	const hostname = new URL(origin).hostname;
 
-	// 12 months out from build time; refresh on every deploy.
-	const expires = new Date();
-	expires.setUTCFullYear(expires.getUTCFullYear() + 1);
-	expires.setUTCHours(0, 0, 0, 0);
+	// 12 months out from build time — use Date.UTC to avoid local-timezone drift
+	// during a build that straddles UTC midnight in a non-UTC timezone.
+	const now = new Date();
+	const expiresUtc = new Date(
+		Date.UTC(now.getUTCFullYear() + 1, now.getUTCMonth(), now.getUTCDate()),
+	);
 
 	const body = [
-		`Contact: mailto:mills@millsymills.com`,
+		`Contact: mailto:mills@${hostname}`,
 		`Encryption: ${origin}/pgp.asc`,
-		`Expires: ${expires.toISOString()}`,
+		`Expires: ${expiresUtc.toISOString()}`,
 		`Canonical: ${origin}/.well-known/security.txt`,
 		`Preferred-Languages: en`,
 		'',
