@@ -105,6 +105,32 @@ function resetIdleTimers(): void {
 	idleSleepTimer = window.setTimeout(() => setPose('sleep'), IDLE_SLEEP_MS);
 }
 
+function openDismissPopover(): void {
+	if (!popover) return;
+	popover.hidden = false;
+	popover.querySelector<HTMLButtonElement>('button')?.focus();
+}
+
+function closeDismissPopover(): void {
+	if (popover) popover.hidden = true;
+}
+
+function dismiss(scope: 'session' | 'forever'): void {
+	closeDismissPopover();
+	setPose('leave');
+	if (scope === 'forever') {
+		try {
+			localStorage.setItem(STORAGE_KEY, 'forever');
+		} catch {
+			// localStorage disabled — silently fall back to session-only.
+		}
+	}
+	// After the leave animation finishes, hide the aside entirely.
+	window.setTimeout(() => {
+		if (aside) aside.hidden = true;
+	}, POSE_DURATIONS_MS.leave);
+}
+
 function init(): void {
 	// Idempotency guard — match the pattern from reset.ts (#67).
 	const w = window as unknown as {
@@ -147,6 +173,28 @@ function init(): void {
 	window.addEventListener('mills:flag-captured', () => {
 		setPose('cool');
 		speak(pickQuip(getCurrentAppId(), 'flag'));
+	});
+
+	// Sprite click → open dismiss popover. (Click-streak suppression for the
+	// CTF flag is layered on in Task 9.)
+	sprite.addEventListener('click', openDismissPopover);
+
+	// Popover button wiring.
+	popover
+		.querySelector<HTMLButtonElement>('[data-clippy-dismiss="session"]')
+		?.addEventListener('click', () => dismiss('session'));
+	popover
+		.querySelector<HTMLButtonElement>('[data-clippy-dismiss="forever"]')
+		?.addEventListener('click', () => dismiss('forever'));
+	popover
+		.querySelector<HTMLButtonElement>('[data-clippy-dismiss-cancel]')
+		?.addEventListener('click', closeDismissPopover);
+
+	// ESC closes the popover.
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && popover && !popover.hidden) {
+			closeDismissPopover();
+		}
 	});
 
 	w.mills = { ...(w.mills ?? {}), __clippyInit: true };
