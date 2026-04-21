@@ -28,26 +28,66 @@ type DesktopState = {
 	windows: Record<string, WindowState>;
 };
 
+function isValidWindowState(v: unknown): v is WindowState {
+	if (!v || typeof v !== 'object') return false;
+	const s = v as Record<string, unknown>;
+	return (
+		typeof s.x === 'number' && Number.isFinite(s.x) &&
+		typeof s.y === 'number' && Number.isFinite(s.y) &&
+		typeof s.w === 'number' && Number.isFinite(s.w) &&
+		typeof s.h === 'number' && Number.isFinite(s.h) &&
+		typeof s.maximized === 'boolean'
+	);
+}
+
 function loadState(): DesktopState {
+	let raw: string | null;
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return { open: [], windows: {} };
-		const parsed = JSON.parse(raw) as DesktopState;
-		if (!parsed || typeof parsed !== 'object') return { open: [], windows: {} };
-		return {
-			open: Array.isArray(parsed.open) ? parsed.open : [],
-			windows: parsed.windows && typeof parsed.windows === 'object' ? parsed.windows : {},
-		};
-	} catch {
+		raw = localStorage.getItem(STORAGE_KEY);
+	} catch (err) {
+		console.warn('[mills.desktop] localStorage.getItem failed', err);
 		return { open: [], windows: {} };
 	}
+	if (!raw) return { open: [], windows: {} };
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (err) {
+		console.warn('[mills.desktop] state JSON parse failed; resetting', err);
+		return { open: [], windows: {} };
+	}
+	if (!parsed || typeof parsed !== 'object') {
+		return { open: [], windows: {} };
+	}
+
+	const p = parsed as { open?: unknown; windows?: unknown };
+	const open = Array.isArray(p.open) ? p.open.filter((id): id is string => typeof id === 'string') : [];
+
+	// Validate each WindowState. Drop entries with non-finite numerics so a
+	// corrupted x/y/w/h doesn't flow to clamp(NaN, ...) and render at the
+	// browser's default position with no error. Loud breadcrumb on drops.
+	const windows: Record<string, WindowState> = {};
+	if (p.windows && typeof p.windows === 'object') {
+		for (const [id, val] of Object.entries(p.windows as Record<string, unknown>)) {
+			if (isValidWindowState(val)) {
+				windows[id] = val;
+			} else {
+				console.warn('[mills.desktop] dropping invalid windows[%s]', id, val);
+			}
+		}
+	}
+	return { open, windows };
 }
 
 function saveState(state: DesktopState): void {
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-	} catch {
-		/* localStorage might be disabled — silently ignore */
+	} catch (err) {
+		// QuotaExceededError, Safari ITP, private browsing — visible state
+		// changes won't persist across reloads. Loud breadcrumb so devtools
+		// shows the actual cause.
+		console.warn('[mills.desktop] localStorage.setItem failed', err);
 	}
 }
 
@@ -176,8 +216,8 @@ class WindowManager {
 					.filter(Boolean)
 					.forEach((id) => this.open(id));
 			}
-		} catch {
-			/* SSR / no-window — ignore */
+		} catch (err) {
+			console.warn('[mills.desktop] failed to read ?open= query param', err);
 		}
 
 		const bodyInitial = document.body?.dataset.initialOpen;

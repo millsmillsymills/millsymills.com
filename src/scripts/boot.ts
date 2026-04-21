@@ -10,13 +10,16 @@ const SESSION_KEY = 'mills.boot.played';
 function shouldPlay(): boolean {
 	try {
 		if (sessionStorage.getItem(SESSION_KEY)) return false;
-	} catch {
+	} catch (err) {
+		// Storage disabled / private browsing — degrade safe: skip the
+		// animation rather than risk replaying it on every navigation.
+		console.warn('[mills.boot] sessionStorage unavailable; skipping intro', err);
 		return false;
 	}
 	try {
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-	} catch {
-		/* noop */
+	} catch (err) {
+		console.warn('[mills.boot] matchMedia unavailable', err);
 	}
 	return true;
 }
@@ -24,8 +27,10 @@ function shouldPlay(): boolean {
 function markPlayed(): void {
 	try {
 		sessionStorage.setItem(SESSION_KEY, '1');
-	} catch {
-		/* noop */
+	} catch (err) {
+		// Marker won't persist — boot animation will replay on next load
+		// in the same session. Visible regression but not a data-loss bug.
+		console.warn('[mills.boot] markPlayed failed; intro may replay', err);
 	}
 }
 
