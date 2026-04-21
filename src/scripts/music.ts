@@ -115,6 +115,7 @@ class MusicPlayer {
 		});
 		this.audio.addEventListener('error', () => {
 			this.setStatus('track unavailable');
+			this.setPlayGlyph('play');
 			this.cassetteEl?.setAttribute('data-music-state', 'paused');
 			if (this.titleEl) this.titleEl.textContent = '(404 — drop audio into public/audio/)';
 			this.emitNowPlaying({ playing: false });
