@@ -64,12 +64,30 @@ if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
 	exit 1
 fi
 # force-unlock targets remote state too; must be guarded same as plan/apply.
-if ./scripts/tf.sh p41m0n force-unlock fake-id >/dev/null 2>&1; then
+# Assert on stderr containing "refusing:" — non-zero exit alone would also
+# fire if terraform reached the backend and failed for a different reason
+# (no such lock id), masking a real guard regression.
+if ! ./scripts/tf.sh p41m0n force-unlock fake-id 2>&1 1>/dev/null | grep -q 'refusing:'; then
 	printf '\033[1;31m✗ tf.sh did not guard force-unlock against wrong stack\033[0m\n' >&2
 	exit 1
 fi
 rm -rf infra/.terraform
 ok "tf.sh refuses invalid stack + missing init + wrong-stack marker + wrong-stack force-unlock"
+
+section "infra: per-stack deploy_workflow files exist"
+# Each stacks/<name>.tfvars sets deploy_workflow to a filename under
+# .github/workflows/. A typo would only surface at terraform-apply time
+# (and then OIDC trust would be wrong). Catch it locally.
+for tfv in infra/stacks/*.tfvars; do
+	stack=$(basename "$tfv" .tfvars)
+	wf=$(grep -E '^deploy_workflow' "$tfv" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+	wf=${wf:-deploy.yml}
+	if [ ! -f ".github/workflows/$wf" ]; then
+		printf '\033[1;31m✗ stack %s references missing workflow .github/workflows/%s\033[0m\n' "$stack" "$wf" >&2
+		exit 1
+	fi
+done
+ok "stacks/*.tfvars deploy_workflow files all exist"
 
 section "terraform: fmt"
 terraform -chdir=infra fmt -check -recursive
