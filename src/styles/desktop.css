@@ -101,19 +101,12 @@ a {
 	display: block;
 	overflow: hidden;
 
-	/* checkerboard tile + soft pink wash */
+	/* Vaporwave-recolored Bliss as the desktop wallpaper. Pink wash is the
+	 * fallback color while the image is loading or if it 404s. */
 	background-color: var(--pink-200);
-	background-image:
-		linear-gradient(135deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
-		linear-gradient(225deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
-		linear-gradient(315deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%),
-		linear-gradient(45deg, rgba(255, 255, 255, 0.18) 25%, transparent 25%);
-	background-size: 32px 32px;
-	background-position:
-		16px 0,
-		16px 0,
-		0 0,
-		0 0;
+	background-image: url('/images/desktop-background.jpg');
+	background-size: cover;
+	background-position: center;
 }
 
 /* sparkle decorations in the background */

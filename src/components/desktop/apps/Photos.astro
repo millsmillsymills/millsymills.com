@@ -45,7 +45,7 @@ import { photos } from '../../../data/profile';
 	{
 		photos.map((p) => (
 			<figure>
-				<img src={p.src} alt={p.alt} loading="lazy" />
+				<img src={p.src} alt={p.alt} loading="lazy" decoding="async" />
 				<figcaption>{p.caption}</figcaption>
 			</figure>
 		))
