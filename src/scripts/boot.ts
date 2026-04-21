@@ -43,6 +43,9 @@ function init(): void {
 
 	const finish = () => {
 		overlay.classList.add('boot-overlay--done');
+		// Notify subscribers (e.g. Clippy) that the boot animation is finished
+		// and the desktop is interactive.
+		window.dispatchEvent(new CustomEvent('mills:boot-done'));
 		setTimeout(() => overlay.remove(), 600);
 	};
 
