@@ -171,8 +171,10 @@ class CommandPalette {
 			const li = document.createElement('li');
 			li.className = 'cmdp__item' + (i === this.activeIdx ? ' cmdp__item--active' : '');
 			li.dataset.cmdpIdx = String(i);
+			// Glyphs are emoji today and authored in apps.ts, but escape anyway —
+			// a future contributor adding `<` would land XSS via this innerHTML.
 			li.innerHTML = `
-				<span class="cmdp__glyph" aria-hidden="true">${e.glyph}</span>
+				<span class="cmdp__glyph" aria-hidden="true">${escapeHtml(e.glyph)}</span>
 				<span class="cmdp__label">${escapeHtml(e.label)}</span>
 				<span class="cmdp__hint">${escapeHtml(e.hint)}</span>
 			`;
