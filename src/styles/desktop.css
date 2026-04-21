@@ -28,6 +28,22 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'Press Start 2P';
+	src: url('/fonts/PressStart2P-Regular.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'VT323';
+	src: url('/fonts/VT323-Regular.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
 	--pink-50: #fff0f7;
 	--pink-100: #ffd6ec;

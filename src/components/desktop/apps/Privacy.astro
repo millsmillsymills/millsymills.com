@@ -1,0 +1,131 @@
+---
+import { copy, browserStorageKeys } from '../../../data/privacy-copy';
+
+const gitShaFull = import.meta.env.PUBLIC_GIT_SHA ?? 'unknown';
+const gitShaShort = gitShaFull.slice(0, 7);
+const repoUrl = copy.licenseAndSource.repoUrl;
+---
+
+<article class="privacy">
+	<h1>privacy.txt</h1>
+	<p class="lede">{copy.intro}</p>
+
+	<section>
+		<h2>{copy.whatWeCollect.heading}</h2>
+		<p>{copy.whatWeCollect.body}</p>
+	</section>
+
+	<section>
+		<h2>{copy.whatsOnTheWire.heading}</h2>
+		<p>{copy.whatsOnTheWire.body}</p>
+	</section>
+
+	<section>
+		<h2>{copy.localStorage.heading}</h2>
+		<p>{copy.localStorage.preamble}</p>
+		<dl class="ls-keys">
+			{browserStorageKeys.map((k) => (
+				<>
+					<dt>
+						<code>{k.key}</code>
+						<span class="storage-tag">{k.storage}</span>
+					</dt>
+					<dd>{k.purpose}</dd>
+				</>
+			))}
+		</dl>
+	</section>
+
+	<section>
+		<h2>{copy.serverLogs.heading}</h2>
+		<p>{copy.serverLogs.body}</p>
+	</section>
+
+	<section>
+		<h2>{copy.botsAndAi.heading}</h2>
+		<p>{copy.botsAndAi.body}</p>
+	</section>
+
+	<section>
+		<h2>{copy.licenseAndSource.heading}</h2>
+		<p>
+			{copy.licenseAndSource.body}{' '}
+			<a href={repoUrl} target="_blank" rel="noopener">{repoUrl}</a>
+		</p>
+	</section>
+
+	<footer class="attestation">
+		<code>{copy.attestationPrefix} {gitShaShort}</code>
+		{' '}
+		<small>(full: <code>{gitShaFull}</code>)</small>
+	</footer>
+</article>
+
+<style>
+	.privacy {
+		padding: 1rem 1.25rem;
+		color: var(--ink);
+		font-family: var(--font-xp-ui, system-ui, sans-serif);
+		line-height: 1.5;
+	}
+	.privacy .lede {
+		font-style: italic;
+		color: var(--ink-soft);
+		border-left: 3px solid var(--pink-400);
+		padding-left: 0.75rem;
+		margin-bottom: 1.25rem;
+	}
+	.privacy section {
+		margin-bottom: 1rem;
+	}
+	.privacy h2 {
+		font-family: var(--font-screen, monospace);
+		font-size: 1.1rem;
+		color: var(--pink-600);
+		margin: 0 0 0.35rem;
+		text-transform: lowercase;
+	}
+	.privacy p,
+	.privacy dd {
+		margin: 0 0 0.5rem;
+	}
+	.privacy .ls-keys {
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 0.15rem 0.75rem;
+		margin: 0.4rem 0;
+	}
+	.privacy .ls-keys dt code {
+		font-size: 0.85rem;
+	}
+	.privacy .storage-tag {
+		display: inline-block;
+		font-size: 0.7rem;
+		padding: 0.05rem 0.35rem;
+		margin-left: 0.35rem;
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 2px;
+		color: var(--ink-soft);
+		font-family: var(--font-pixel);
+	}
+	.privacy .ls-keys dd {
+		margin: 0;
+		color: var(--ink-soft);
+	}
+	.privacy .attestation {
+		margin-top: 1.5rem;
+		padding-top: 0.75rem;
+		border-top: 1px dashed var(--pink-300);
+		font-size: 0.85rem;
+		color: var(--ink-soft);
+	}
+	.privacy .attestation code {
+		background: var(--pink-50);
+		padding: 0.1rem 0.35rem;
+		border-radius: 3px;
+	}
+	.privacy a {
+		color: var(--pink-600);
+	}
+</style>
