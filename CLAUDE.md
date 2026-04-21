@@ -8,6 +8,19 @@ Personal/portfolio website. Currently hosted on Squarespace; this repo is the re
 - **Hosting**: AWS S3 + CloudFront + Route53 + ACM — `infra/` contains Terraform
 - **IaC**: Terraform 1.10+
 
+## Aesthetic conventions
+
+- **Theme:** neon-noir vaporwave — dark navy/black surfaces, hot pink + cyan accents, lilac/cream supporting. Tokens live in `src/styles/desktop.css :root` (`--bg-void`, `--bg-deep`, `--neon-pink`, `--neon-cyan`, etc.). Legacy `--pink-*` / `--cream` / `--border` names are repointed to new values, not renamed, so any code referencing them keeps working.
+- **"mills" is always lowercase.** Branding rule — never "Mills", "MILLS", "MillsOS", "MILLS-OS". Applies to UI chrome text, window titles, code comments, docs. Existing chrome already honors this (`mills@millsymills:~$` in the start menu, lowercase app labels in `src/data/apps.ts`).
+- **Asset directories:**
+  - `public/images/vaporwave-ui/ui-icons/` — window controls (minimize, maximize, close)
+  - `public/images/vaporwave-ui/buttons/` — Music transport buttons (prev, play, pause, next, mute, unmute)
+  - `public/images/vaporwave-ui/misc/` — occasional decorative icons
+  - `public/images/noise.png` — tileable grain for the `.motif-grain` overlay
+- **Motif utilities** (`.motif-scanlines` + `.motif-scanlines--soft`, `.motif-grain`, `.motif-chrom`) are opt-in texture classes in `desktop.css`. Grain is mounted once via `<div class="motif-grain">` in `DesktopLayout.astro` so it paints above windows but below the taskbar.
+- **Hero apps** (Terminal, Music, Memes, Photos) have bespoke scoped chrome in their component `<style>` blocks; info-dense apps (About, Projects, Resume, Uses, Flags, Mail, Trash) inherit the base window chrome unchanged.
+- **Full spec:** `docs/superpowers/specs/2026-04-21-vaporwave-chrome-design.md`.
+
 ## Key commands
 
 ```bash

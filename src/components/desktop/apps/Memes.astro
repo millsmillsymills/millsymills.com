@@ -1,44 +1,98 @@
 ---
 import { memes } from '../../../data/memes';
+
+// Deterministic rotation in [-3.0, +3.0] degrees from the meme id.
+// Hash stays stable across SSR ↔ CSR hydration.
+function rotationFor(id: string): number {
+	let h = 0;
+	for (let i = 0; i < id.length; i++) {
+		h = (h * 31 + id.charCodeAt(i)) | 0;
+	}
+	return ((h % 600) / 100) - 3; // -3.00 … +2.99
+}
+
+// Show a tape strip on every third tile.
+function hasTape(index: number): boolean {
+	return index % 3 === 0;
+}
 ---
 
 <style>
+	.memes__header {
+		font-family: var(--font-xp-display);
+		font-style: italic;
+		color: var(--neon-pink-hi);
+		font-size: 26px;
+		margin: 0 0 18px;
+		letter-spacing: 1px;
+		text-shadow: 2px 2px 0 var(--neon-cyan);
+		text-transform: lowercase;
+	}
+
 	.memes__intro {
 		font-family: var(--font-screen);
 		font-size: 17px;
-		color: var(--ink-soft);
-		margin: 0 0 16px;
+		color: var(--ink-muted);
+		margin: 0 0 20px;
 	}
 
 	.memes__grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-		gap: 12px;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 28px 22px;
 		margin: 0;
 		padding: 0;
 		list-style: none;
+		align-items: start;
 	}
 
 	.memes__tile {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
+		position: relative;
 	}
 
-	.memes__img-wrap {
+	.memes__polaroid {
+		background: var(--ink-primary);
+		padding: 8px 8px 28px;
+		border: 1px solid var(--bg-void);
+		box-shadow: 4px 4px 0 var(--neon-cyan), 0 0 0 1px var(--bg-void) inset;
+		transform: rotate(var(--r, -2deg));
 		position: relative;
+		display: flex;
+		flex-direction: column;
+		transition: transform 200ms ease;
+	}
+
+	.memes__polaroid:hover {
+		transform: rotate(0deg) scale(1.02);
+	}
+
+	.memes__tape {
+		position: absolute;
+		top: -6px;
+		left: 25%;
+		right: 25%;
+		height: 18px;
+		background: rgba(255, 79, 168, 0.7);
+		border: 1px dashed rgba(255, 255, 255, 0.3);
+		transform: rotate(-4deg);
+	}
+
+	.memes__img-frame {
+		background: var(--bg-void);
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		aspect-ratio: 1 / 1;
-		background: var(--lilac-100);
-		border: 2px solid var(--border);
-		border-radius: 6px;
 		overflow: hidden;
 	}
 
 	.memes__img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
 		display: block;
+		max-width: 100%;
+		max-height: 100%;
+		width: auto;
+		height: auto;
+		object-fit: contain;
 	}
 
 	.memes__placeholder {
@@ -50,20 +104,32 @@ import { memes } from '../../../data/memes';
 		font-family: var(--font-pixel);
 		font-size: 9px;
 		text-align: center;
-		color: var(--ink-soft);
+		color: var(--ink-dim);
 		padding: 8px;
 	}
 
-	.memes__caption {
-		font-family: var(--font-pixel);
-		font-size: 10px;
-		color: var(--ink-soft);
+	.memes__cap {
+		position: absolute;
+		bottom: 6px;
+		left: 0;
+		right: 0;
 		text-align: center;
+		font-family: var(--font-pixel);
+		font-size: 8px;
+		color: var(--bg-void);
+		letter-spacing: 1px;
 		text-transform: lowercase;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.memes__polaroid,
+		.memes__polaroid:hover {
+			transition: none;
+		}
 	}
 </style>
 
-<h1>memes/</h1>
+<h3 class="memes__header">memes, a zine</h3>
 
 <p class="memes__intro">
 	a small but earnest collection. drop more into <code>public/images/memes/</code> and add
@@ -72,15 +138,18 @@ import { memes } from '../../../data/memes';
 
 <ul class="memes__grid">
 	{
-		memes.map((m) => (
+		memes.map((m, i) => (
 			<li class="memes__tile">
-				<div class="memes__img-wrap">
-					<img class="memes__img" src={m.src} alt={m.alt} loading="lazy" decoding="async" />
-					<div class="memes__placeholder" hidden>
-						{m.id}.jpg pending — drop into <br />public/images/memes/
+				<div class="memes__polaroid" style={`--r: ${rotationFor(m.id).toFixed(2)}deg`}>
+					{hasTape(i) && <div class="memes__tape" aria-hidden="true" />}
+					<div class="memes__img-frame">
+						<img class="memes__img" src={m.src} alt={m.alt} loading="lazy" decoding="async" />
+						<div class="memes__placeholder" hidden>
+							{m.id}.jpg pending — drop into <br />public/images/memes/
+						</div>
 					</div>
+					<div class="memes__cap">{m.caption ?? m.id}</div>
 				</div>
-				<span class="memes__caption">{m.caption}</span>
 			</li>
 		))
 	}

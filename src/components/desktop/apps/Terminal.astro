@@ -1,16 +1,18 @@
 <style>
 	.term {
-		--term-bg: #100614;
-		--term-fg: #ffd6ec;
-		--term-dim: #9a7fb8;
-		--term-err: #ff7ec0;
-		--term-ok: #6ea8ff;
-		--term-dir: #c8a8ff;
+		--term-bg: #050110;
+		--term-fg: var(--neon-cyan);
+		--term-dim: #5a8098;
+		--term-err: var(--neon-pink-hi);
+		--term-ok: var(--neon-cyan);
+		--term-dir: var(--neon-lilac);
+		--term-prompt: var(--neon-pink);
 
 		display: flex;
 		flex-direction: column;
 		height: 100%;
 		margin: -16px -18px;
+		padding: 12px;
 		background: var(--term-bg);
 		color: var(--term-fg);
 		font-family: var(--font-mono);
@@ -18,45 +20,68 @@
 		line-height: 1.4;
 	}
 
+	.term__crt {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		background: radial-gradient(ellipse at center, #001018 0%, #000008 90%);
+		border: 2px solid #0b2a3a;
+		border-radius: 18px / 20px;
+		box-shadow:
+			inset 0 0 40px rgba(0, 229, 255, 0.2),
+			inset 0 0 0 1px rgba(0, 229, 255, 0.3);
+		position: relative;
+		overflow: hidden;
+	}
+
+	.term__crt::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--scanlines);
+		pointer-events: none;
+		z-index: 1;
+	}
+
+	.term__crt::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+		pointer-events: none;
+		z-index: 1;
+	}
+
 	.term__output {
 		flex: 1;
 		overflow-y: auto;
-		padding: 12px 14px;
+		padding: 14px 16px;
 		white-space: pre-wrap;
 		word-break: break-word;
+		position: relative;
+		z-index: 2;
 	}
 
 	.term__line {
 		min-height: 1em;
 	}
-
-	.term__line.t-err {
-		color: var(--term-err);
-	}
-
-	.term__line.t-ok {
-		color: var(--term-ok);
-	}
-
-	.term__line.t-dim {
-		color: var(--term-dim);
-	}
-
-	.term__line.t-dir {
-		color: var(--term-dir);
-		font-weight: bold;
-	}
+	.term__line.t-err { color: var(--term-err); }
+	.term__line.t-ok { color: var(--term-ok); }
+	.term__line.t-dim { color: var(--term-dim); }
+	.term__line.t-dir { color: var(--term-dir); font-weight: bold; }
 
 	.term__input-line {
 		display: flex;
 		align-items: center;
-		padding: 8px 14px 12px;
+		padding: 8px 16px 12px;
 		gap: 4px;
-		border-top: 1px solid rgba(255, 255, 255, 0.06);
+		border-top: 1px solid rgba(0, 229, 255, 0.2);
+		position: relative;
+		z-index: 2;
 	}
 
 	.term__prompt {
-		color: var(--term-ok);
+		color: var(--term-prompt);
 		white-space: pre;
 	}
 
@@ -77,17 +102,19 @@
 </style>
 
 <div class="term">
-	<div class="term__output" aria-live="polite"></div>
-	<div class="term__input-line">
-		<span class="term__prompt">mills@millsymills:~$&nbsp;</span>
-		<input
-			class="term__input"
-			type="text"
-			autocomplete="off"
-			autocapitalize="off"
-			spellcheck="false"
-			aria-label="terminal input"
-		/>
+	<div class="term__crt">
+		<div class="term__output" aria-live="polite"></div>
+		<div class="term__input-line">
+			<span class="term__prompt">mills@millsymills:~$&nbsp;</span>
+			<input
+				class="term__input"
+				type="text"
+				autocomplete="off"
+				autocapitalize="off"
+				spellcheck="false"
+				aria-label="terminal input"
+			/>
+		</div>
 	</div>
 </div>
 
