@@ -1,9 +1,10 @@
 /*
- * Incident wall. Real CVE / IR stories mills has personally worked.
+ * Incident wall. Real IR / response stories mills has personally worked.
  *
  * NDA-safe content only. Voice is terse, lowercase, Y2K-pink — annotations
- * read like debriefs, not resume bullets. Sort newest first; the component
- * renders in array order.
+ * read like debriefs, not resume bullets. Titles also lowercase (except
+ * proper-noun codenames like ELUSIVE COMET). Sort newest first; the
+ * component renders in array order.
  */
 
 export type Severity = 'info' | 'low' | 'med' | 'high' | 'critical';
@@ -29,14 +30,14 @@ export const incidents: Incident[] = [
 	{
 		year: 2017,
 		severity: 'high',
-		title: 'Zoom RCE 0-day — custom mitigation 8h before vendor',
+		title: 'zoom RCE 0-day — custom mitigation 8h before vendor',
 		annotation:
 			'beat the vendor by eight hours. wrote + deployed a custom mitigation blocking the known exploit path fleet-wide before zoom shipped the official patch. FINRA/SEC-regulated environment — no room for lucky timing.',
 	},
 	{
 		year: 2017,
 		severity: 'info',
-		title: 'Hurricane Irma — emergency data exfil',
+		title: 'hurricane irma — emergency data exfil',
 		annotation:
 			'VIP had a beachfront florida office about to be taken out by irma. racing the eyewall, pulled everything to the cloud, clean shutdown, boarded up. beat the storm. not a security incident per se — an IT-ops one — but unforgettable.',
 	},
@@ -57,7 +58,7 @@ export const incidents: Incident[] = [
 	{
 		year: 2014,
 		severity: 'med',
-		title: 'Poweliks + Cryptolocker wave',
+		title: 'poweliks + cryptolocker wave',
 		annotation:
 			'two of the era-defining commodity malware families, handled back-to-back under FINRA/SEC compliance. playbooks got sharper each round. reminder that "commodity" doesn\'t mean "cheap to respond to."',
 	},

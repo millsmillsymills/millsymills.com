@@ -144,13 +144,20 @@ register(
 		summary: 'list security incidents and CVEs',
 		usage: 'incidents [year]',
 		handler: ({ args, out }) => {
-			const yearArg = args[0] ? Number(args[0]) : null;
-			const filtered = yearArg && !Number.isNaN(yearArg)
+			let yearArg: number | null = null;
+			if (args[0] !== undefined) {
+				const parsed = Number(args[0]);
+				if (!Number.isInteger(parsed) || parsed < 2000 || parsed > 2100) {
+					return out(`incidents: invalid year: ${args[0]}`, 't-err');
+				}
+				yearArg = parsed;
+			}
+			const filtered = yearArg !== null
 				? incidents.filter((i) => i.year === yearArg)
 				: incidents;
 
 			if (filtered.length === 0) {
-				out(`no incidents${yearArg ? ` in ${yearArg}` : ''}.`, 't-dim');
+				out(`no incidents${yearArg !== null ? ` in ${yearArg}` : ''}.`, 't-dim');
 				return;
 			}
 
@@ -164,11 +171,11 @@ register(
 
 			for (const i of filtered) {
 				const sev = i.severity.toUpperCase().padEnd(9);
-				out(`  ${i.year}  ${sev} ${i.title}`, sevClass[i.severity]);
+				out(`  ${i.year}  ${sev} ${i.title}`, sevClass[i.severity] ?? '');
 			}
 			out('');
-			out(`  ${filtered.length} incident${filtered.length === 1 ? '' : 's'}${yearArg ? ` in ${yearArg}` : ''}`, 't-dim');
-			if (!yearArg) {
+			out(`  ${filtered.length} incident${filtered.length === 1 ? '' : 's'}${yearArg !== null ? ` in ${yearArg}` : ''}`, 't-dim');
+			if (yearArg === null) {
 				out('  filter by year:  incidents <year>', 't-dim');
 				out('  full wall:  /incidents/', 't-dim');
 			}
