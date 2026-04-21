@@ -1,0 +1,152 @@
+---
+import { incidents, type Severity } from '../../../data/incidents';
+
+const severityLabel: Record<Severity, string> = {
+	info: 'info',
+	low: 'low',
+	med: 'med',
+	high: 'high',
+	critical: 'crit',
+};
+---
+
+<article class="incidents">
+	<h1>incidents.log</h1>
+	<header class="hex-chrome">
+		<pre class="hex"
+>{`0x00000000  69 6e 63 69 64 65 6e 74  73 2e 6c 6f 67 20 2d 2d   incidents.log --
+0x00000010  20 76 69 65 77 65 72 20  20 20 20 20 20 20 20 20    viewer
+0x00000020  6e 65 77 65 73 74 20 66  69 72 73 74 20 20 20 20   newest first    `}</pre>
+	</header>
+
+	<ol class="timeline">
+		{incidents.map((i) => (
+			<li class={`card sev-${i.severity}`}>
+				<span class="year">{i.year}</span>
+				<div class="body">
+					<div class="row">
+						<span class={`sev sev-${i.severity}`}>{severityLabel[i.severity]}</span>
+						<span class="title">{i.title}</span>
+						{i.cve && <span class="cve">{i.cve}</span>}
+					</div>
+					<p class="annotation">{i.annotation}</p>
+					{i.link && (
+						<p class="link">
+							<a href={i.link.href} rel="noopener">&gt; {i.link.label} →</a>
+						</p>
+					)}
+				</div>
+			</li>
+		))}
+	</ol>
+</article>
+
+<style>
+	.incidents {
+		padding: 1rem 1.25rem;
+		color: var(--ink);
+		font-family: var(--font-xp-ui, system-ui, sans-serif);
+	}
+	.incidents h1 {
+		font-family: var(--font-screen, monospace);
+		font-size: 1.25rem;
+		color: var(--pink-600);
+		margin: 0 0 0.75rem;
+		text-transform: lowercase;
+	}
+	.hex-chrome {
+		background: var(--ink);
+		color: var(--pink-200);
+		padding: 0.4rem 0.6rem;
+		border: 1px solid var(--pink-400);
+		margin-bottom: 1rem;
+	}
+	.hex-chrome .hex {
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		line-height: 1.25;
+		margin: 0;
+		white-space: pre;
+	}
+	.timeline {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		gap: 0.9rem;
+	}
+	.card {
+		display: grid;
+		grid-template-columns: 4rem 1fr;
+		gap: 0.75rem;
+		padding: 0.6rem 0.75rem;
+		background: var(--cream);
+		border: 1px solid var(--pink-300);
+		border-left: 4px solid var(--pink-400);
+	}
+	.card.sev-critical { border-left-color: #c80050; }
+	.card.sev-high     { border-left-color: #e06a00; }
+	.card.sev-med      { border-left-color: #caa200; }
+	.card.sev-low      { border-left-color: #4aa500; }
+	.card.sev-info     { border-left-color: #3090c8; }
+
+	.year {
+		font-family: var(--font-mono);
+		font-size: 1rem;
+		color: var(--pink-600);
+		align-self: start;
+	}
+	.body .row {
+		display: flex;
+		gap: 0.55rem;
+		align-items: baseline;
+		flex-wrap: wrap;
+		margin-bottom: 0.25rem;
+	}
+	.sev {
+		display: inline-block;
+		padding: 0.05rem 0.4rem;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		border-radius: 2px;
+		color: var(--cream);
+	}
+	.sev.sev-critical { background: #c80050; }
+	.sev.sev-high     { background: #e06a00; }
+	.sev.sev-med      { background: #caa200; color: var(--ink); }
+	.sev.sev-low      { background: #4aa500; }
+	.sev.sev-info     { background: #3090c8; }
+
+	.title {
+		font-family: var(--font-mono);
+		font-size: 0.95rem;
+		color: var(--ink);
+	}
+	.cve {
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		color: var(--ink-soft);
+	}
+	.annotation {
+		margin: 0.15rem 0;
+		line-height: 1.45;
+	}
+	.link {
+		margin: 0.2rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+	}
+	.link a {
+		color: var(--pink-600);
+		text-decoration: none;
+	}
+	.link a:hover { text-decoration: underline; }
+
+	@media (max-width: 520px) {
+		.card {
+			grid-template-columns: 1fr;
+			gap: 0.3rem;
+		}
+	}
+</style>
