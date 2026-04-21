@@ -24,7 +24,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 	let cwd = '/home/mills';
 	const history: string[] = [];
 	let histIdx = -1;
-	let pendingResolve: ((v: string) => void) | null = null;
+	let pendingResolve: ((v: string | null) => void) | null = null;
 	let pendingMask = false;
 
 	function writeLine(text: string, cls = ''): void {
@@ -65,7 +65,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 			pendingMask = mask;
 			setPrompt(label);
 			input!.type = mask ? 'password' : 'text';
-			return new Promise<string>((r) => {
+			return new Promise<string | null>((r) => {
 				pendingResolve = r;
 			});
 		},
@@ -128,7 +128,10 @@ export function bootTerminal({ root, onExit }: Options): void {
 				input!.type = 'text';
 				writeLine('^C', 't-dim');
 				refreshPrompt();
-				r('');
+				// Resolve with null so callers can distinguish Ctrl-C from
+				// an empty Enter (which feeds '' into things like sudo's
+				// 3-strike password check).
+				r(null);
 			}
 			return;
 		}
