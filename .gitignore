@@ -33,8 +33,6 @@ infra/terraform.tfstate.backup
 infra/*.tfvars
 !infra/terraform.tfvars.example
 
-# brainstorming session scratch (HTML mockups, click events)
+# local-only state (brainstorming session scratch, misc)
 .superpowers/
-
-# misc local state
 .local/
