@@ -2,6 +2,7 @@
 // markup + CSS, and docs/superpowers/specs/2026-04-20-clippy-companion-design.md
 // for the full design.
 
+import { isAppId, type AppId } from '../data/apps';
 import { pickQuip } from '../data/clippy-quips';
 import { captureById } from './flags';
 
@@ -50,10 +51,10 @@ function clearTimer(id: number | null): void {
 	if (id !== null) window.clearTimeout(id);
 }
 
-function getCurrentAppId(): string | undefined {
+function getCurrentAppId(): AppId | undefined {
 	// Heuristic: the topmost open window in the desktop's z-stack is the
 	// "current" app for quip context. Falls back to undefined (default pool)
-	// when no windows are open.
+	// when no windows are open or the topmost window's id isn't recognized.
 	//
 	// FRAGILE COUPLING: relies on `window-manager.ts` writing z-index as an
 	// inline `style.zIndex` (see `applyZ()` in that file). If WM ever moves
@@ -62,7 +63,8 @@ function getCurrentAppId(): string | undefined {
 	const visible = Array.from(
 		document.querySelectorAll<HTMLElement>('.window:not([hidden])'),
 	).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0));
-	return visible[0]?.dataset.windowId;
+	const id = visible[0]?.dataset.windowId;
+	return isAppId(id) ? id : undefined;
 }
 
 function setPose(next: Pose): void {

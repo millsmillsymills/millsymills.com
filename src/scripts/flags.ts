@@ -29,7 +29,7 @@ export interface Challenge {
 /* eslint-disable max-len */
 // digests below are SHA-256 of the canonical flag strings.
 // Generated locally; do not regenerate in CI.
-export const challenges: readonly Challenge[] = [
+export const challenges = [
 	{
 		id: 'view-source',
 		title: 'view source, hacker',
@@ -112,10 +112,21 @@ export const challenges: readonly Challenge[] = [
 		digest: '7c4472a13cd7a2ab2b8bc08de2a7f294bd45989da767b07149546f04d4c0ea9d',
 		tag: 'delight',
 	},
-];
+] as const satisfies readonly Challenge[];
 /* eslint-enable max-len */
 
-export type FlagState = Record<string, number>; // id -> capture epoch ms
+/**
+ * Literal-union type derived from `challenges`. A typo at a `captureById('xyz')`
+ * call site is now a TS error instead of a silent no-op at runtime.
+ */
+export type ChallengeId = (typeof challenges)[number]['id'];
+
+/** Runtime guard for narrowing arbitrary strings to ChallengeId. */
+export function isChallengeId(value: string | undefined | null): value is ChallengeId {
+	return typeof value === 'string' && challenges.some((c) => c.id === value);
+}
+
+export type FlagState = Partial<Record<ChallengeId, number>>; // id -> capture epoch ms
 
 function loadState(): FlagState {
 	let raw: string | null;
@@ -136,10 +147,16 @@ function loadState(): FlagState {
 	}
 	if (!parsed || typeof parsed !== 'object') return {};
 
-	// Validate shape: Record<string, number-epoch-ms>. Drop bad entries
+	// Validate shape: Partial<Record<ChallengeId, number>>. Drop bad entries
 	// so a corrupted timestamp doesn't surface as a "captured" UI badge.
+	// Also drop ids that don't match a real challenge (e.g. a renamed flag
+	// in an old localStorage) — they'd otherwise be unaddressable from code.
 	const valid: FlagState = {};
 	for (const [id, ts] of Object.entries(parsed as Record<string, unknown>)) {
+		if (!isChallengeId(id)) {
+			console.warn('[mills.flags] dropping unknown capture[%s]', id);
+			continue;
+		}
 		if (typeof ts === 'number' && Number.isFinite(ts)) {
 			valid[id] = ts;
 		} else {
@@ -214,7 +231,7 @@ export async function submitFlag(input: string): Promise<SubmitResult> {
  * Mark a flag captured by id directly. Used by side-channel triggers (konami,
  * console listeners, etc.) where the user doesn't type the flag string.
  */
-export function captureById(id: string): boolean {
+export function captureById(id: ChallengeId): boolean {
 	const match = challenges.find((c) => c.id === id);
 	if (!match) return false;
 	const state = loadState();
