@@ -1,11 +1,13 @@
 /*
- * Y2K-pink retro-desktop chrome.
+ * Neon-noir vaporwave desktop chrome.
  *
  * Two layouts coexist in the DOM:
  *   .desktop  — visible at >=769px, the full draggable-window UI
  *   .mshell   — visible at <=768px, a phone-OS launcher + app views
  *
- * Color/spacing tokens live in :root so individual apps can re-use them.
+ * Color/spacing tokens live in :root. Legacy --pink-* / --lilac-* / --cream
+ * names are repointed, not renamed, so call sites across the codebase
+ * keep working with the new palette.
  */
 
 /* ------------------------------------------------------------------ */
@@ -157,8 +159,7 @@
 	pointer-events: none;
 	background-image: var(--grain);
 	background-repeat: repeat;
-	mix-blend-mode: overlay;
-	opacity: 0.04;
+	opacity: 0.06;
 	z-index: 9998;
 }
 
@@ -227,9 +228,14 @@ a {
 	display: block;
 	overflow: hidden;
 	background-color: var(--bg-void);
-	background-image: url('/images/desktop-background.jpg');
-	background-size: cover;
-	background-position: center;
+}
+
+@media (min-width: 769px) {
+	.desktop {
+		background-image: url('/images/desktop-background.jpg');
+		background-size: cover;
+		background-position: center;
+	}
 }
 
 /* Primary sparkle pair — cyan, original layout. */
@@ -449,7 +455,7 @@ a {
 .window-control:hover,
 .window-control:focus-visible {
 	background: var(--neon-pink);
-	outline: 2px solid var(--neon-cyan);
+	outline: 2px solid var(--ink-primary);
 	outline-offset: 1px;
 }
 
