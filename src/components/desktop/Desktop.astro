@@ -47,7 +47,7 @@ const contentFor = (id: string) => {
 
 <main class="desktop" id="desktop">
 	<ul class="desktop__icons">
-		{apps.map((a) => <DesktopIcon target={a.id} label={a.label} glyph={a.glyph} />)}
+		{apps.map((a) => <DesktopIcon target={a.id} label={a.label} glyph={a.glyph} iconUrl={a.iconUrl} />)}
 	</ul>
 
 	{

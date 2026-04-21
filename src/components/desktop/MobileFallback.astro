@@ -63,9 +63,13 @@ const contentFor = (id: string) => {
 							data-open-app={a.id}
 							data-title={a.title}
 						>
-							<span class="mshell-icon__glyph" aria-hidden="true">
-								{a.glyph}
-							</span>
+							{
+								a.iconUrl ? (
+									<img class="mshell-icon__icon" src={a.iconUrl} alt="" aria-hidden="true" />
+								) : (
+									<span class="mshell-icon__glyph" aria-hidden="true">{a.glyph}</span>
+								)
+							}
 							<span class="mshell-icon__label">{a.label}</span>
 						</button>
 					</li>
