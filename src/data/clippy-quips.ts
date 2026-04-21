@@ -5,11 +5,14 @@
 // Add a new entry here when wiring a new app or trigger; no controller change
 // required.
 
+import type { AppId } from './apps';
+
 export type QuipTrigger = 'idle' | 'flag' | 'wakeup';
 
 export interface QuipBank {
 	default: Partial<Record<QuipTrigger, string[]>>;
-	perApp: Record<string, Partial<Record<QuipTrigger, string[]>>>;
+	// Keys are AppIds — typo in the data file is now a TS error.
+	perApp: Partial<Record<AppId, Partial<Record<QuipTrigger, string[]>>>>;
 }
 
 export const quips: QuipBank = {
@@ -44,7 +47,7 @@ export const quips: QuipBank = {
 	},
 };
 
-export function pickQuip(appId: string | undefined, trigger: QuipTrigger): string {
+export function pickQuip(appId: AppId | undefined, trigger: QuipTrigger): string {
 	const appBank = appId ? quips.perApp[appId] : undefined;
 	const pool = appBank?.[trigger] ?? quips.default[trigger] ?? [];
 	if (pool.length === 0) return '';
