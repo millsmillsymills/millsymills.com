@@ -36,6 +36,16 @@ data "aws_iam_policy_document" "github_deploy_trust" {
       variable = "token.actions.githubusercontent.com:sub"
       values   = ["repo:${var.github_repo}:ref:refs/heads/${var.deploy_branch}"]
     }
+
+    # Pin which workflow file may mint this token. Without this, a maintainer
+    # who modifies a different workflow on `deploy_branch` (or adds a new one)
+    # could assume the role with arbitrary job content. Reduces blast radius
+    # if the maintainer account is compromised.
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:job_workflow_ref"
+      values   = ["${var.github_repo}/.github/workflows/${var.deploy_workflow}@refs/heads/${var.deploy_branch}"]
+    }
   }
 }
 
