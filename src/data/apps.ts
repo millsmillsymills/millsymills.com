@@ -133,6 +133,17 @@ const _APPS_DATA = [
 		height: 460,
 	},
 	{
+		id: 'incidents',
+		label: 'incidents',
+		glyph: '🚨',
+		title: 'incidents.log',
+		ogDescription: 'notable security incidents and CVEs mills has personally responded to. structured war stories, not resume bullets.',
+		x: 260,
+		y: 120,
+		width: 640,
+		height: 560,
+	},
+	{
 		id: 'mail',
 		label: 'mail',
 		glyph: '✉️',
