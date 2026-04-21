@@ -13,6 +13,8 @@
  * localStorage so progress survives reloads.
  */
 
+import { dispatchFlagCaptured } from './util/events';
+
 const STORAGE_KEY = 'mills.flags.v1';
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
@@ -226,8 +228,7 @@ export function captureById(id: string): boolean {
 }
 
 function notifyCapture(c: Challenge): void {
-	const evt = new CustomEvent('mills:flag-captured', { detail: c });
-	window.dispatchEvent(evt);
+	dispatchFlagCaptured(c);
 	toast(`flag captured: ${c.title}`);
 }
 

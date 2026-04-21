@@ -164,11 +164,11 @@ class WindowManager {
 	// External callers (e.g. terminal `exit` command) request a close via this
 	// event so they don't have to hold a reference to the WindowManager
 	// instance — and so the taskbar / state.open are kept in sync. Mutating
-	// .hidden directly leaves stale entries; #51.
+	// .hidden directly leaves stale entries; #51. Event shape is declared in
+	// util/events.ts so the callback parameter is auto-typed.
 	private bindExternalCloseEvent() {
 		document.addEventListener('mills:close-window', (ev) => {
-			const id = (ev as CustomEvent<{ id?: string }>).detail?.id;
-			if (typeof id === 'string') this.close(id);
+			this.close(ev.detail.id);
 		});
 	}
 

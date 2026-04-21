@@ -6,6 +6,12 @@
  * shows "track unavailable" rather than crashing.
  */
 
+import { dispatchNowPlaying } from './util/events';
+
+// Internal runtime track shape — distinct from src/data/playlist.ts's Track,
+// which is the canonical readonly playlist data. Kept separate so the
+// player can mutate (e.g. tracks.push) without bumping into the data
+// module's readonly contract.
 interface Track {
 	id: string;
 	src: string;
@@ -29,6 +35,8 @@ function playErrorMessage(err: unknown): string {
 	const name = (err as { name?: string } | null)?.name;
 	if (name === 'NotAllowedError') return 'click play to start';
 	if (name === 'NotSupportedError') return 'track unavailable';
+	// AbortError fires when a new load() interrupts an in-flight play —
+	// transient and self-resolving, so the generic message is fine.
 	return 'cannot play';
 }
 
@@ -105,15 +113,11 @@ class MusicPlayer {
 	private emitNowPlaying(opts: { playing?: boolean } = {}): void {
 		const track = this.tracks[this.current];
 		const playing = opts.playing ?? !this.audio.paused;
-		window.dispatchEvent(
-			new CustomEvent('mills:now-playing', {
-				detail: {
-					playing,
-					title: track?.title ?? '',
-					artist: track?.artist ?? '',
-				},
-			}),
-		);
+		dispatchNowPlaying({
+			playing,
+			title: track?.title ?? '',
+			artist: track?.artist ?? '',
+		});
 	}
 
 	private load(i: number, autoplay = false): void {
