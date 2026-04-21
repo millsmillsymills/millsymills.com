@@ -25,7 +25,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <style>
 	.not-found {
-		min-height: 100vh;
+		/* dvh keeps the layout from overflowing if BaseLayout ever grows
+		 * a header/footer. 100vh would force a scrollbar in that case. */
+		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -37,7 +39,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 	}
 
 	.not-found__hero {
-		max-width: min(580px, 90vw);
+		/* Cap at the asset's intrinsic 464px so it doesn't upscale and lose
+		 * pixel-art crispness on wide monitors; still scales down on phones. */
+		max-width: min(464px, 90vw);
 		width: 100%;
 		height: auto;
 		image-rendering: pixelated;
