@@ -31,8 +31,8 @@
 :root {
 	/* ============================================================
 	 * Neon-noir vaporwave palette (#vaporwave chrome redesign)
-	 * Surfaces darkest-first. Legacy --pink-*/--lilac-*/--cream
-	 * names kept below for downstream compatibility — only their
+	 * Surfaces darkest-first. Legacy --pink-* / --lilac-* / --cream
+	 * names kept below for downstream compatibility - only their
 	 * values moved into the new palette.
 	 * ============================================================ */
 
@@ -71,7 +71,7 @@
 
 	/* ------------------------------------------------------------
 	 * Legacy names — repointed values, not renamed, so unrelated
-	 * code that references --pink-*/--cream/etc keeps working.
+	 * code that references --pink-* / --cream / etc keeps working.
 	 * ------------------------------------------------------------ */
 	--pink-50: #241055;
 	--pink-100: #2a1654;
