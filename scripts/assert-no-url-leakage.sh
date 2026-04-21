@@ -18,8 +18,16 @@ export SITE_URL="$STAGE_SITE_URL"
 export NO_INDEX=true
 
 printf '\n\033[1;36m== assert-no-url-leakage: rehearsal build ==\033[0m\n'
-rm -rf "$BUILD_DIR"
-npm run build
+# Skip rebuild if dist/ already looks like a rehearsal build (CI typically
+# runs the script right after `npm run build` with rehearsal SITE_URL —
+# no point throwing away the artifact about to be deployed). Local
+# invocations without a pre-built dist/ rebuild fresh.
+if [ -f "$BUILD_DIR/index.html" ] && grep -q "$STAGE_SITE_URL" "$BUILD_DIR/index.html"; then
+	printf 'dist/ already matches rehearsal SITE_URL; reusing existing build\n'
+else
+	rm -rf "$BUILD_DIR"
+	npm run build
+fi
 
 printf '\n\033[1;36m== grep dist/ for https://millsymills.com ==\033[0m\n'
 
