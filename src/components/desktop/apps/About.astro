@@ -1,5 +1,6 @@
 ---
 import { profile } from '../../../data/profile';
+import { pgp } from '../../../data/pgp';
 ---
 
 <style>
@@ -46,6 +47,32 @@ import { profile } from '../../../data/profile';
 		border-radius: 3px;
 	}
 
+	.about__keys {
+		margin-top: 0.6rem;
+		font-size: 0.82rem;
+		color: var(--ink-soft);
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.about__keys-label {
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		padding: 2px 6px;
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 3px;
+	}
+	.about__keys-fp {
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		background: var(--pink-50);
+		padding: 0.1rem 0.35rem;
+		border-radius: 2px;
+		word-break: break-all;
+	}
+
 	@media (max-width: 460px) {
 		.about {
 			grid-template-columns: 1fr;
@@ -81,6 +108,11 @@ import { profile } from '../../../data/profile';
 			<a href={`mailto:${profile.email}`}>{profile.email}</a> · <a href={profile.github}
 				>github</a
 			>
+		</p>
+		<p class="about__keys">
+			<span class="about__keys-label">pgp</span>
+			<code class="about__keys-fp">{pgp.fingerprint}</code>
+			<a href="/pgp.asc" download>/pgp.asc</a>
 		</p>
 	</div>
 </article>
