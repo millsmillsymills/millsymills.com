@@ -44,7 +44,7 @@ const severityLabel: Record<Severity, string> = {
 <style>
 	.incidents {
 		padding: 1rem 1.25rem;
-		color: var(--ink);
+		color: var(--ink-primary);
 		font-family: var(--font-xp-ui, system-ui, sans-serif);
 	}
 	.incidents h1 {
@@ -55,8 +55,8 @@ const severityLabel: Record<Severity, string> = {
 		text-transform: lowercase;
 	}
 	.hex-chrome {
-		background: var(--ink);
-		color: var(--pink-200);
+		background: var(--bg-edge);
+		color: var(--neon-lilac);
 		padding: 0.4rem 0.6rem;
 		border: 1px solid var(--pink-400);
 		margin-bottom: 1rem;
@@ -80,7 +80,7 @@ const severityLabel: Record<Severity, string> = {
 		grid-template-columns: 4rem 1fr;
 		gap: 0.75rem;
 		padding: 0.6rem 0.75rem;
-		background: var(--cream);
+		background: var(--bg-raised);
 		border: 1px solid var(--pink-300);
 		border-left: 4px solid var(--pink-400);
 	}
@@ -110,18 +110,18 @@ const severityLabel: Record<Severity, string> = {
 		font-size: 0.72rem;
 		text-transform: uppercase;
 		border-radius: 2px;
-		color: var(--cream);
+		color: var(--ink-primary);
 	}
 	.sev.sev-critical { background: #c80050; }
 	.sev.sev-high     { background: #e06a00; }
-	.sev.sev-med      { background: #caa200; color: var(--ink); }
+	.sev.sev-med      { background: #caa200; color: var(--bg-void); }
 	.sev.sev-low      { background: #4aa500; }
 	.sev.sev-info     { background: #3090c8; }
 
 	.title {
 		font-family: var(--font-mono);
 		font-size: 0.95rem;
-		color: var(--ink);
+		color: var(--ink-primary);
 	}
 	.cve {
 		font-family: var(--font-mono);
