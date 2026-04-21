@@ -17,8 +17,12 @@ export interface Context {
 	cwd: string;
 	setCwd: (next: string) => void;
 	fs: Record<string, Entry>;
-	/** ask user for a single line of input (optionally masked, eg. password) */
-	prompt: (label: string, mask?: boolean) => Promise<string>;
+	/**
+	 * Ask user for a single line of input (optionally masked, eg. password).
+	 * Resolves to the entered string on Enter, or `null` on Ctrl-C so callers
+	 * can distinguish a deliberate cancel from an empty entry.
+	 */
+	prompt: (label: string, mask?: boolean) => Promise<string | null>;
 	/** clear the scrollback */
 	clear: () => void;
 	/** close the terminal window */

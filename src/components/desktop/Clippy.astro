@@ -1,0 +1,139 @@
+---
+// Clippy desktop companion — corner-dwelling animated paperclip. Markup +
+// scoped CSS only; behavior lives in src/scripts/clippy.ts.
+---
+
+<aside
+	class="clippy"
+	id="clippy"
+	role="complementary"
+	aria-label="clippy companion"
+	hidden
+>
+	<button type="button" class="clippy__sprite" data-clippy-pose="idle" aria-label="clippy"></button>
+
+	<div class="clippy__bubble" hidden role="status" aria-live="polite">
+		<span class="clippy__bubble-text"></span>
+	</div>
+
+	<div class="clippy__popover" hidden role="dialog" aria-label="hide clippy">
+		<p>hide this thing?</p>
+		<button type="button" data-clippy-dismiss="session">this session</button>
+		<button type="button" data-clippy-dismiss="forever">forever</button>
+		<button type="button" data-clippy-dismiss-cancel>cancel</button>
+	</div>
+</aside>
+
+<style>
+	.clippy {
+		position: fixed;
+		right: 24px;
+		bottom: 64px;
+		z-index: 200;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 6px;
+		font-family: var(--font-screen);
+	}
+
+	.clippy[hidden] {
+		display: none;
+	}
+
+	.clippy__sprite {
+		all: unset;
+		width: 160px;
+		height: 160px;
+		background-repeat: no-repeat;
+		background-size: calc(160px * var(--frames, 1)) 160px;
+		cursor: var(--c-pointer);
+	}
+
+	.clippy__sprite:focus-visible {
+		outline: 2px dashed var(--cream);
+		outline-offset: 2px;
+	}
+
+	.clippy__sprite[data-clippy-pose='idle']        { --frames: 33;  background-image: url('/clippy/idle.png');        animation: clippy-scrub 2.4s steps(33) infinite; }
+	.clippy__sprite[data-clippy-pose='wakeup']      { --frames: 22;  background-image: url('/clippy/wakeup.png');      animation: clippy-scrub 1.5s steps(22) 1 forwards; }
+	.clippy__sprite[data-clippy-pose='leave']       { --frames: 13;  background-image: url('/clippy/leave.png');       animation: clippy-scrub 0.8s steps(13) 1 forwards; }
+	.clippy__sprite[data-clippy-pose='think']       { --frames: 55;  background-image: url('/clippy/think.png');       animation: clippy-scrub 3.5s steps(55) 1 forwards; }
+	.clippy__sprite[data-clippy-pose='sleep']       { --frames: 145; background-image: url('/clippy/sleep.png');       animation: clippy-scrub 9s   steps(145) 1 forwards; }
+	.clippy__sprite[data-clippy-pose='cool']        { --frames: 60;  background-image: url('/clippy/cool.png');        animation: clippy-scrub 3.5s steps(60) 1 forwards; }
+	.clippy__sprite[data-clippy-pose='tired']       { --frames: 133; background-image: url('/clippy/tired.png');       animation: clippy-scrub 8s   steps(133) 1 forwards; }
+	.clippy__sprite[data-clippy-pose='point-right'] { --frames: 34;  background-image: url('/clippy/point-right.png'); animation: clippy-scrub 2.2s steps(34) 1 forwards; }
+
+	@keyframes clippy-scrub {
+		from { background-position: 0 0; }
+		to   { background-position: calc(-160px * var(--frames)) 0; }
+	}
+
+	.clippy__bubble {
+		max-width: 200px;
+		padding: 8px 10px;
+		background: var(--cream);
+		color: var(--ink);
+		border: 2px solid var(--border);
+		border-radius: 8px;
+		box-shadow: 2px 2px 0 0 var(--border);
+		font-family: var(--font-screen);
+		font-size: 16px;
+		line-height: 1.25;
+	}
+
+	.clippy__bubble[hidden] {
+		display: none;
+	}
+
+	.clippy__popover {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 10px 12px;
+		background: var(--cream);
+		color: var(--ink);
+		border: 2px solid var(--border);
+		border-radius: 8px;
+		box-shadow: 2px 2px 0 0 var(--border);
+		font-family: var(--font-screen);
+		font-size: 14px;
+	}
+
+	.clippy__popover[hidden] {
+		display: none;
+	}
+
+	.clippy__popover p {
+		margin: 0 0 4px;
+	}
+
+	.clippy__popover button {
+		all: unset;
+		cursor: var(--c-pointer);
+		padding: 4px 8px;
+		background: var(--pink-100);
+		border: 2px solid var(--border);
+		border-radius: 4px;
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		text-align: center;
+	}
+
+	.clippy__popover button:hover,
+	.clippy__popover button:focus-visible {
+		background: var(--pink-200);
+	}
+
+	@media (hover: none) {
+		.clippy { display: none; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.clippy__sprite { animation: none !important; background-position: 0 0; }
+	}
+</style>
+
+<script>
+	import '../../scripts/clippy';
+</script>

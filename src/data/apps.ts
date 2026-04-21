@@ -73,7 +73,7 @@ export const apps: AppDef[] = [
 		glyph: '🚩',
 		iconUrl: '/images/icons/vaporwave/arcade-game.png',
 		title: 'flags.exe',
-		ogDescription: '10 hidden CTF flags scattered across the site. find them all. Juice-Shop-style.',
+		ogDescription: '11 hidden CTF flags scattered across the site. find them all. Juice-Shop-style.',
 		x: 220,
 		y: 140,
 		width: 520,
