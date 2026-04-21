@@ -22,7 +22,14 @@ function init(): void {
 		root,
 		onExit: () => {
 			const win = root.closest<HTMLElement>('.window');
-			if (win) win.hidden = true;
+			const id = win?.dataset.windowId;
+			if (!id) return;
+			// Route through the WindowManager so the taskbar item, open-stack,
+			// and z-order all stay in sync. Mutating .hidden directly here
+			// left stale state behind (#51).
+			document.dispatchEvent(
+				new CustomEvent('mills:close-window', { detail: { id } }),
+			);
 		},
 	});
 }
