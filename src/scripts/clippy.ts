@@ -40,6 +40,71 @@ let bubble: HTMLElement | null = null;
 let bubbleText: HTMLElement | null = null;
 let popover: HTMLElement | null = null;
 
+let currentPose: Pose = 'idle';
+let returnToIdleTimer: number | null = null;
+let bubbleHideTimer: number | null = null;
+let idleThinkTimer: number | null = null;
+let idleTiredTimer: number | null = null;
+let idleSleepTimer: number | null = null;
+
+function clearTimer(id: number | null): void {
+	if (id !== null) window.clearTimeout(id);
+}
+
+function getCurrentAppId(): string | undefined {
+	// Heuristic: the topmost open window in the desktop's z-stack is the
+	// "current" app for quip context. Falls back to undefined (default pool)
+	// when no windows are open.
+	const visible = Array.from(
+		document.querySelectorAll<HTMLElement>('.window:not([hidden])'),
+	).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0));
+	return visible[0]?.dataset.windowId;
+}
+
+function setPose(next: Pose): void {
+	if (!sprite) return;
+	currentPose = next;
+	sprite.dataset.clippyPose = next;
+	clearTimer(returnToIdleTimer);
+	// Non-loop poses auto-return to idle after their duration. idle and sleep
+	// loop / hold and stay until something else fires.
+	if (next !== 'idle' && next !== 'sleep') {
+		returnToIdleTimer = window.setTimeout(() => {
+			if (currentPose === next) setPose('idle');
+		}, POSE_DURATIONS_MS[next]);
+	}
+}
+
+function speak(text: string): void {
+	if (!bubble || !bubbleText || !text) return;
+	bubbleText.textContent = text;
+	bubble.hidden = false;
+	clearTimer(bubbleHideTimer);
+	bubbleHideTimer = window.setTimeout(() => {
+		if (bubble) bubble.hidden = true;
+	}, QUIP_VISIBLE_MS);
+}
+
+function resetIdleTimers(): void {
+	clearTimer(idleThinkTimer);
+	clearTimer(idleTiredTimer);
+	clearTimer(idleSleepTimer);
+	// If Clippy was thinking / tired / sleeping, snap back to idle on activity.
+	if (
+		currentPose === 'think' ||
+		currentPose === 'tired' ||
+		currentPose === 'sleep'
+	) {
+		setPose('idle');
+	}
+	idleThinkTimer = window.setTimeout(() => {
+		setPose('think');
+		speak(pickQuip(getCurrentAppId(), 'idle'));
+	}, IDLE_THINK_MS);
+	idleTiredTimer = window.setTimeout(() => setPose('tired'), IDLE_TIRED_MS);
+	idleSleepTimer = window.setTimeout(() => setPose('sleep'), IDLE_SLEEP_MS);
+}
+
 function init(): void {
 	// Idempotency guard — match the pattern from reset.ts (#67).
 	const w = window as unknown as {
@@ -63,10 +128,25 @@ function init(): void {
 	popover = aside?.querySelector<HTMLElement>('.clippy__popover') ?? null;
 	if (!aside || !sprite || !bubble || !bubbleText || !popover) return;
 
-	// Boot trigger — show Clippy once boot animation finishes.
+	// Boot trigger — show Clippy, play wakeup, then start the idle ladder.
 	window.addEventListener('mills:boot-done', () => {
 		if (!aside) return;
 		aside.hidden = false;
+		setPose('wakeup');
+		window.setTimeout(() => {
+			speak(pickQuip(undefined, 'wakeup'));
+		}, POSE_DURATIONS_MS.wakeup);
+		resetIdleTimers();
+	});
+
+	// Activity resets the idle ladder.
+	document.addEventListener('mousemove', resetIdleTimers, { passive: true });
+	document.addEventListener('click', resetIdleTimers);
+
+	// Flag captured anywhere → cool pose + contextual quip.
+	window.addEventListener('mills:flag-captured', () => {
+		setPose('cool');
+		speak(pickQuip(getCurrentAppId(), 'flag'));
 	});
 
 	w.mills = { ...(w.mills ?? {}), __clippyInit: true };
@@ -80,15 +160,7 @@ if (typeof window !== 'undefined') {
 	}
 }
 
-// Touch the imports + constants to keep the linter from flagging them — they're
-// consumed in Tasks 7-9 of the implementation plan. These lines are removed
-// over the next three tasks as each symbol is wired up.
-void pickQuip;
+// Wired in Tasks 8-9.
 void captureById;
-void POSE_DURATIONS_MS;
-void IDLE_THINK_MS;
-void IDLE_TIRED_MS;
-void IDLE_SLEEP_MS;
-void QUIP_VISIBLE_MS;
 void CLICK_STREAK_WINDOW_MS;
 void CLICK_STREAK_THRESHOLD;
