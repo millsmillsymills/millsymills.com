@@ -18,6 +18,7 @@ register({
 		out('  · boot-animation skip');
 		out('');
 		out('confirm in the modal (or cancel).');
+		out('focus is in the modal — press Esc or click Cancel to back out.', 't-dim');
 		resetAll();
 	},
 });
