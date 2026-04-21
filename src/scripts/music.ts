@@ -13,6 +13,25 @@ interface Track {
 	artist: string;
 }
 
+/**
+ * Map a play() rejection to a user-visible status. Browsers reject for two
+ * very different reasons that we want to communicate distinctly:
+ *
+ *   - NotAllowedError: autoplay policy blocked playback. The user needs
+ *     to click play themselves to grant permission.
+ *   - NotSupportedError / DOMException: the source 404'd, the codec is
+ *     unsupported, or the URL is otherwise unplayable.
+ *
+ * The previous "cannot play" message conflated both, so a missing track
+ * looked indistinguishable from "your browser is being safe."
+ */
+function playErrorMessage(err: unknown): string {
+	const name = (err as { name?: string } | null)?.name;
+	if (name === 'NotAllowedError') return 'click play to start';
+	if (name === 'NotSupportedError') return 'track unavailable';
+	return 'cannot play';
+}
+
 class MusicPlayer {
 	private audio: HTMLAudioElement;
 	private tracks: Track[] = [];
@@ -105,7 +124,7 @@ class MusicPlayer {
 		if (this.titleEl) this.titleEl.textContent = track.title;
 		if (this.artistEl) this.artistEl.textContent = track.artist;
 		this.refreshTrackHighlight();
-		if (autoplay) this.audio.play().catch(() => this.setStatus('cannot play'));
+		if (autoplay) this.audio.play().catch((err) => this.setStatus(playErrorMessage(err)));
 	}
 
 	private refreshTrackHighlight(): void {
@@ -119,7 +138,7 @@ class MusicPlayer {
 			this.load(0, true);
 			return;
 		}
-		if (this.audio.paused) this.audio.play().catch(() => this.setStatus('cannot play'));
+		if (this.audio.paused) this.audio.play().catch((err) => this.setStatus(playErrorMessage(err)));
 		else this.audio.pause();
 	}
 
