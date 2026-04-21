@@ -25,14 +25,13 @@ case "$STACK" in
 esac
 
 MARKER="infra/.terraform/.stack"
-BACKEND_CFG="infra/stacks/${STACK}.backend.hcl"
 
 printf '\033[1;36m== tf.sh: stack=%s ==\033[0m\n' "$STACK"
 
 SUBCMD="${1:-}"
 
 init_stack() {
-	terraform -chdir=infra init -reconfigure -backend-config="stacks/${STACK}.backend.hcl" -input=false
+	terraform -chdir=infra init -reconfigure -backend-config="stacks/${STACK}.backend.hcl" -input=false "$@"
 	# Record which stack this working dir is initialized for. Read by
 	# stale_state_guard below. Written AFTER a successful init so a
 	# failed init doesn't leave a stale marker.
@@ -42,7 +41,7 @@ init_stack() {
 stale_state_guard() {
 	# Only run for commands that touch remote state.
 	case "$SUBCMD" in
-		apply|destroy|plan|refresh|import|state|output|console|show) ;;
+		apply|destroy|plan|refresh|import|state|output|console|show|force-unlock) ;;
 		*) return 0 ;;
 	esac
 
@@ -52,7 +51,7 @@ stale_state_guard() {
 	fi
 
 	local current_stack
-	current_stack="$(cat "$MARKER")"
+	read -r current_stack < "$MARKER"
 
 	if [[ "$current_stack" != "$STACK" ]]; then
 		printf '\033[1;31mrefusing: infra/.terraform initialized for stack %q, this command targets %q. Run `./scripts/tf.sh %s init` to re-init.\033[0m\n' "$current_stack" "$STACK" "$STACK" >&2
@@ -62,17 +61,18 @@ stale_state_guard() {
 
 case "$SUBCMD" in
 	init)
-		init_stack
+		init_stack "${@:2}"
 		;;
 	plan|apply|destroy|refresh)
 		stale_state_guard
 		terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" "${@:2}"
 		;;
-	output|state|import|console|show)
+	output|state|import|console|show|force-unlock)
+		# Touch remote state — guard against running against the wrong stack.
 		stale_state_guard
 		terraform -chdir=infra "$@"
 		;;
-	fmt|validate|workspace|providers|get|force-unlock|version)
+	fmt|validate|workspace|providers|get|version)
 		# No state needed, no guard.
 		terraform -chdir=infra "$@"
 		;;

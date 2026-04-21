@@ -66,6 +66,12 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
         run: npm run build
 
+      # Symmetric to deploy-rehearsal.yml's leakage check — catches a hardcoded
+      # rehearsal URL accidentally shipping to prod. No untrusted github.event
+      # context used.
+      - name: Assert no rehearsal URL leakage
+        run: ./scripts/assert-no-rehearsal-leakage.sh
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
         with:
