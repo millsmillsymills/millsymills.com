@@ -29,37 +29,79 @@
 }
 
 :root {
-	--pink-50: #fff0f7;
-	--pink-100: #ffd6ec;
-	--pink-200: #ffaad7;
+	/* ============================================================
+	 * Neon-noir vaporwave palette (#vaporwave chrome redesign)
+	 * Surfaces darkest-first. Legacy --pink-*/--lilac-*/--cream
+	 * names kept below for downstream compatibility — only their
+	 * values moved into the new palette.
+	 * ============================================================ */
+
+	/* Surface hierarchy */
+	--bg-void: #0a0320;
+	--bg-deep: #140832;
+	--bg-raised: #1e0f44;
+	--bg-edge: #2a1654;
+
+	/* Ink */
+	--ink-primary: #f5edff;
+	--ink-muted: #c8a8ff;
+	--ink-dim: #8a6bb8;
+
+	/* Accents */
+	--neon-pink: #ff4fa8;
+	--neon-pink-hi: #ff7ec0;
+	--neon-pink-lo: #e62b8c;
+	--neon-cyan: #00e5ff;
+	--neon-cyan-hi: #66f0ff;
+	--neon-cyan-lo: #00a8c2;
+	--neon-lilac: #c8a8ff;
+
+	/* Motif layers */
+	--scanlines: repeating-linear-gradient(
+		0deg,
+		transparent 0 2px,
+		rgba(0, 0, 0, 0.35) 2px 3px
+	);
+	--grain: url('/images/noise.png');
+
+	/* Chrome geometry */
+	--chrome-border-width: 2px;
+	--chrome-radius-window: 10px;
+	--chrome-radius-button: 4px;
+
+	/* ------------------------------------------------------------
+	 * Legacy names — repointed values, not renamed, so unrelated
+	 * code that references --pink-*/--cream/etc keeps working.
+	 * ------------------------------------------------------------ */
+	--pink-50: #241055;
+	--pink-100: #2a1654;
+	--pink-200: #3b1d70;
 	--pink-300: #ff7ec0;
 	--pink-400: #ff4fa8;
 	--pink-500: #e62b8c;
-	--pink-600: #b6196d;
+	--pink-600: #ff4fa8;
 
-	--lilac-100: #efe1ff;
+	--lilac-100: #2a1654;
 	--lilac-300: #c8a8ff;
 
-	--cream: #fff9f3;
-	--ink: #1a0e23;
-	--ink-soft: #4a3257;
-	--border: #321a44;
+	--cream: #f5edff;
+	--ink: #f5edff;
+	--ink-soft: #c8a8ff;
+	--border: #00e5ff;
 
-	--titlebar-bg: linear-gradient(180deg, #ff4fa8 0%, #e62b8c 100%);
-	--titlebar-fg: #fff9f3;
-	--window-bg: #fff9f3;
-	--window-shadow: 4px 4px 0 0 var(--border);
+	--titlebar-bg: linear-gradient(90deg, #ff4fa8 0%, #c8a8ff 50%, #00e5ff 100%);
+	--titlebar-fg: #0a0320;
+	--window-bg: #140832;
+	--window-shadow: 4px 4px 0 0 var(--neon-cyan);
 
+	/* Fonts — unchanged */
 	--font-pixel: 'Press Start 2P', 'VT323', 'Courier New', monospace;
 	--font-screen: 'VT323', 'Courier New', monospace;
 	--font-mono: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', monospace;
 	--font-xp-ui: 'Tahoma', 'Geneva', system-ui, sans-serif;
 	--font-xp-display: 'Franklin Gothic ITC', 'Georgia', serif;
 
-	/* Y2K-XP cursor pack (3dw white set + default_link hand). Hotspots are
-	 * tuned for a 32x32 sprite — arrow tip top-left, beam/move/no center,
-	 * link near the index-finger tip. Native CSS keyword stays as fallback
-	 * for browsers that fail PNG cursors or for pages outside .desktop. */
+	/* Cursors — unchanged */
 	--c-default: url('/cursors/3dwarro.png') 0 0, default;
 	--c-pointer: url('/cursors/default_link.png') 6 2, pointer;
 	--c-text: url('/cursors/3dwbeam.png') 16 16, text;
