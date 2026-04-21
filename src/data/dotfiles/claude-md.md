@@ -41,22 +41,24 @@ prescribes the *learning loop* (pattern extraction, reuse).
   Verify each point against the code; implement or push back with
   specifics. Never performatively agree.
 
-## Tools I actually use
+## Tools
 
-- **Search**: `rg` (ripgrep) first, never `grep`/`find` directly in
-  scripts. Claude Code's `Grep` tool is ripgrep-backed — use it.
-- **File navigation**: `fd`, `zoxide`, `fzf`.
-- **Editor**: VS Code. For quick edits from the shell: the `Edit` tool,
-  not `sed`/`awk`.
-- **Shell**: zsh + starship + atuin + zsh-autosuggestions +
-  zsh-syntax-highlighting. See `~/.zshrc` in this directory.
-- **Package managers**: pnpm (node), uv (python), brew (macOS).
-- **Git**: signed commits — see `~/.config/git/config`. GitHub access
-  via `gh`, never paste PATs.
-- **Infrastructure**: Terraform with per-stack backend configs; use
-  stack-aware wrappers (e.g. `scripts/tf.sh`) where they exist — never
-  bypass them.
-- **AI-adjacent**: Claude Code is primary. opencode for local-first work.
+Full list with per-tool rationale at `/uses/#ai-native-cli-stack`, or
+via `tools` / `tools <name>` in the terminal app.
+
+Short version: every tool in the stack is chosen for machine-parseable
+output, deterministic behavior, or agent-safe auth. Agents and I consume
+the same interfaces.
+
+- **Search**: `rg` first, never `grep`/`find` directly. Claude Code's
+  `Grep` tool is ripgrep-backed — use it.
+- **Edit**: the `Edit` tool, not `sed`/`awk` — the tool's diff semantics
+  are stricter than a regex replace.
+- **GitHub**: `gh` with `--json` output, never paste PATs, never
+  commit tokens.
+- **Infra**: Terraform + stack-aware wrappers (e.g. `scripts/tf.sh`).
+  Never bypass them.
+- **Env**: uv for python, pnpm for node, direnv for per-project env.
 
 ## Guardrails
 

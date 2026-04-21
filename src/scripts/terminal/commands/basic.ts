@@ -2,6 +2,7 @@ import { register, listCommands, lookup, type Context } from '../registry';
 import { incidents } from '../../../data/incidents';
 import { pgp } from '../../../data/pgp';
 import pgpArmored from '../../../../public/pgp.asc?raw';
+import { tools, findTool, toolCategoryTitles, type Tool, type ToolCategory } from '../../../data/tools';
 
 const DOTFILE_INDEX: Array<[string, string]> = [
 	['.zshrc', 'zsh — starship, atuin, eza/bat/fd/rg, direnv'],
@@ -155,6 +156,26 @@ register(
 		},
 	},
 	{
+		name: 'tools',
+		summary: 'list AI-native CLI stack; `tools <name>` for details',
+		usage: 'tools [name]',
+		handler: ({ args, out }) => {
+			const id = args[0];
+			if (id) {
+				const t = findTool(id);
+				if (!t) {
+					out(`unknown tool: ${id}`, 't-err');
+					out('', 't-dim');
+					out('run `tools` for the full list.', 't-dim');
+					return;
+				}
+				printToolDetail(t, out);
+				return;
+			}
+			printToolOverview(out);
+		},
+	},
+	{
 		name: 'dotfiles',
 		summary: 'list files under ~/.dotfiles/',
 		handler: ({ out }) => {
@@ -227,6 +248,67 @@ register(
 
 export function _resolvePath(cwd: string, target: string | undefined): string {
 	return resolvePath(cwd, target);
+}
+
+type WriteFn = (line: string, cls?: string) => void;
+
+function printToolOverview(out: WriteFn): void {
+	out('ai-native cli stack — chosen for machine-parseable output + determinism.', 't-dim');
+	out('');
+	const order: ToolCategory[] = ['basics', 'agent-native', 'environment', 'ai-coding', 'security', 'editor-infra'];
+	const byCat = new Map<ToolCategory, Tool[]>();
+	for (const t of tools) {
+		const arr = byCat.get(t.category) ?? [];
+		arr.push(t);
+		byCat.set(t.category, arr);
+	}
+	const idWidth = Math.max(...tools.map((t) => t.id.length));
+	for (const cat of order) {
+		const entries = byCat.get(cat);
+		if (!entries || entries.length === 0) continue;
+		out(`  ${toolCategoryTitles[cat]}`, 't-dim');
+		for (const t of entries) {
+			out(`    ${t.id.padEnd(idWidth + 2)}${t.tagline}`);
+		}
+		out('');
+	}
+	out('  `tools <name>` for details (e.g. `tools ripgrep`)', 't-dim');
+	out('  full list + rationale:  /uses/', 't-dim');
+}
+
+function printToolDetail(t: Tool, out: WriteFn): void {
+	out(`${t.name} — ${t.tagline}`);
+	out('');
+	if (t.aliases && t.aliases.length) {
+		out(`  aliases:      ${t.aliases.join(', ')}`, 't-dim');
+	}
+	if (t.install) {
+		out(`  install:      ${t.install}`, 't-dim');
+	}
+	if (t.docsUrl) {
+		out(`  docs:         ${t.docsUrl}`, 't-dim');
+	}
+	out('');
+	out('why this tool in an ai-native stack:');
+	for (const bullet of t.aiRationale) {
+		out(`  - ${bullet}`);
+	}
+	if (t.examples && t.examples.length) {
+		out('');
+		out('common uses:');
+		const cmdWidth = Math.max(...t.examples.map((e) => e.cmd.length));
+		for (const ex of t.examples) {
+			out(`  ${ex.cmd.padEnd(cmdWidth + 2)}${ex.description}`);
+		}
+	}
+	if (t.note) {
+		out('');
+		out("mills's note:", 't-dim');
+		// wrap long notes into terminal-width-ish lines (simple, no smart hyphenation)
+		for (const line of t.note.split('\n')) {
+			out(`  ${line}`);
+		}
+	}
 }
 
 export type { Context };

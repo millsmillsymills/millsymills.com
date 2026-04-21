@@ -1,5 +1,20 @@
 ---
 import { chimera, gear } from '../../../data/uses';
+import { tools, toolCategoryTitles, type ToolCategory } from '../../../data/tools';
+
+const toolCategoryOrder: ToolCategory[] = [
+	'basics',
+	'agent-native',
+	'environment',
+	'ai-coding',
+	'security',
+	'editor-infra',
+];
+const toolsByCategory = toolCategoryOrder.map((cat) => ({
+	cat,
+	title: toolCategoryTitles[cat],
+	items: tools.filter((t) => t.category === cat),
+}));
 ---
 
 <style>
@@ -122,6 +137,73 @@ import { chimera, gear } from '../../../data/uses';
 		color: var(--pink-500);
 		text-decoration: underline;
 	}
+
+	.tools-lede {
+		border-left: 3px solid var(--pink-400);
+		padding: 0.4rem 0.75rem;
+		margin: 0.75rem 0 1rem;
+		background: var(--pink-50);
+		font-size: 0.92rem;
+	}
+	.tools-group {
+		margin-bottom: 1.25rem;
+	}
+	.tools-group h3 {
+		font-family: var(--font-screen, monospace);
+		color: var(--pink-600);
+		font-size: 0.95rem;
+		margin: 0 0 0.35rem;
+		text-transform: lowercase;
+		letter-spacing: 0.04em;
+	}
+	.tools-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+	.tools-list li {
+		display: grid;
+		grid-template-columns: 10rem 1fr;
+		gap: 0.4rem 0.75rem;
+		padding: 0.25rem 0;
+		border-bottom: 1px dashed var(--pink-200);
+		font-size: 0.88rem;
+	}
+	.tools-list li:last-child {
+		border-bottom: 0;
+	}
+	.tools-list .tool-id {
+		font-family: var(--font-mono);
+		color: var(--ink);
+	}
+	.tools-list .tool-id a {
+		color: var(--pink-600);
+		text-decoration: none;
+	}
+	.tools-list .tool-id a:hover {
+		text-decoration: underline;
+	}
+	.tools-list .tool-tag {
+		color: var(--ink-soft);
+	}
+	.tools-hint {
+		font-size: 0.8rem;
+		color: var(--ink-soft);
+		margin: 0 0 1rem;
+	}
+	.tools-hint code {
+		font-family: var(--font-mono);
+		background: var(--pink-50);
+		padding: 0.05rem 0.3rem;
+		border-radius: 2px;
+	}
+
+	@media (max-width: 520px) {
+		.tools-list li {
+			grid-template-columns: 1fr;
+			gap: 0.1rem;
+		}
+	}
 </style>
 
 <h1>/uses</h1>
@@ -130,6 +212,42 @@ import { chimera, gear } from '../../../data/uses';
 	the gear that survives selection pressure. updated when i replace something, not when i think about
 	replacing something.
 </p>
+
+<h2>ai-native cli stack</h2>
+<p class="tools-lede">
+	every tool here is chosen because agents and i consume the same interfaces — machine-parseable
+	output, deterministic behavior, per-project scoping. most look like "modern cli alternatives,"
+	but the real selection pressure is <em>this works with ai pair programming</em>.
+</p>
+<p class="tools-hint">
+	terminal tip: run <code>tools</code> for the overview, or <code>tools &lt;name&gt;</code> (e.g.
+	<code>tools ripgrep</code>) for per-tool rationale + examples.
+</p>
+{
+	toolsByCategory.map((group) => (
+		<section class="tools-group">
+			<h3>{group.title}</h3>
+			<ul class="tools-list">
+				{group.items.map((t) => (
+					<li>
+						<span class="tool-id">
+							{t.docsUrl ? (
+								<a href={t.docsUrl} target="_blank" rel="noopener">
+									{t.name}
+								</a>
+							) : (
+								t.name
+							)}
+						</span>
+						<span class="tool-tag">{t.tagline}</span>
+					</li>
+				))}
+			</ul>
+		</section>
+	))
+}
+
+<h2>physical stack</h2>
 
 <section class="chimera" aria-label="chimera server specs">
 	<header class="chimera__header">
