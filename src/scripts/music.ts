@@ -26,6 +26,9 @@ class MusicPlayer {
 	private playBtn: HTMLButtonElement | null;
 	private muteBtn: HTMLButtonElement | null;
 	private seekBar: HTMLInputElement | null;
+	private cassetteEl: HTMLElement | null;
+	private playImg: HTMLImageElement | null;
+	private muteImg: HTMLImageElement | null;
 
 	constructor(root: HTMLElement) {
 		this.audio = root.querySelector<HTMLAudioElement>('[data-music-audio]')!;
@@ -37,6 +40,9 @@ class MusicPlayer {
 		this.playBtn = root.querySelector<HTMLButtonElement>('[data-music-play]');
 		this.muteBtn = root.querySelector<HTMLButtonElement>('[data-music-mute]');
 		this.seekBar = root.querySelector<HTMLInputElement>('[data-music-seek]');
+		this.cassetteEl = root.querySelector<HTMLElement>('[data-music-state]');
+		this.playImg = this.playBtn?.querySelector<HTMLImageElement>('img') ?? null;
+		this.muteImg = this.muteBtn?.querySelector<HTMLImageElement>('img') ?? null;
 
 		root.querySelectorAll<HTMLElement>('[data-music-track]').forEach((el, i) => {
 			this.tracks.push({
@@ -69,15 +75,20 @@ class MusicPlayer {
 		this.audio.addEventListener('durationchange', () => this.renderTime());
 		this.audio.addEventListener('ended', () => this.next());
 		this.audio.addEventListener('play', () => {
-			this.setStatus('playing', '⏸');
+			this.setStatus('playing');
+			this.setPlayGlyph('pause');
+			this.cassetteEl?.setAttribute('data-music-state', 'playing');
 			this.emitNowPlaying();
 		});
 		this.audio.addEventListener('pause', () => {
-			this.setStatus('paused', '▶');
+			this.setStatus('paused');
+			this.setPlayGlyph('play');
+			this.cassetteEl?.setAttribute('data-music-state', 'paused');
 			this.emitNowPlaying({ playing: false });
 		});
 		this.audio.addEventListener('error', () => {
 			this.setStatus('track unavailable');
+			this.cassetteEl?.setAttribute('data-music-state', 'paused');
 			if (this.titleEl) this.titleEl.textContent = '(404 — drop audio into public/audio/)';
 			this.emitNowPlaying({ playing: false });
 		});
@@ -125,7 +136,11 @@ class MusicPlayer {
 
 	private toggleMute(): void {
 		this.audio.muted = !this.audio.muted;
-		if (this.muteBtn) this.muteBtn.textContent = this.audio.muted ? '🔇' : '🔊';
+		if (this.muteImg) {
+			this.muteImg.src = this.audio.muted
+				? '/images/vaporwave-ui/buttons/mute.png'
+				: '/images/vaporwave-ui/buttons/unmute.png';
+		}
 	}
 
 	private prev(): void {
@@ -138,9 +153,16 @@ class MusicPlayer {
 		this.load(next, !this.audio.paused);
 	}
 
-	private setStatus(text: string, playGlyph?: string): void {
+	private setStatus(text: string): void {
 		if (this.statusEl) this.statusEl.textContent = text;
-		if (playGlyph && this.playBtn) this.playBtn.textContent = playGlyph;
+	}
+
+	private setPlayGlyph(which: 'play' | 'pause'): void {
+		if (!this.playImg) return;
+		this.playImg.src =
+			which === 'pause'
+				? '/images/vaporwave-ui/buttons/pause.png'
+				: '/images/vaporwave-ui/buttons/play.png';
 	}
 
 	private renderTime(): void {
