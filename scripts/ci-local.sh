@@ -63,8 +63,13 @@ if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
 	printf '\033[1;31m✗ tf.sh did not catch wrong-stack marker\033[0m\n' >&2
 	exit 1
 fi
+# force-unlock targets remote state too; must be guarded same as plan/apply.
+if ./scripts/tf.sh p41m0n force-unlock fake-id >/dev/null 2>&1; then
+	printf '\033[1;31m✗ tf.sh did not guard force-unlock against wrong stack\033[0m\n' >&2
+	exit 1
+fi
 rm -rf infra/.terraform
-ok "tf.sh refuses invalid stack + missing init + wrong-stack marker"
+ok "tf.sh refuses invalid stack + missing init + wrong-stack marker + wrong-stack force-unlock"
 
 section "terraform: fmt"
 terraform -chdir=infra fmt -check -recursive
