@@ -78,6 +78,8 @@ DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip t
 
 Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the workflow targets the `production` GitHub Environment, which **must be configured with required reviewers**. GitHub holds each run in a "Waiting" state until a human approves it — so nothing ships to AWS without an explicit click, even if a push lands on `main`.
 
+The OIDC trust policy pins each stack's role to a specific workflow file via the `deploy_workflow` Terraform variable. Default is `deploy.yml`; the rehearsal stack overrides to `deploy-rehearsal.yml` in `infra/stacks/p41m0n.tfvars`. **If you add a new deploy workflow, add a matching `deploy_workflow = "<file>.yml"` line to the relevant stack's tfvars and `terraform apply` BEFORE pushing the workflow** — otherwise the new workflow's `AssumeRoleWithWebIdentity` call will fail. `ci-local.sh` checks the referenced workflow file exists; a typo there is caught locally.
+
 ### One-time setup
 
 1. `./scripts/tf.sh millsymills init && ./scripts/tf.sh millsymills apply` — creates the OIDC provider and the `millsymills-com-github-deploy` IAM role.

@@ -19,8 +19,16 @@ export SITE_URL="$PROD_SITE_URL"
 unset NO_INDEX
 
 printf '\n\033[1;36m== assert-no-rehearsal-leakage: prod build ==\033[0m\n'
-rm -rf "$BUILD_DIR"
-npm run build
+# Skip rebuild if dist/ already looks like a prod build (CI typically runs
+# the script right after `npm run build` with prod SITE_URL — no point
+# throwing away the artifact about to be deployed). Local invocations
+# without a pre-built dist/ rebuild fresh.
+if [ -f "$BUILD_DIR/index.html" ] && grep -q "$PROD_SITE_URL" "$BUILD_DIR/index.html"; then
+	printf 'dist/ already matches prod SITE_URL; reusing existing build\n'
+else
+	rm -rf "$BUILD_DIR"
+	npm run build
+fi
 
 printf '\n\033[1;36m== grep dist/ for https://p41m0n.com ==\033[0m\n'
 
