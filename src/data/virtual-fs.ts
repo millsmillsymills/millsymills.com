@@ -8,6 +8,15 @@
 
 import { profile, experience, coreSkills } from './profile';
 
+// Dotfile content — ?raw imports keep the source readable and avoid
+// template-literal escaping of ${} / backticks inside shell snippets.
+import zshrc from './dotfiles/zshrc.zsh?raw';
+import tmuxConf from './dotfiles/tmux.conf?raw';
+import nvimInit from './dotfiles/nvim-init.lua?raw';
+import gitConfig from './dotfiles/git-config?raw';
+import dotfilesReadme from './dotfiles/readme.md?raw';
+import claudeMd from './dotfiles/claude-md.md?raw';
+
 export interface Entry {
 	type: 'file' | 'dir';
 	content?: string;
@@ -94,6 +103,19 @@ export const virtualFs: Record<string, Entry> = {
 	'/home/mills/skills.txt': { type: 'file', content: skillsTxt, language: 'text' },
 	'/home/mills/resume.md': { type: 'file', content: '(see /files/resume.md served from public/)', language: 'markdown' },
 	'/home/mills/.bashrc': { type: 'file', content: bashrc, language: 'bash' },
+	'/home/mills/.zshrc': { type: 'file', content: zshrc, language: 'zsh' },
+	'/home/mills/.tmux.conf': { type: 'file', content: tmuxConf, language: 'conf' },
+	'/home/mills/.config': { type: 'dir' },
+	'/home/mills/.config/nvim': { type: 'dir' },
+	'/home/mills/.config/nvim/init.lua': { type: 'file', content: nvimInit, language: 'lua' },
+	'/home/mills/.config/git': { type: 'dir' },
+	'/home/mills/.config/git/config': { type: 'file', content: gitConfig, language: 'conf' },
+	'/home/mills/.dotfiles': { type: 'dir' },
+	'/home/mills/.dotfiles/README.md': { type: 'file', content: dotfilesReadme, language: 'markdown' },
+	'/home/mills/.dotfiles/CLAUDE.md': { type: 'file', content: claudeMd, language: 'markdown' },
+	// Mirrored at the installed path — same bytes, so `cat` in either place works.
+	'/home/mills/.claude': { type: 'dir' },
+	'/home/mills/.claude/CLAUDE.md': { type: 'file', content: claudeMd, language: 'markdown' },
 	'/etc': { type: 'dir' },
 	'/etc/passwd': { type: 'file', content: passwd, language: 'text' },
 	'/etc/shadow': { type: 'file', content: shadow, priv: true, language: 'text' },

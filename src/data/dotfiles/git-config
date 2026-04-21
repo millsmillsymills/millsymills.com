@@ -1,0 +1,70 @@
+[user]
+    name = mills
+    email = mills@millsymills.com
+    # With commit.gpgsign=true below, this must match a key in the keyring.
+    # Points at the same PGP key published at /pgp.asc.
+    signingkey = 0BD8E33BE4A6372DB679E77D60AAA2D2D8A2DC66
+
+[init]
+    # 'main' since 2020. Override per-repo with `git init -b other`.
+    defaultBranch = main
+
+[pull]
+    # Reject non-ff pulls. Forces you to choose rebase or merge explicitly —
+    # no surprise merge commits sneaking into feature branches.
+    ff = only
+
+[push]
+    # 'simple' is the post-2.0 default (push current branch to upstream of same name).
+    default = simple
+    # New branches auto-create upstream on first push. Saves typing `-u`.
+    autoSetupRemote = true
+
+[rebase]
+    # Auto-stash dirty tree before rebase, restore after. No "please stash first" dance.
+    autoStash = true
+    # When a commit subject starts with 'fixup!' or 'squash!', auto-sequence it
+    # during interactive rebase. Pairs with `git commit --fixup <sha>`.
+    autoSquash = true
+
+[commit]
+    # Sign all commits with the key above; requires gpg or ssh signing in PATH.
+    gpgsign = true
+    # Show the full diff in the commit-message editor. Catches staged-wrong
+    # mistakes before the commit lands.
+    verbose = true
+
+[tag]
+    # Sign annotated tags too.
+    gpgsign = true
+    # Sort tags by version number, not alphabetically (so v10 > v2).
+    sort = version:refname
+
+[diff]
+    # Highlight moved lines differently from added/removed. Great for refactors.
+    colorMoved = zebra
+
+[merge]
+    # Show base + ours + theirs in conflict markers. Easier to resolve.
+    conflictStyle = zdiff3
+
+[core]
+    # Files matched here are ignored in every repo (without touching .gitignore).
+    excludesFile = ~/.config/git/ignore
+    # Default editor when git opens one (rebase, commit, etc.).
+    editor = code --wait
+
+[color]
+    # Enables the colorful output you're used to. Default since git 1.8.
+    ui = auto
+
+[alias]
+    co = checkout
+    br = branch
+    st = status -sb
+    # One-line log with graph — favorite.
+    lol = log --graph --oneline --decorate --all
+    # Amend without editing the message.
+    fix = commit --amend --no-edit
+    # Undo last commit, keep changes staged.
+    uncommit = reset --soft HEAD~1
