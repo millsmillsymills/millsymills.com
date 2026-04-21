@@ -1,0 +1,177 @@
+/* vscode.exe — evocative reskin, pink-on-cream */
+
+.vscode {
+	display: grid;
+	grid-template-columns: 48px 220px 1fr;
+	grid-template-rows: 1fr 22px;
+	grid-template-areas:
+		'activity sidebar main'
+		'status   status  status';
+	height: 100%;
+	background: var(--cream);
+	color: var(--ink);
+	font-family: var(--font-mono);
+	font-size: 0.9rem;
+}
+
+.vscode-activitybar {
+	grid-area: activity;
+	background: var(--pink-500);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 0.5rem 0;
+	gap: 0.3rem;
+}
+.vscode-activity-btn {
+	width: 32px;
+	height: 32px;
+	background: transparent;
+	color: var(--cream);
+	border: 1px solid transparent;
+	cursor: pointer;
+	font-size: 1rem;
+}
+.vscode-activity-btn.active {
+	background: var(--pink-600);
+	border-color: var(--cream);
+}
+.vscode-activity-btn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.vscode-sidebar {
+	grid-area: sidebar;
+	background: var(--pink-50);
+	border-right: 1px solid var(--pink-300);
+	overflow-y: auto;
+}
+.vscode-sidebar-heading {
+	font-size: 0.72rem;
+	letter-spacing: 0.08em;
+	color: var(--pink-600);
+	padding: 0.4rem 0.6rem;
+	border-bottom: 1px solid var(--pink-200);
+}
+.vscode-tree-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+.vscode-tree-list .vscode-tree-list {
+	padding-left: 1rem;
+}
+.vscode-tree-row {
+	padding: 0.12rem 0.55rem;
+	cursor: pointer;
+	font-size: 0.82rem;
+	white-space: nowrap;
+}
+.vscode-tree-row:hover {
+	background: var(--pink-100);
+}
+
+.vscode-main {
+	grid-area: main;
+	display: grid;
+	grid-template-rows: auto 1fr;
+	min-width: 0;
+}
+.vscode-tabs {
+	display: flex;
+	background: var(--pink-100);
+	border-bottom: 1px solid var(--pink-300);
+	overflow-x: auto;
+}
+.vscode-tab {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.25rem 0.55rem;
+	font-size: 0.82rem;
+	border-right: 1px solid var(--pink-300);
+	cursor: pointer;
+	color: var(--ink-soft);
+	user-select: none;
+}
+.vscode-tab.active {
+	background: var(--cream);
+	color: var(--ink);
+	border-bottom: 2px solid var(--pink-500);
+}
+.vscode-tab-close {
+	background: transparent;
+	border: 0;
+	color: inherit;
+	font-size: 0.9rem;
+	cursor: pointer;
+	padding: 0 0.15rem;
+	line-height: 1;
+}
+.vscode-tab-close:hover {
+	background: var(--pink-200);
+	border-radius: 3px;
+}
+
+.vscode-editor {
+	display: grid;
+	grid-template-columns: 3rem 1fr;
+	overflow: auto;
+	background: var(--cream);
+}
+.vscode-editor-gutter,
+.vscode-editor-code {
+	margin: 0;
+	padding: 0.4rem 0.6rem;
+	font-family: var(--font-mono);
+	font-size: 0.82rem;
+	line-height: 1.4;
+	white-space: pre;
+}
+.vscode-editor-gutter {
+	color: var(--ink-soft);
+	background: var(--pink-50);
+	text-align: right;
+	user-select: none;
+	border-right: 1px solid var(--pink-200);
+}
+.vscode-editor-empty {
+	padding: 1rem;
+	color: var(--ink-soft);
+	font-style: italic;
+}
+
+.vscode-status {
+	grid-area: status;
+	background: var(--pink-500);
+	color: var(--cream);
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	padding: 0 0.6rem;
+	font-size: 0.75rem;
+}
+.vscode-status-seg code {
+	font-family: inherit;
+	color: var(--cream);
+}
+
+/* mobile: 2-pane stacked */
+@media (max-width: 768px) {
+	.vscode {
+		grid-template-columns: 1fr;
+		grid-template-rows: 40% 60%;
+		grid-template-areas:
+			'sidebar'
+			'main';
+	}
+	.vscode-activitybar,
+	.vscode-status {
+		display: none;
+	}
+	.vscode-sidebar {
+		border-right: 0;
+		border-bottom: 1px solid var(--pink-300);
+	}
+}

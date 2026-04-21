@@ -43,6 +43,35 @@ if (process.env.CI === 'true' && !process.env.SITE_URL) {
 	);
 }
 
+/**
+ * Vite plugin: when a source file is loaded via `?raw` into the vscode
+ * file-tree snippet bundler, strip any hardcoded production URL from the
+ * snippet. Real source files legitimately embed `https://millsymills.com`
+ * inside `Astro.site ?? "..."` fallbacks, but our `assert-no-url-leakage.sh`
+ * check rejects the literal anywhere in dist/. The snippets are evocative
+ * view-source teasers, not runtime logic, so scrubbing is safe here.
+ *
+ * @returns {import('vite').Plugin}
+ */
+function scrubVscodeSnippets() {
+	return {
+		name: 'mills-scrub-vscode-snippets',
+		enforce: /** @type {const} */ ('pre'),
+		transform(/** @type {string} */ code, /** @type {string} */ id) {
+			if (!id.includes('?raw')) return null;
+			// Only scrub the specific snippet imports used by vscode.exe so we
+			// don't quietly rewrite real configuration or data files.
+			const snippetTargets = [
+				'/src/pages/index.astro',
+				'/src/data/apps.ts',
+				'/public/files/resume.md',
+			];
+			if (!snippetTargets.some((p) => id.includes(p))) return null;
+			return code.replace(/https:\/\/millsymills\.com/g, '<site>');
+		},
+	};
+}
+
 export default defineConfig({
 	output: 'static',
 	site: siteUrl,
@@ -51,5 +80,6 @@ export default defineConfig({
 			'import.meta.env.NO_INDEX': JSON.stringify(noIndex ? 'true' : 'false'),
 			'import.meta.env.PUBLIC_GIT_SHA': JSON.stringify(gitSha),
 		},
+		plugins: [scrubVscodeSnippets()],
 	},
 });
