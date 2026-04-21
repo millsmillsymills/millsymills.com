@@ -170,8 +170,11 @@ function init(): void {
 	document.addEventListener('mousemove', resetIdleTimers, { passive: true });
 	document.addEventListener('click', resetIdleTimers);
 
-	// Flag captured anywhere → cool pose + contextual quip.
+	// Flag captured anywhere → cool pose + contextual quip. Reset the idle
+	// ladder so a capture at minute 4 of an idle session doesn't let Clippy
+	// fall asleep mid-celebration.
 	window.addEventListener('mills:flag-captured', () => {
+		resetIdleTimers();
 		setPose('cool');
 		speak(pickQuip(getCurrentAppId(), 'flag'));
 	});
