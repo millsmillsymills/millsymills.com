@@ -1,4 +1,5 @@
 import { register, listCommands, lookup, type Context } from '../registry';
+import { incidents } from '../../../data/incidents';
 
 function resolvePath(cwd: string, target: string | undefined): string {
 	if (!target || target === '~' || target === '~/') return '/home/mills';
@@ -136,6 +137,41 @@ register(
 			out('  - MIT licensed, source on GitHub');
 			out('');
 			out('full policy:  /privacy/');
+		},
+	},
+	{
+		name: 'incidents',
+		summary: 'list security incidents and CVEs',
+		usage: 'incidents [year]',
+		handler: ({ args, out }) => {
+			const yearArg = args[0] ? Number(args[0]) : null;
+			const filtered = yearArg && !Number.isNaN(yearArg)
+				? incidents.filter((i) => i.year === yearArg)
+				: incidents;
+
+			if (filtered.length === 0) {
+				out(`no incidents${yearArg ? ` in ${yearArg}` : ''}.`, 't-dim');
+				return;
+			}
+
+			const sevClass: Record<string, string> = {
+				critical: 't-err',
+				high: 't-err',
+				med: 't-dim',
+				low: 't-ok',
+				info: 't-dim',
+			};
+
+			for (const i of filtered) {
+				const sev = i.severity.toUpperCase().padEnd(9);
+				out(`  ${i.year}  ${sev} ${i.title}`, sevClass[i.severity]);
+			}
+			out('');
+			out(`  ${filtered.length} incident${filtered.length === 1 ? '' : 's'}${yearArg ? ` in ${yearArg}` : ''}`, 't-dim');
+			if (!yearArg) {
+				out('  filter by year:  incidents <year>', 't-dim');
+				out('  full wall:  /incidents/', 't-dim');
+			}
 		},
 	},
 );
