@@ -2,20 +2,20 @@
 // terminal commands (`mcp list`, `mcp describe`, `mcp install`).
 
 export interface Project {
-	id: string;
-	name: string;
-	tagline: string;
-	description: string;
-	repo: string;
-	kind: 'mcp' | 'site' | 'tool';
-	tags: string[];
+	readonly id: string;
+	readonly name: string;
+	readonly tagline: string;
+	readonly description: string;
+	readonly repo: string;
+	readonly kind: 'mcp' | 'site' | 'tool';
+	readonly tags: readonly string[];
 	/** command line to install (e.g. `claude mcp add ...`). Optional. */
-	install?: string;
+	readonly install?: string;
 	/** short blurb shown by `mcp describe`. */
-	describe?: string;
+	readonly describe?: string;
 }
 
-export const projects: Project[] = [
+export const projects: readonly Project[] = [
 	{
 		id: 'unraid-mcp',
 		name: 'unraid-mcp',
@@ -58,4 +58,4 @@ export function findProject(id: string): Project | undefined {
 	return projects.find((p) => p.id === id);
 }
 
-export const mcpProjects = (): Project[] => projects.filter((p) => p.kind === 'mcp');
+export const mcpProjects = (): readonly Project[] => projects.filter((p) => p.kind === 'mcp');
