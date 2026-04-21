@@ -1,5 +1,7 @@
 import { register, listCommands, lookup, type Context } from '../registry';
 import { incidents } from '../../../data/incidents';
+import { pgp } from '../../../data/pgp';
+import pgpArmored from '../../../../public/pgp.asc?raw';
 
 function resolvePath(cwd: string, target: string | undefined): string {
 	if (!target || target === '~' || target === '~/') return '/home/mills';
@@ -125,6 +127,23 @@ register(
 		name: 'exit',
 		summary: 'close the terminal window',
 		handler: ({ exit }) => exit(),
+	},
+	{
+		name: 'pubkey',
+		summary: 'print mills\'s PGP public key + fingerprint',
+		handler: ({ out }) => {
+			out(`Fingerprint: ${pgp.fingerprint}`);
+			out(`Short ID:    ${pgp.shortId}`);
+			out(`Created:     ${pgp.createdAt}`);
+			out(`Expires:     ${pgp.expiresAt}`);
+			out('');
+			out('fetch the full key:', 't-dim');
+			out(`  curl ${pgp.downloadPath}`, 't-dim');
+			out('');
+			for (const line of pgpArmored.split('\n')) {
+				out(line);
+			}
+		},
 	},
 	{
 		name: 'privacy',
