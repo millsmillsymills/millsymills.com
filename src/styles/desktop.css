@@ -1048,6 +1048,34 @@ body.mshell-app-open {
 	.boot-overlay {
 		display: none !important;
 	}
+	.desktop::before,
+	.desktop::after,
+	.desktop__sparkle-layer::before,
+	.desktop__sparkle-layer::after {
+		animation: none !important;
+		opacity: 0.75;
+	}
+	.motif-chrom:hover,
+	.motif-chrom:focus-visible {
+		text-shadow: none !important;
+	}
+}
+
+@media (prefers-contrast: more) {
+	:root {
+		--titlebar-bg: var(--neon-pink);
+	}
+	.motif-grain {
+		opacity: 0 !important;
+	}
+	.motif-scanlines::after,
+	.motif-scanlines--soft::after {
+		opacity: 0 !important;
+	}
+	.motif-chrom:hover,
+	.motif-chrom:focus-visible {
+		text-shadow: none !important;
+	}
 }
 
 @media (max-width: 768px) {
