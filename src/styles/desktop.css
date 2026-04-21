@@ -110,6 +110,52 @@
 	--c-not-allowed: url('/cursors/3dwno.png') 16 16, not-allowed;
 }
 
+/* ------------------------------------------------------------------ */
+/* motifs — opt-in texture utilities                                  */
+/* ------------------------------------------------------------------ */
+
+/* CRT scanline overlay. Apply to any positioned surface; adds a
+ * fixed pseudo-element with horizontal stripes. Default is full
+ * strength; the --soft variant dims to 25% for subtle chrome. */
+.motif-scanlines {
+	position: relative;
+}
+.motif-scanlines::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: var(--scanlines);
+	pointer-events: none;
+	z-index: 2;
+}
+.motif-scanlines--soft::after {
+	opacity: 0.25;
+}
+
+/* Grain overlay element — mounted once in DesktopLayout, sits above
+ * windows (z-index 9998) but below the taskbar (9999) so grain
+ * textures all surfaces without fuzzing out chrome labels. */
+.motif-grain {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	background-image: var(--grain);
+	background-repeat: repeat;
+	mix-blend-mode: overlay;
+	opacity: 0.04;
+	z-index: 9998;
+}
+
+/* Chromatic aberration on hover/focus. RGB-split text-shadow.
+ * Opt-in per element — only fires on interaction to stay
+ * non-intrusive for accessibility. */
+.motif-chrom:hover,
+.motif-chrom:focus-visible {
+	text-shadow:
+		-1.5px 0 0 var(--neon-pink),
+		1.5px 0 0 var(--neon-cyan);
+}
+
 /* Apply the default cursor at the document root so unstyled regions and
  * the desktop surface itself pick up the XP arrow. */
 html,
