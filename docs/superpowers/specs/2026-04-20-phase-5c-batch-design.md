@@ -306,8 +306,8 @@ Calendar reminder for expiry refresh — Terraform auto-rolling is premature.
 ```
 $ privacy
 tl;dr — no tracking, no cookies, no third-party scripts.
-- localStorage only (window positions, flag progress, etc.)
-- CloudFront access logs — 30d retention, non-PII
+- localStorage + sessionStorage only (window positions, flag progress, boot flag)
+- CloudFront access logs — 90d retention (ip, ua, url, status, timestamp)
 - MIT licensed, source on GitHub
 
 full policy:  https://millsymills.com/privacy/
