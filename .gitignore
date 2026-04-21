@@ -38,3 +38,6 @@ infra/*.tfvars
 
 # misc local state
 .local/
+
+# git worktrees
+.worktrees/
