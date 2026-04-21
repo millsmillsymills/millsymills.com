@@ -36,3 +36,6 @@ infra/*.tfvars
 # local-only state (brainstorming session scratch, misc)
 .superpowers/
 .local/
+
+# git worktrees
+.worktrees/
