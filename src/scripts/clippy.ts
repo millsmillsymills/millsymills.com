@@ -122,13 +122,13 @@ function closeDismissPopover(): void {
 function isDismissed(): boolean {
 	try {
 		if (localStorage.getItem(STORAGE_KEY) === 'forever') return true;
-	} catch {
-		// localStorage disabled — fall through.
+	} catch (err) {
+		console.warn('[mills.clippy] localStorage.getItem failed', err);
 	}
 	try {
 		if (sessionStorage.getItem(STORAGE_KEY) === 'session') return true;
-	} catch {
-		// sessionStorage disabled — fall through.
+	} catch (err) {
+		console.warn('[mills.clippy] sessionStorage.getItem failed', err);
 	}
 	return false;
 }
@@ -139,9 +139,10 @@ function dismiss(scope: 'session' | 'forever'): void {
 	const store = scope === 'forever' ? localStorage : sessionStorage;
 	try {
 		store.setItem(STORAGE_KEY, scope);
-	} catch {
+	} catch (err) {
 		// Storage disabled — Clippy hides for this page-view, but in-tab
 		// navigation will resurrect it. Acceptable degradation.
+		console.warn('[mills.clippy] dismiss persistence failed', err);
 	}
 	// After the leave animation finishes, hide the aside entirely.
 	window.setTimeout(() => {

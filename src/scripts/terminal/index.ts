@@ -13,6 +13,7 @@ import './commands/uses';
 import './commands/reset';
 
 import { bootTerminal } from './repl';
+import { dispatchCloseWindow } from '../util/events';
 
 function init(): void {
 	const root = document.querySelector<HTMLElement>('.term');
@@ -23,13 +24,14 @@ function init(): void {
 		onExit: () => {
 			const win = root.closest<HTMLElement>('.window');
 			const id = win?.dataset.windowId;
-			if (!id) return;
+			if (!id) {
+				console.warn('[mills.terminal] no enclosing .window[data-window-id]; exit no-op');
+				return;
+			}
 			// Route through the WindowManager so the taskbar item, open-stack,
 			// and z-order all stay in sync. Mutating .hidden directly here
 			// left stale state behind (#51).
-			document.dispatchEvent(
-				new CustomEvent('mills:close-window', { detail: { id } }),
-			);
+			dispatchCloseWindow(id);
 		},
 	});
 }
