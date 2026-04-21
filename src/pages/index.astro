@@ -6,13 +6,15 @@ import CommandPalette from '../components/desktop/CommandPalette.astro';
 import HelpOverlay from '../components/desktop/HelpOverlay.astro';
 import ResetConfirm from '../components/desktop/ResetConfirm.astro';
 import { profile } from '../data/profile';
+
+const canonical = Astro.site?.href ?? 'https://millsymills.com/';
 ---
 
 <DesktopLayout
 	title={profile.handle}
 	description={`${profile.title} @ ${profile.currentEmployer}. portfolio + links.`}
-	canonical="https://millsymills.com/"
-	ogUrl="https://millsymills.com/"
+	canonical={canonical}
+	ogUrl={canonical}
 >
 	<Desktop />
 	<MobileFallback />

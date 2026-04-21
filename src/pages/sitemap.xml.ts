@@ -1,13 +1,18 @@
 import type { APIRoute } from 'astro';
 import { apps } from '../data/apps';
 
-const SITE = 'https://millsymills.com';
+export const GET: APIRoute = ({ site }) => {
+	if (!site) {
+		throw new Error('sitemap.xml: Astro.site is undefined. Check astro.config.mjs site value.');
+	}
+	// site.href ends with a trailing slash; strip it so paths we concatenate
+	// don't produce double slashes.
+	const origin = site.href.replace(/\/$/, '');
 
-export const GET: APIRoute = () => {
 	const urls = [
-		{ loc: `${SITE}/`, priority: '1.0', changefreq: 'monthly' },
+		{ loc: `${origin}/`, priority: '1.0', changefreq: 'monthly' },
 		...apps.map((a) => ({
-			loc: `${SITE}/${a.id}/`,
+			loc: `${origin}/${a.id}/`,
 			priority: '0.8',
 			changefreq: 'monthly',
 		})),

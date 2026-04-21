@@ -1,4 +1,6 @@
-# robots.txt — millsymills.com
+import type { APIRoute } from 'astro';
+
+const PERMISSIVE_BODY = (sitemapUrl: string) => `# robots.txt — millsymills.com
 #
 # This site is released under MIT and is explicitly friendly to both
 # search crawlers and AI agents. Indexing, summarizing, and training
@@ -47,4 +49,31 @@ Allow: /
 User-agent: Bytespider
 Allow: /
 
-Sitemap: https://millsymills.com/sitemap.xml
+Sitemap: ${sitemapUrl}
+`;
+
+const REHEARSAL_BODY = (sitemapUrl: string) => `# robots.txt — rehearsal build
+#
+# This deployment is a deployment dress rehearsal. All crawlers and
+# agents are disallowed to avoid duplicate-content indexing.
+
+User-agent: *
+Disallow: /
+
+Sitemap: ${sitemapUrl}
+`;
+
+export const GET: APIRoute = ({ site }) => {
+	if (!site) {
+		throw new Error('robots.txt: Astro.site is undefined. Check astro.config.mjs site value.');
+	}
+	const origin = site.href.replace(/\/$/, '');
+	const sitemapUrl = `${origin}/sitemap.xml`;
+	const body =
+		import.meta.env.NO_INDEX === 'true' ? REHEARSAL_BODY(sitemapUrl) : PERMISSIVE_BODY(sitemapUrl);
+
+	return new Response(body, {
+		status: 200,
+		headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+	});
+};

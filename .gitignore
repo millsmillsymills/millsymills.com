@@ -27,5 +27,14 @@ pnpm-debug.log*
 infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
+# NB: non-recursive glob is intentional — infra/stacks/*.tfvars carry per-stack
+# config (millsymills, p41m0n) and ARE committed. If a future change makes this
+# recursive (e.g. **/*.tfvars), it would silently start ignoring those files.
 infra/*.tfvars
 !infra/terraform.tfvars.example
+
+# brainstorming session scratch (HTML mockups, click events)
+.superpowers/
+
+# misc local state
+.local/
