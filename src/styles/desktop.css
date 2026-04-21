@@ -53,10 +53,8 @@
 	--font-pixel: 'Press Start 2P', 'VT323', 'Courier New', monospace;
 	--font-screen: 'VT323', 'Courier New', monospace;
 	--font-mono: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', monospace;
-<<<<<<< HEAD
 	--font-xp-ui: 'Tahoma', 'Geneva', system-ui, sans-serif;
 	--font-xp-display: 'Franklin Gothic ITC', 'Georgia', serif;
-=======
 
 	/* Y2K-XP cursor pack (3dw white set + default_link hand). Hotspots are
 	 * tuned for a 32x32 sprite — arrow tip top-left, beam/move/no center,
@@ -84,7 +82,6 @@ textarea,
 select,
 [contenteditable] {
 	cursor: var(--c-text);
->>>>>>> origin/main
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,20 +255,13 @@ a {
 	padding: 8px 10px;
 	background: var(--titlebar-bg);
 	color: var(--titlebar-fg);
-<<<<<<< HEAD
 	/* Tahoma is the actual XP titlebar font — bumped to 13px because
 	 * Tahoma at 11px reads smaller than Press Start 2P did. */
 	font-family: var(--font-xp-ui);
 	font-size: 13px;
 	font-weight: 700;
 	letter-spacing: 0.3px;
-	cursor: grab;
-=======
-	font-family: var(--font-pixel);
-	font-size: 11px;
-	letter-spacing: 0.5px;
 	cursor: var(--c-grab);
->>>>>>> origin/main
 	user-select: none;
 	border-bottom: 2px solid var(--border);
 }
