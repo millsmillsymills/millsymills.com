@@ -3,6 +3,7 @@ import type { Entry } from '../filesystem';
 import { incidents } from '../../../data/incidents';
 import { pgp } from '../../../data/pgp';
 import pgpArmored from '../../../../public/pgp.asc?raw';
+import { flagsUnlocked } from '../../flags';
 import {
 	tools,
 	findTool,
@@ -53,7 +54,9 @@ register(
 		handler: ({ out }) => {
 			out('available commands:', 't-dim');
 			out('');
+			const unlocked = flagsUnlocked();
 			for (const c of listCommands()) {
+				if (!unlocked && c.name === 'flag') continue;
 				out(`  ${c.name.padEnd(12)} ${c.summary}`);
 			}
 			out('');

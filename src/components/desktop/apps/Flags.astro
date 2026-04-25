@@ -132,8 +132,33 @@ import { challenges } from '../../../scripts/flags';
 		border-radius: 3px;
 		text-transform: uppercase;
 	}
+
+	/* Pre-capture placeholder — neutral copy, no hint that there is a CTF
+	 * to find. Shown when body lacks `data-flags-unlocked`; flipped on the
+	 * first capture by flags.ts. The real UI below carries the
+	 * `flags__inner` class and hides until unlock. */
+	.flags__placeholder {
+		display: none;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-muted);
+		padding: 14px 4px;
+		line-height: 1.55;
+	}
+	body:not([data-flags-unlocked='true']) .flags__placeholder {
+		display: block;
+	}
+	body:not([data-flags-unlocked='true']) .flags__inner {
+		display: none;
+	}
 </style>
 
+<div class="flags__placeholder">
+	<p>nothing to track here yet.</p>
+	<p>this app activates when there's something worth showing.</p>
+</div>
+
+<div class="flags__inner">
 <h1>flags.exe</h1>
 
 <p class="flags__score">
@@ -181,6 +206,7 @@ import { challenges } from '../../../scripts/flags';
 		))
 	}
 </ul>
+</div>
 
 <script>
 	import { submitFlag, getCaptured, challenges } from '../../../scripts/flags';

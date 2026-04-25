@@ -13,7 +13,7 @@
  * localStorage so progress survives reloads.
  */
 
-import { dispatchFlagCaptured } from './util/events';
+import { dispatchFlagCaptured, dispatchFlagsUnlocked } from './util/events';
 
 const STORAGE_KEY = 'mills.flags.v1';
 
@@ -190,6 +190,48 @@ export function getCaptured(): FlagState {
 	return loadState();
 }
 
+/**
+ * True if the visitor has captured at least one flag. Drives the body
+ * `data-flags-unlocked` attribute, which gates every flag-related UI
+ * surface across the site (launcher icon, taskbar/start menu entries,
+ * help overlay copy, command-palette result, terminal `help` listing,
+ * Flags app body). Pre-capture, none of those surfaces hint that flags
+ * exist; the first capture flips the attribute live and unlocks them.
+ */
+export function flagsUnlocked(): boolean {
+	return Object.keys(loadState()).length > 0;
+}
+
+/** Set body[data-flags-unlocked] to match current state. Idempotent. */
+function syncUnlockAttr(): void {
+	if (typeof document === 'undefined') return;
+	if (flagsUnlocked()) {
+		document.body.dataset.flagsUnlocked = 'true';
+	} else {
+		delete document.body.dataset.flagsUnlocked;
+	}
+}
+
+/**
+ * Bootstrap on script init. Sets the body attribute synchronously based on
+ * stored state so users who already captured don't see a flash of
+ * locked-state UI on reload.
+ */
+export function initFlagsUI(): void {
+	if (typeof document === 'undefined') return;
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', syncUnlockAttr, { once: true });
+	} else {
+		syncUnlockAttr();
+	}
+	// Wipe the attribute when ResetConfirm clears storage; the reset script
+	// reloads the page, but a subscriber here keeps state coherent if a
+	// future reset stops reloading.
+	window.addEventListener('storage', (e) => {
+		if (e.key === STORAGE_KEY) syncUnlockAttr();
+	});
+}
+
 export async function sha256(input: string): Promise<string> {
 	const data = new TextEncoder().encode(input);
 	const hash = await crypto.subtle.digest('SHA-256', data);
@@ -227,9 +269,10 @@ export async function submitFlag(input: string): Promise<SubmitResult> {
 			message: `already captured "${match.title}". no double-credit, sorry.`,
 		};
 	}
+	const wasFirst = Object.keys(state).length === 0;
 	state[match.id] = Date.now();
 	saveState(state);
-	notifyCapture(match);
+	notifyCapture(match, wasFirst);
 	return {
 		ok: true,
 		id: match.id,
@@ -246,25 +289,26 @@ export function captureById(id: ChallengeId): boolean {
 	if (!match) return false;
 	const state = loadState();
 	if (state[id]) return false;
+	const wasFirst = Object.keys(state).length === 0;
 	state[id] = Date.now();
 	saveState(state);
-	notifyCapture(match);
+	notifyCapture(match, wasFirst);
 	return true;
 }
 
-function notifyCapture(c: Challenge): void {
+function notifyCapture(c: Challenge, isFirstEver: boolean): void {
 	dispatchFlagCaptured(c);
-	toast(`flag captured: ${c.title}`);
+	syncUnlockAttr();
+	if (isFirstEver) {
+		dispatchFlagsUnlocked(c);
+		firstCaptureBanner(c);
+	} else {
+		toast(`flag captured: ${c.title}`);
+	}
 }
 
 function toast(message: string): void {
-	let host = document.querySelector<HTMLDivElement>('.flag-toast-host');
-	if (!host) {
-		host = document.createElement('div');
-		host.className = 'flag-toast-host';
-		host.setAttribute('aria-live', 'polite');
-		document.body.appendChild(host);
-	}
+	const host = ensureToastHost();
 	const el = document.createElement('div');
 	el.className = 'flag-toast';
 	el.textContent = message;
@@ -274,6 +318,50 @@ function toast(message: string): void {
 		el.classList.remove('flag-toast--in');
 		setTimeout(() => el.remove(), 400);
 	}, 3500);
+}
+
+/**
+ * First-capture celebration. Larger, alert-styled variant of the toast — the
+ * UI surfaces just unlocked silently; this is the only thing that announces
+ * the change. Has a manual dismiss button because the unlock is a moment the
+ * user might want to read at their own pace.
+ */
+function firstCaptureBanner(c: Challenge): void {
+	const host = ensureToastHost();
+	const el = document.createElement('div');
+	el.className = 'flag-toast flag-toast--first-capture';
+	el.dataset.firstCapture = 'true';
+	const heading = document.createElement('strong');
+	heading.className = 'flag-toast__heading';
+	heading.textContent = '🎉 flags unlocked';
+	const body = document.createElement('span');
+	body.className = 'flag-toast__body';
+	body.textContent = `first capture: "${c.title}". flags.exe is now on the desktop — there are ${
+		challenges.length - 1
+	} more.`;
+	const dismiss = document.createElement('button');
+	dismiss.type = 'button';
+	dismiss.className = 'flag-toast__dismiss';
+	dismiss.textContent = '✕';
+	dismiss.setAttribute('aria-label', 'dismiss');
+	dismiss.addEventListener('click', () => {
+		el.classList.remove('flag-toast--in');
+		setTimeout(() => el.remove(), 400);
+	});
+	el.append(heading, body, dismiss);
+	host.appendChild(el);
+	requestAnimationFrame(() => el.classList.add('flag-toast--in'));
+}
+
+function ensureToastHost(): HTMLDivElement {
+	let host = document.querySelector<HTMLDivElement>('.flag-toast-host');
+	if (!host) {
+		host = document.createElement('div');
+		host.className = 'flag-toast-host';
+		host.setAttribute('aria-live', 'polite');
+		document.body.appendChild(host);
+	}
+	return host;
 }
 
 /**
