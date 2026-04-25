@@ -102,8 +102,13 @@ const jsonLd = {
 				submitFlag,
 				getCaptured,
 				captureById,
+				initFlagsUI,
 			} from '../scripts/flags';
 			import { initMailPow } from '../scripts/mail-pow';
+			// initFlagsUI is the FIRST thing that runs — it sets
+			// body[data-flags-unlocked] from localStorage so users with
+			// captures don't see a flash of locked-state UI on reload.
+			initFlagsUI();
 			consoleBanner();
 			konami();
 			initMailPow();

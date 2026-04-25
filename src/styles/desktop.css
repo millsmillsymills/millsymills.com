@@ -979,6 +979,70 @@ body.mshell-app-open {
 	transform: translateX(0);
 }
 
+/* First-capture variant — promoted to a larger alert-style banner so the
+ * unlock moment lands. Single CSS module, two states — the regular toast
+ * still ships for every subsequent capture. */
+.flag-toast--first-capture {
+	max-width: 360px;
+	padding: 14px 16px 14px 18px;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	grid-template-rows: auto auto;
+	column-gap: 12px;
+	row-gap: 4px;
+	border-width: 3px;
+	border-left-width: 8px;
+	box-shadow: var(--window-shadow), 0 0 24px rgba(255, 79, 168, 0.35);
+	font-size: 12px;
+}
+.flag-toast__heading {
+	grid-column: 1;
+	grid-row: 1;
+	font-size: 13px;
+	color: var(--neon-pink-hi);
+}
+.flag-toast__body {
+	grid-column: 1;
+	grid-row: 2;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	line-height: 1.45;
+	color: var(--ink-primary);
+}
+.flag-toast__dismiss {
+	grid-column: 2;
+	grid-row: 1 / -1;
+	align-self: start;
+	background: transparent;
+	color: var(--ink-muted);
+	border: 1px solid var(--bg-edge);
+	border-radius: 3px;
+	width: 22px;
+	height: 22px;
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+}
+.flag-toast__dismiss:hover {
+	color: var(--neon-pink);
+	border-color: var(--neon-pink-lo);
+}
+
+/* ------------------------------------------------------------------ */
+/* flag UI gating — pre-capture, every flag-related surface is hidden  */
+/* ------------------------------------------------------------------ */
+
+/* Default state (no body[data-flags-unlocked]): hide every launcher
+ * entry that targets the flags app. Setting the attribute on body via
+ * flags.ts's syncUnlockAttr re-enables them in place. The data-attribute
+ * approach means no JS subscribers per surface — pure CSS-driven gating
+ * keeps markup simple. */
+body:not([data-flags-unlocked='true']) [data-open-window='flags'],
+body:not([data-flags-unlocked='true']) [data-mobile-app='flags'],
+body:not([data-flags-unlocked='true']) [data-flags-gated] {
+	display: none !important;
+}
+
 /* ------------------------------------------------------------------ */
 /* boot overlay — CRT power-on                                        */
 /* ------------------------------------------------------------------ */
