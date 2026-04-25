@@ -63,7 +63,7 @@ Populate `iconUrl` on 10 apps per the locked mapping:
 | `flags`    | `/images/icons/vaporwave/arcade-game.png`          |
 | `projects` | `/images/icons/web10/under-construction-1.png`     |
 | `uses`     | `/images/icons/web10/dial-up-days.png`             |
-| `music`    | `/images/icons/vaporwave/casette-tape.png`         |
+| `music`    | `/images/icons/vaporwave/cassette-tape.png`         |
 | `memes`    | `/images/icons/vaporwave/japanese-wave.png`        |
 | `mail`     | `/images/icons/web10/netscape-floppy.png`          |
 | `trash`    | `/images/icons/vaporwave/dixie-cup.png`            |
