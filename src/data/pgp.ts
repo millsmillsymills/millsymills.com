@@ -1,11 +1,26 @@
 /*
- * PGP key metadata. Single source of truth — About.astro, Mail.astro, and
- * the `pubkey` terminal command all read from here. On key rotation:
+ * PGP + age key metadata. Single source of truth — About.astro, Mail.astro,
+ * and the `pubkey` terminal command all read from here.
+ *
+ * On PGP rotation:
  *   1. Re-run ./scripts/generate-wkd.sh
  *   2. Overwrite public/pgp.asc
- *   3. Update the fields below
+ *   3. Update the PGP fields below
  *   4. Commit all four changes in one PR
+ *
+ * On age rotation (or first activation):
+ *   1. Generate a keypair: `age-keygen -o ~/age-mills.txt`
+ *   2. Drop the public recipient (the `age1...` line) into public/age.pub
+ *   3. Update `age` below — `recipient` must match public/age.pub exactly
+ *   4. Commit; assert-pgp-consistency.sh enforces the match
  */
+
+interface AgeKey {
+	/** Single `age1...` recipient string. Must match public/age.pub exactly. */
+	recipient: string;
+	/** ISO yyyy-mm-dd */
+	createdAt: string;
+}
 
 export const pgp = {
 	/** 40-char hex fingerprint with standard group-of-4 spacing, double-space between halves */
@@ -18,4 +33,13 @@ export const pgp = {
 	expiresAt: '2030-04-21',
 	/** path where the armored key is served, relative to the origin */
 	downloadPath: '/pgp.asc',
+	/**
+	 * age recipient — undefined until mills generates an age keypair and drops
+	 * the public half into public/age.pub. Consumers conditionally render the
+	 * age block only when this is set, so the surface ships dormant until
+	 * activated.
+	 */
+	age: undefined as AgeKey | undefined,
+	/** path where the age recipient is served, relative to the origin */
+	ageDownloadPath: '/age.pub',
 } as const;
