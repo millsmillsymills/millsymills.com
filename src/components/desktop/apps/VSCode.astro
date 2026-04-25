@@ -31,6 +31,23 @@ const gitShaShort = gitSha.slice(0, 7);
 		<span class="vscode-status-seg">UTF-8</span>
 		<span class="vscode-status-seg" data-status="lang">plain text</span>
 	</footer>
+
+	<div class="vscode-qopen" role="dialog" aria-label="quick open file" aria-modal="true" hidden>
+		<div class="vscode-qopen__panel" role="presentation">
+			<header class="vscode-qopen__header">
+				<input
+					type="text"
+					class="vscode-qopen__input"
+					autocomplete="off"
+					spellcheck="false"
+					placeholder="go to file… (start typing)"
+					aria-label="search files"
+				/>
+				<kbd class="vscode-qopen__kbd">esc</kbd>
+			</header>
+			<ul class="vscode-qopen__list" role="listbox"></ul>
+		</div>
+	</div>
 </div>
 
 <script>

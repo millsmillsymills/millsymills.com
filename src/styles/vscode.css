@@ -1,6 +1,7 @@
 /* vscode.exe — evocative reskin, pink-on-cream */
 
 .vscode {
+	position: relative;            /* anchors the .vscode-qopen overlay */
 	display: grid;
 	grid-template-columns: 48px 220px 1fr;
 	grid-template-rows: 1fr 22px;
@@ -155,6 +156,103 @@
 .vscode-status-seg code {
 	font-family: inherit;
 	color: var(--cream);
+}
+
+/* quick-open palette (Cmd-P / Ctrl-P) — scoped inside the vscode root.
+ * Neon-noir: dark panel, hot-pink border, cream text, cyan accents.
+ * Class names are namespaced so the global Cmd-K handler doesn't bind. */
+.vscode-qopen {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding-top: 6vh;
+	background: rgba(10, 3, 32, 0.65);
+	z-index: 50;
+}
+.vscode-qopen[hidden] {
+	display: none;
+}
+.vscode-qopen__panel {
+	width: min(520px, calc(100% - 32px));
+	max-height: 60%;
+	display: flex;
+	flex-direction: column;
+	background: var(--pink-100);            /* dark purple via legacy alias */
+	color: var(--cream);
+	border: 2px solid var(--pink-500);      /* hot pink */
+	border-radius: 6px;
+	box-shadow: 0 16px 40px rgba(10, 3, 32, 0.6);
+	overflow: hidden;
+}
+.vscode-qopen__header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	background: var(--pink-50);             /* even darker */
+	border-bottom: 1px solid var(--pink-500);
+}
+.vscode-qopen__input {
+	flex: 1;
+	all: unset;
+	font-family: var(--font-mono);
+	font-size: 0.95rem;
+	color: var(--cream);
+	background: transparent;
+}
+.vscode-qopen__input::placeholder {
+	color: var(--ink-soft);
+}
+.vscode-qopen__kbd {
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	padding: 2px 6px;
+	background: transparent;
+	color: var(--pink-600);
+	border: 1px solid var(--pink-500);
+	border-radius: 3px;
+}
+.vscode-qopen__list {
+	flex: 1;
+	overflow-y: auto;
+	margin: 0;
+	padding: 4px 0;
+	list-style: none;
+}
+.vscode-qopen__item {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 4px 10px;
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 0.82rem;
+	color: var(--cream);
+	border-left: 3px solid transparent;
+}
+.vscode-qopen__item:hover {
+	background: var(--pink-200);
+}
+.vscode-qopen__item--active {
+	background: var(--pink-200);
+	color: var(--neon-cyan);
+	border-left-color: var(--pink-500);
+}
+.vscode-qopen__name {
+	color: inherit;
+}
+.vscode-qopen__dir {
+	color: var(--ink-soft);
+	font-size: 0.74rem;
+}
+.vscode-qopen__empty {
+	padding: 12px;
+	text-align: center;
+	font-family: var(--font-mono);
+	font-size: 0.82rem;
+	color: var(--ink-soft);
 }
 
 /* mobile: 2-pane stacked */
