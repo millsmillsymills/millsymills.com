@@ -32,6 +32,10 @@ export const copy = {
 		heading: "what's on the wire",
 		body: 'when you load a page: html, css, images, the two self-hosted fonts (Press Start 2P, VT323), and the javascript bundle for the desktop ui. that\'s it. zero third-party fetches. no google fonts, no cdn libraries, no analytics beacons.',
 	},
+	mailPow: {
+		heading: 'the mail address',
+		body: '/mail/ runs a small client-side proof-of-work to decrypt mills\' email address — keeps it out of the static html so casual scrapers don\'t get a free mailto. nothing leaves your browser; it\'s ~16K sha-256 hashes in a web worker (~150-800ms) and the result is never stored or transmitted.',
+	},
 	localStorage: {
 		heading: 'browser storage',
 		preamble: 'a handful of keys keep your ui state between visits. everything is client-side, never sent anywhere. two storage types — `localStorage` persists across browser restarts, `sessionStorage` clears when you close the tab:',
