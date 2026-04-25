@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { VSCODE_SNIPPET_SOURCES } from './src/scripts/vscode/snippet-sources.mjs';
 
 function readGitSha() {
 	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
@@ -135,6 +136,9 @@ if (process.env.CI === 'true' && !process.env.SITE_URL) {
  * check rejects the literal anywhere in dist/. The snippets are evocative
  * view-source teasers, not runtime logic, so scrubbing is safe here.
  *
+ * The list of files to scrub lives in src/scripts/vscode/snippet-sources.mjs
+ * so file-tree.ts can assert its literal `?raw` imports stay aligned.
+ *
  * @returns {import('vite').Plugin}
  */
 function scrubVscodeSnippets() {
@@ -143,14 +147,7 @@ function scrubVscodeSnippets() {
 		enforce: /** @type {const} */ ('pre'),
 		transform(/** @type {string} */ code, /** @type {string} */ id) {
 			if (!id.includes('?raw')) return null;
-			// Only scrub the specific snippet imports used by vscode.exe so we
-			// don't quietly rewrite real configuration or data files.
-			const snippetTargets = [
-				'/src/pages/index.astro',
-				'/src/data/apps.ts',
-				'/public/files/resume.md',
-			];
-			if (!snippetTargets.some((p) => id.includes(p))) return null;
+			if (!VSCODE_SNIPPET_SOURCES.some((p) => id.includes(p))) return null;
 			return code.replace(/https:\/\/millsymills\.com/g, '<site>');
 		},
 	};
