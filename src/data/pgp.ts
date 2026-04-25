@@ -18,6 +18,4 @@ export const pgp = {
 	expiresAt: '2030-04-21',
 	/** path where the armored key is served, relative to the origin */
 	downloadPath: '/pgp.asc',
-	/** email address associated with the key */
-	email: 'mills@millsymills.com',
 } as const;

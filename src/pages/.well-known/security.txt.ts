@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { pgp } from '../../data/pgp';
 
 // RFC 9116 security.txt — served from /.well-known/security.txt.
 // All URLs derive from Astro.site so the file works across prod + rehearsal
@@ -19,7 +20,7 @@ export const GET: APIRoute = ({ site }) => {
 
 	const body = [
 		`Contact: mailto:mills@${hostname}`,
-		`Encryption: ${origin}/pgp.asc`,
+		`Encryption: ${origin}${pgp.downloadPath}`,
 		`Expires: ${expiresUtc.toISOString()}`,
 		`Canonical: ${origin}/.well-known/security.txt`,
 		`Preferred-Languages: en`,

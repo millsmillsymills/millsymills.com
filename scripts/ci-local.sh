@@ -27,6 +27,10 @@ section "node: assert icon assets referenced by apps.ts exist"
 ./scripts/assert-icon-assets-exist.sh
 ok "all iconUrl values resolve"
 
+section "node: assert PGP fingerprint + WKD binary consistency"
+./scripts/assert-pgp-consistency.sh
+ok "pgp.ts, pgp.asc, and WKD binary agree"
+
 section "node: build"
 npm run build
 ok "npm run build"
