@@ -1,4 +1,5 @@
 import { register, listCommands, lookup, type Context } from '../registry';
+import type { Entry } from '../filesystem';
 import { incidents } from '../../../data/incidents';
 import { pgp } from '../../../data/pgp';
 import pgpArmored from '../../../../public/pgp.asc?raw';
@@ -11,14 +12,26 @@ import {
 	type ToolCategory,
 } from '../../../data/tools';
 
-const DOTFILE_INDEX: Array<[string, string]> = [
-	['.zshrc', 'zsh — starship, atuin, eza/bat/fd/rg, direnv'],
-	['.tmux.conf', '(stub) — mills does not use tmux'],
-	['.config/nvim/init.lua', '(stub) — mills does not use nvim; primary editor is vscode'],
-	['.config/git/config', 'git — signed commits, autosquash, zdiff3 merges'],
-	['.dotfiles/README.md', 'intro + source-of-truth link'],
-	['.dotfiles/CLAUDE.md', 'claude-code operating contract (plugins, guardrails)'],
-];
+const HOME_PREFIX = '/home/mills/';
+
+/**
+ * Derive the `dotfiles` listing from the live virtual filesystem.
+ *
+ * A file appears iff it lives under /home/mills/ AND carries a
+ * `description` field on its virtualFs entry. The description field
+ * doubles as the inclusion signal, so e.g. `.bashrc` (boring bash stub)
+ * and `.claude/CLAUDE.md` (duplicate mirror of `.dotfiles/CLAUDE.md`)
+ * stay out of the curated index without a parallel filter list.
+ */
+function listDotfiles(fs: Record<string, Entry>): Array<[name: string, description: string]> {
+	const rows: Array<[string, string]> = [];
+	for (const [path, entry] of Object.entries(fs)) {
+		if (entry.type !== 'file' || !entry.description) continue;
+		if (!path.startsWith(HOME_PREFIX)) continue;
+		rows.push([path.slice(HOME_PREFIX.length), entry.description]);
+	}
+	return rows;
+}
 
 function resolvePath(cwd: string, target: string | undefined): string {
 	if (!target || target === '~' || target === '~/') return '/home/mills';
@@ -185,11 +198,12 @@ register(
 	{
 		name: 'dotfiles',
 		summary: 'list files under ~/.dotfiles/',
-		handler: ({ out }) => {
+		handler: ({ fs, out }) => {
+			const rows = listDotfiles(fs);
 			out('~/.dotfiles/ — mills\'s config files', 't-dim');
 			out('');
-			const width = Math.max(...DOTFILE_INDEX.map(([name]) => name.length));
-			for (const [name, desc] of DOTFILE_INDEX) {
+			const width = rows.reduce((m, [name]) => Math.max(m, name.length), 0);
+			for (const [name, desc] of rows) {
 				out(`  ${name.padEnd(width + 2)}${desc}`);
 			}
 			out('');
