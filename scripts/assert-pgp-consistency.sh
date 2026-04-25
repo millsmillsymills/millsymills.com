@@ -41,8 +41,11 @@ if [[ ! -f "$PGP_ASC" ]]; then
 	printf '\033[1;31m✗ %s missing\033[0m\n' "$PGP_ASC" >&2
 	exit 1
 fi
+# Anchor on the `pub` record so we always read the PRIMARY key's fpr,
+# never a subkey's. gpg lists pub before its subkeys, so the first fpr
+# after pub is the primary fingerprint.
 asc_fpr=$(gpg --show-keys --with-colons "$PGP_ASC" 2>/dev/null \
-	| awk -F: '$1=="fpr" {print $10; exit}')
+	| awk -F: '$1=="pub"{seen=1} seen && $1=="fpr"{print $10; exit}')
 if [[ -z "$asc_fpr" ]]; then
 	printf '\033[1;31m✗ could not parse fingerprint from %s\033[0m\n' "$PGP_ASC" >&2
 	exit 1
@@ -59,7 +62,7 @@ if [[ ${#wkd_files[@]} -ne 1 ]]; then
 fi
 wkd_file="${wkd_files[0]}"
 wkd_fpr=$(gpg --show-keys --with-colons "$wkd_file" 2>/dev/null \
-	| awk -F: '$1=="fpr" {print $10; exit}')
+	| awk -F: '$1=="pub"{seen=1} seen && $1=="fpr"{print $10; exit}')
 if [[ -z "$wkd_fpr" ]]; then
 	printf '\033[1;31m✗ could not parse fingerprint from WKD binary %s\033[0m\n' "$wkd_file" >&2
 	exit 1
