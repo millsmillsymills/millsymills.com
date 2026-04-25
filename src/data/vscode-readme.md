@@ -8,3 +8,5 @@ the actual source lives at:
   github.com/millsmillsymills/millsymills.com
 
 `npm run dev` runs the whole thing. MIT license.
+
+ps — for the explorers: flag{not_an_electron_app}
