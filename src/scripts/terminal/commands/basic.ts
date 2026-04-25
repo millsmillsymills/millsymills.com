@@ -302,7 +302,7 @@ function printToolDetail(t: Tool, out: WriteFn): void {
 	if (t.examples && t.examples.length) {
 		out('');
 		out('common uses:');
-		const cmdWidth = Math.max(...t.examples.map((e) => e.cmd.length));
+		const cmdWidth = t.examples.reduce((m, e) => Math.max(m, e.cmd.length), 0);
 		for (const ex of t.examples) {
 			out(`  ${ex.cmd.padEnd(cmdWidth + 2)}${ex.description}`);
 		}
