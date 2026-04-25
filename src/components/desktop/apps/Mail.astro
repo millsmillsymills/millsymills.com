@@ -33,7 +33,7 @@ import { pgp } from '../../../data/pgp';
 <p class="pgp">
 	encrypt: <code>{pgp.fingerprint}</code>
 	&nbsp;·&nbsp;
-	<a href="/pgp.asc" download>download /pgp.asc</a>
+	<a href={pgp.downloadPath} download>download {pgp.downloadPath}</a>
 </p>
 
 <p>

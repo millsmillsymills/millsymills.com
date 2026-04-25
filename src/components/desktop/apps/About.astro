@@ -124,7 +124,7 @@ import { pgp } from '../../../data/pgp';
 		<p class="about__keys">
 			<span class="about__keys-label">pgp</span>
 			<code class="about__keys-fp">{pgp.fingerprint}</code>
-			<a href="/pgp.asc" download>/pgp.asc</a>
+			<a href={pgp.downloadPath} download>{pgp.downloadPath}</a>
 		</p>
 	</div>
 </article>
