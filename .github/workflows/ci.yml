@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Assert icon assets referenced by apps.ts exist
+        run: ./scripts/assert-icon-assets-exist.sh
+
       - name: Typecheck (astro check)
         run: npm run check
 
