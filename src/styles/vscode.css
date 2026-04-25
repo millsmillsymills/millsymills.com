@@ -1,4 +1,15 @@
-/* vscode.exe — evocative reskin, pink-on-cream */
+/*
+ * vscode.exe — neon-noir reskin
+ *
+ * Surfaces (back to front):
+ *   --bg-void    activity bar, status bar, qopen header (chrome of the chrome)
+ *   --bg-edge    sidebar, tab strip, qopen panel (chrome adjacent to editor)
+ *   --bg-raised  editor surface, active tab (the work surface)
+ *   --bg-deep    inline accents (gutter, hover lifts, separators)
+ *
+ * Accents: --neon-pink for active indicators and headings, --neon-pink-lo
+ * for restrained borders, --neon-cyan for SHA + selected text.
+ */
 
 .vscode {
 	position: relative;            /* anchors the .vscode-qopen overlay */
@@ -9,33 +20,34 @@
 		'activity sidebar main'
 		'status   status  status';
 	height: 100%;
-	background: var(--cream);
-	color: var(--ink);
+	background: var(--bg-raised);
+	color: var(--ink-primary);
 	font-family: var(--font-mono);
 	font-size: 0.9rem;
 }
 
 .vscode-activitybar {
 	grid-area: activity;
-	background: var(--pink-500);
+	background: var(--bg-void);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	padding: 0.5rem 0;
 	gap: 0.3rem;
+	border-right: 1px solid var(--bg-deep);
 }
 .vscode-activity-btn {
 	width: 32px;
 	height: 32px;
 	background: transparent;
-	color: var(--cream);
+	color: var(--ink-primary);
 	border: 1px solid transparent;
 	cursor: pointer;
 	font-size: 1rem;
 }
 .vscode-activity-btn.active {
-	background: var(--pink-600);
-	border-color: var(--cream);
+	background: var(--neon-pink-lo);
+	border-color: var(--ink-primary);
 }
 .vscode-activity-btn:disabled {
 	opacity: 0.55;
@@ -44,16 +56,16 @@
 
 .vscode-sidebar {
 	grid-area: sidebar;
-	background: var(--pink-50);
-	border-right: 1px solid var(--pink-300);
+	background: var(--bg-edge);
+	border-right: 1px solid var(--bg-deep);
 	overflow-y: auto;
 }
 .vscode-sidebar-heading {
 	font-size: 0.72rem;
 	letter-spacing: 0.08em;
-	color: var(--pink-600);
+	color: var(--neon-pink);
 	padding: 0.4rem 0.6rem;
-	border-bottom: 1px solid var(--pink-200);
+	border-bottom: 1px solid var(--bg-deep);
 }
 .vscode-tree-list {
 	list-style: none;
@@ -70,7 +82,7 @@
 	white-space: nowrap;
 }
 .vscode-tree-row:hover {
-	background: var(--pink-100);
+	background: var(--bg-deep);
 }
 
 .vscode-sidebar-panel[hidden] {
@@ -85,7 +97,7 @@
 	padding: 0;
 }
 .vscode-scm-row {
-	border-bottom: 1px solid var(--pink-200);
+	border-bottom: 1px solid var(--bg-deep);
 }
 .vscode-scm-link {
 	display: grid;
@@ -93,13 +105,13 @@
 	grid-template-rows: auto auto;
 	column-gap: 0.5rem;
 	padding: 0.3rem 0.55rem;
-	color: var(--cream);
+	color: var(--ink-primary);
 	text-decoration: none;
 	font-size: 0.78rem;
 	line-height: 1.3;
 }
 .vscode-scm-link:hover {
-	background: var(--pink-100);
+	background: var(--bg-deep);
 }
 .vscode-scm-sha {
 	grid-row: 1;
@@ -110,21 +122,21 @@
 .vscode-scm-when {
 	grid-row: 1;
 	grid-column: 2;
-	color: var(--ink-soft);
+	color: var(--ink-muted);
 	text-align: right;
 	font-size: 0.72rem;
 }
 .vscode-scm-subject {
 	grid-row: 2;
 	grid-column: 1 / -1;
-	color: var(--cream);
+	color: var(--ink-primary);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 .vscode-scm-empty {
 	padding: 0.6rem;
-	color: var(--ink-soft);
+	color: var(--ink-muted);
 	font-style: italic;
 	font-size: 0.78rem;
 }
@@ -137,8 +149,8 @@
 }
 .vscode-tabs {
 	display: flex;
-	background: var(--pink-100);
-	border-bottom: 1px solid var(--pink-300);
+	background: var(--bg-edge);
+	border-bottom: 1px solid var(--bg-deep);
 	overflow-x: auto;
 }
 .vscode-tab {
@@ -147,15 +159,15 @@
 	gap: 0.35rem;
 	padding: 0.25rem 0.55rem;
 	font-size: 0.82rem;
-	border-right: 1px solid var(--pink-300);
+	border-right: 1px solid var(--bg-deep);
 	cursor: pointer;
-	color: var(--ink-soft);
+	color: var(--ink-muted);
 	user-select: none;
 }
 .vscode-tab.active {
-	background: var(--cream);
-	color: var(--ink);
-	border-bottom: 2px solid var(--pink-500);
+	background: var(--bg-raised);
+	color: var(--ink-primary);
+	border-bottom: 2px solid var(--neon-pink);
 }
 .vscode-tab-close {
 	background: transparent;
@@ -167,7 +179,7 @@
 	line-height: 1;
 }
 .vscode-tab-close:hover {
-	background: var(--pink-200);
+	background: var(--bg-deep);
 	border-radius: 3px;
 }
 
@@ -175,7 +187,7 @@
 	display: grid;
 	grid-template-columns: 3rem 1fr;
 	overflow: auto;
-	background: var(--cream);
+	background: var(--bg-raised);
 }
 .vscode-editor-gutter,
 .vscode-editor-code {
@@ -187,35 +199,35 @@
 	white-space: pre;
 }
 .vscode-editor-gutter {
-	color: var(--ink-soft);
-	background: var(--pink-50);
+	color: var(--ink-muted);
+	background: var(--bg-deep);
 	text-align: right;
 	user-select: none;
-	border-right: 1px solid var(--pink-200);
+	border-right: 1px solid var(--bg-edge);
 }
 .vscode-editor-empty {
 	padding: 1rem;
-	color: var(--ink-soft);
+	color: var(--ink-muted);
 	font-style: italic;
 }
 
 .vscode-status {
 	grid-area: status;
-	background: var(--pink-500);
-	color: var(--cream);
+	background: var(--bg-void);
+	color: var(--ink-primary);
 	display: flex;
 	align-items: center;
 	gap: 0.8rem;
 	padding: 0 0.6rem;
 	font-size: 0.75rem;
+	border-top: 1px solid var(--bg-deep);
 }
 .vscode-status-seg code {
 	font-family: inherit;
-	color: var(--cream);
+	color: var(--ink-primary);
 }
 
 /* quick-open palette (Cmd-P / Ctrl-P) — scoped inside the vscode root.
- * Neon-noir: dark panel, hot-pink border, cream text, cyan accents.
  * Class names are namespaced so the global Cmd-K handler doesn't bind. */
 .vscode-qopen {
 	position: absolute;
@@ -235,9 +247,9 @@
 	max-height: 60%;
 	display: flex;
 	flex-direction: column;
-	background: var(--pink-100);            /* dark purple via legacy alias */
-	color: var(--cream);
-	border: 2px solid var(--pink-500);      /* hot pink */
+	background: var(--bg-edge);
+	color: var(--ink-primary);
+	border: 2px solid var(--neon-pink);
 	border-radius: 6px;
 	box-shadow: 0 16px 40px rgba(10, 3, 32, 0.6);
 	overflow: hidden;
@@ -247,27 +259,27 @@
 	align-items: center;
 	gap: 8px;
 	padding: 8px 10px;
-	background: var(--pink-50);             /* even darker */
-	border-bottom: 1px solid var(--pink-500);
+	background: var(--bg-void);
+	border-bottom: 1px solid var(--neon-pink-lo);
 }
 .vscode-qopen__input {
 	flex: 1;
 	all: unset;
 	font-family: var(--font-mono);
 	font-size: 0.95rem;
-	color: var(--cream);
+	color: var(--ink-primary);
 	background: transparent;
 }
 .vscode-qopen__input::placeholder {
-	color: var(--ink-soft);
+	color: var(--ink-muted);
 }
 .vscode-qopen__kbd {
 	font-family: var(--font-mono);
 	font-size: 0.7rem;
 	padding: 2px 6px;
 	background: transparent;
-	color: var(--pink-600);
-	border: 1px solid var(--pink-500);
+	color: var(--neon-pink);
+	border: 1px solid var(--neon-pink-lo);
 	border-radius: 3px;
 }
 .vscode-qopen__list {
@@ -285,22 +297,22 @@
 	cursor: pointer;
 	font-family: var(--font-mono);
 	font-size: 0.82rem;
-	color: var(--cream);
+	color: var(--ink-primary);
 	border-left: 3px solid transparent;
 }
 .vscode-qopen__item:hover {
-	background: var(--pink-200);
+	background: var(--bg-deep);
 }
 .vscode-qopen__item--active {
-	background: var(--pink-200);
+	background: var(--bg-deep);
 	color: var(--neon-cyan);
-	border-left-color: var(--pink-500);
+	border-left-color: var(--neon-pink);
 }
 .vscode-qopen__name {
 	color: inherit;
 }
 .vscode-qopen__dir {
-	color: var(--ink-soft);
+	color: var(--ink-muted);
 	font-size: 0.74rem;
 }
 .vscode-qopen__empty {
@@ -308,7 +320,7 @@
 	text-align: center;
 	font-family: var(--font-mono);
 	font-size: 0.82rem;
-	color: var(--ink-soft);
+	color: var(--ink-muted);
 }
 
 /* mobile: 2-pane stacked */
@@ -326,6 +338,6 @@
 	}
 	.vscode-sidebar {
 		border-right: 0;
-		border-bottom: 1px solid var(--pink-300);
+		border-bottom: 1px solid var(--bg-deep);
 	}
 }
