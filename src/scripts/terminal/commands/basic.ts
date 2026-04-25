@@ -163,8 +163,9 @@ register(
 	},
 	{
 		name: 'pubkey',
-		summary: 'print mills\'s PGP public key + fingerprint',
+		summary: 'print mills\'s public keys (PGP + age)',
 		handler: ({ out }) => {
+			out('PGP', 't-dim');
 			out(`Fingerprint: ${pgp.fingerprint}`);
 			out(`Short ID:    ${pgp.shortId}`);
 			out(`Created:     ${pgp.createdAt}`);
@@ -175,6 +176,15 @@ register(
 			out('');
 			for (const line of pgpArmored.split('\n')) {
 				out(line);
+			}
+			if (pgp.age) {
+				out('');
+				out('age', 't-dim');
+				out(`Recipient: ${pgp.age.recipient}`);
+				out(`Created:   ${pgp.age.createdAt}`);
+				out('');
+				out('fetch the recipient from this site:', 't-dim');
+				out(`  ${pgp.ageDownloadPath}`, 't-dim');
 			}
 		},
 	},
