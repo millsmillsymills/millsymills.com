@@ -126,6 +126,13 @@ import { pgp } from '../../../data/pgp';
 			<code class="about__keys-fp">{pgp.fingerprint}</code>
 			<a href={pgp.downloadPath} download>{pgp.downloadPath}</a>
 		</p>
+		{pgp.age && (
+			<p class="about__keys">
+				<span class="about__keys-label">age</span>
+				<code class="about__keys-fp">{pgp.age.recipient}</code>
+				<a href={pgp.ageDownloadPath} download>{pgp.ageDownloadPath}</a>
+			</p>
+		)}
 	</div>
 </article>
 
