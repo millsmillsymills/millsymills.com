@@ -23,6 +23,10 @@ section "node: npm ci"
 npm ci
 ok "npm ci"
 
+section "node: assert icon assets referenced by apps.ts exist"
+./scripts/assert-icon-assets-exist.sh
+ok "all iconUrl values resolve"
+
 section "node: build"
 npm run build
 ok "npm run build"
