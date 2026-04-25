@@ -7,16 +7,19 @@ const gitShaShort = gitSha.slice(0, 7);
 
 <div class="vscode" data-vscode-root>
 	<aside class="vscode-activitybar" aria-label="activity bar">
-		<button type="button" class="vscode-activity-btn active" aria-label="files" title="files">🗎</button>
+		<button type="button" class="vscode-activity-btn active" data-panel-btn="files" aria-label="files" title="files">🗎</button>
 		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="search" disabled>🔍</button>
-		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="source control" disabled>⎇</button>
+		<button type="button" class="vscode-activity-btn" data-panel-btn="scm" aria-label="source control" title="source control">⎇</button>
 		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="debug" disabled>🐞</button>
 		<button type="button" class="vscode-activity-btn" title="v1 — coming soon" aria-label="extensions" disabled>🧩</button>
 	</aside>
 
 	<aside class="vscode-sidebar">
-		<div class="vscode-sidebar-heading">EXPLORER</div>
-		<div class="vscode-sidebar-tree"></div>
+		<div class="vscode-sidebar-panel" data-panel="files">
+			<div class="vscode-sidebar-heading">EXPLORER</div>
+			<div class="vscode-sidebar-tree"></div>
+		</div>
+		<div class="vscode-sidebar-panel" data-panel="scm" hidden></div>
 	</aside>
 
 	<section class="vscode-main">

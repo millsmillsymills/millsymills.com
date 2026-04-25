@@ -10,6 +10,9 @@ import { renderTabs, attachTabBar } from './tabs';
 import { renderEditor } from './editor';
 import { loadState, saveState, addTab, closeTab, switchTab } from './state';
 import { attachQuickOpen } from './quick-open';
+import { renderSourceControl } from './source-control';
+
+const recentCommits = import.meta.env.PUBLIC_GIT_LOG ?? [];
 
 /**
  * Vscode is "focused" when its `.window` ancestor is the topmost open
@@ -86,5 +89,29 @@ export function initVscode(root: HTMLElement): void {
 		},
 	});
 
+	// Source-control panel: render once (commits are baked at build time and
+	// don't change at runtime), then wire activity-bar buttons to swap which
+	// .vscode-sidebar-panel is visible.
+	const scmPanel = root.querySelector<HTMLElement>('.vscode-sidebar-panel[data-panel="scm"]');
+	if (scmPanel) renderSourceControl(scmPanel, recentCommits);
+	wireActivityBar(root);
+
 	refreshAll();
+}
+
+function wireActivityBar(root: HTMLElement): void {
+	const activityBar = root.querySelector<HTMLElement>('.vscode-activitybar');
+	if (!activityBar) return;
+	activityBar.addEventListener('click', (ev) => {
+		const btn = (ev.target as HTMLElement).closest<HTMLElement>('[data-panel-btn]');
+		if (!btn) return;
+		const target = btn.dataset.panelBtn;
+		if (!target) return;
+		root.querySelectorAll<HTMLElement>('[data-panel-btn]').forEach((b) => {
+			b.classList.toggle('active', b.dataset.panelBtn === target);
+		});
+		root.querySelectorAll<HTMLElement>('.vscode-sidebar-panel').forEach((p) => {
+			p.hidden = p.dataset.panel !== target;
+		});
+	});
 }

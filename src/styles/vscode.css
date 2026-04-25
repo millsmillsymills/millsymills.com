@@ -73,6 +73,62 @@
 	background: var(--pink-100);
 }
 
+.vscode-sidebar-panel[hidden] {
+	display: none;
+}
+
+/* source-control panel: list of recent commits, decorative — links open
+ * the commit on GitHub in a new tab. */
+.vscode-scm-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.vscode-scm-row {
+	border-bottom: 1px solid var(--pink-200);
+}
+.vscode-scm-link {
+	display: grid;
+	grid-template-columns: 4.5rem 1fr;
+	grid-template-rows: auto auto;
+	column-gap: 0.5rem;
+	padding: 0.3rem 0.55rem;
+	color: var(--cream);
+	text-decoration: none;
+	font-size: 0.78rem;
+	line-height: 1.3;
+}
+.vscode-scm-link:hover {
+	background: var(--pink-100);
+}
+.vscode-scm-sha {
+	grid-row: 1;
+	grid-column: 1;
+	color: var(--neon-cyan);
+	font-family: var(--font-mono);
+}
+.vscode-scm-when {
+	grid-row: 1;
+	grid-column: 2;
+	color: var(--ink-soft);
+	text-align: right;
+	font-size: 0.72rem;
+}
+.vscode-scm-subject {
+	grid-row: 2;
+	grid-column: 1 / -1;
+	color: var(--cream);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.vscode-scm-empty {
+	padding: 0.6rem;
+	color: var(--ink-soft);
+	font-style: italic;
+	font-size: 0.78rem;
+}
+
 .vscode-main {
 	grid-area: main;
 	display: grid;
