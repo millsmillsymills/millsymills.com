@@ -33,7 +33,9 @@ const jsonLd = {
 			jobTitle: profile.title,
 			worksFor: { '@type': 'Organization', name: profile.currentEmployer },
 			address: { '@type': 'PostalAddress', addressLocality: 'Seattle', addressRegion: 'WA' },
-			email: `mailto:${profile.email}`,
+			// Email omitted intentionally — surfaced only via the PoW-gated reveal
+			// on /mail/ to keep it out of static html (and out of structured-data
+			// scrapers that hoover JSON-LD).
 			url: siteHref,
 			sameAs: [profile.github],
 		},
@@ -101,8 +103,10 @@ const jsonLd = {
 				getCaptured,
 				captureById,
 			} from '../scripts/flags';
+			import { initMailPow } from '../scripts/mail-pow';
 			consoleBanner();
 			konami();
+			initMailPow();
 			// Expose a tiny API so devtools-savvy visitors can play with flags
 			// outside the terminal. Read-only by intent.
 			(window as unknown as { mills: unknown }).mills = {

@@ -47,6 +47,11 @@ import { pgp } from '../../../data/pgp';
 		border-radius: 3px;
 	}
 
+	.about__mail-link[data-pow-state='solving'] {
+		color: var(--ink-soft);
+		font-style: italic;
+	}
+
 	.about__keys {
 		margin-top: 0.6rem;
 		font-size: 0.82rem;
@@ -105,9 +110,16 @@ import { pgp } from '../../../data/pgp';
 		</p>
 		<p>{profile.summary}</p>
 		<p>
-			<a href={`mailto:${profile.email}`}>{profile.email}</a> · <a href={profile.github}
-				>github</a
+			<a
+				data-mail-pow-link
+				data-mail-subject="hi from millsymills.com"
+				href="#"
+				data-pow-state="solving"
+				class="about__mail-link"
+				>solving proof-of-work…</a
 			>
+			·
+			<a href={profile.github}>github</a>
 		</p>
 		<p class="about__keys">
 			<span class="about__keys-label">pgp</span>
