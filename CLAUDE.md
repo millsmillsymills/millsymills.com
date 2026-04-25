@@ -101,6 +101,8 @@ Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the 
 
 The parallel `deploy-rehearsal.yml` workflow ships the same build to the `p41m0n` rehearsal stack via the `rehearsal` environment. Keep the two workflows in sync when changing CI — the rehearsal exists to catch deploy-pipeline bugs before they hit prod.
 
+`deploy.yml` also fires on a monthly `schedule` (1st of each month, 03:00 UTC). The point is to keep `/.well-known/security.txt`'s `Expires:` field — set to build-time + 12 months — from silently going stale. Each scheduled run still hits the `production` environment's required-reviewer gate, so it surfaces as a once-a-month "approve a no-op rebuild" notification rather than running unattended. If the cron ever gets noisy or expensive, drop the `schedule:` trigger from `deploy.yml`; security.txt's 12mo `Expires` window leaves plenty of slack to bring it back later.
+
 The OIDC trust policy pins each stack's role to a specific workflow file via the `deploy_workflow` Terraform variable. Default is `deploy.yml`; the rehearsal stack overrides to `deploy-rehearsal.yml` in `infra/stacks/p41m0n.tfvars`. **If you add a new deploy workflow, add a matching `deploy_workflow = "<file>.yml"` line to the relevant stack's tfvars and `terraform apply` BEFORE pushing the workflow** — otherwise the new workflow's `AssumeRoleWithWebIdentity` call will fail. `ci-local.sh` checks the referenced workflow file exists; a typo there is caught locally.
 
 ### One-time setup

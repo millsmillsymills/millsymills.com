@@ -1,11 +1,20 @@
 name: Deploy
 
-# TEMPORARY: automatic triggers are disabled while we're over the
-# GitHub Actions minute quota. Deploys can still be kicked off via
+# TEMPORARY: per-push automatic triggers are disabled while we're over
+# the GitHub Actions minute quota. Deploys can still be kicked off via
 # the Actions tab (workflow_dispatch); they just won't chain off a
 # push to main until the workflow_run trigger below is uncommented.
+#
+# The monthly `schedule` trigger IS active — it rebuilds + redeploys
+# once per month so /.well-known/security.txt's `Expires:` field
+# (build_time + 12mo) never silently goes stale. The `production`
+# environment still requires reviewer approval, so a scheduled run
+# pings for one click per month rather than running unattended.
 on:
   workflow_dispatch:
+  schedule:
+    # 1st of each month, 03:00 UTC. Closes #153.
+    - cron: '0 3 1 * *'
   # workflow_run:
   #   workflows: ['CI']
   #   types: [completed]
@@ -23,9 +32,10 @@ jobs:
     name: Build + sync to S3 + invalidate CloudFront
     runs-on: ubuntu-latest
 
-    # Gate: manual dispatch OR CI succeeded on the main branch.
+    # Gate: manual dispatch, monthly schedule, OR CI succeeded on main.
     if: >-
       ${{ github.event_name == 'workflow_dispatch' ||
+          github.event_name == 'schedule' ||
           (github.event.workflow_run.conclusion == 'success' &&
            github.event.workflow_run.head_branch == 'main') }}
 
