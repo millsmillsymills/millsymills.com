@@ -195,7 +195,7 @@ function init(): void {
 		speak(pickQuip(getCurrentAppId(), 'flag'));
 	});
 
-	// Sprite click — track for the 11th CTF flag, suppress popover during a
+	// Sprite click — track for the clippy CTF flag, suppress popover during a
 	// streak so the user can keep clicking, otherwise open the popover.
 	sprite.addEventListener('click', () => {
 		const now = Date.now();
