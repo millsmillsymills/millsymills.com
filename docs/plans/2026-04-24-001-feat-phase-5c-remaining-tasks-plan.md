@@ -17,7 +17,7 @@ items from the original spec — shiki syntax highlighting, age public key,
 security.txt freshness — (b) review follow-ups that came out of #147/#149/#150/#159
 post-merge reviews, and (c) three small UX polish items that came out of 5c work.
 
-This plan groups 14 issues into 10 reviewable PRs, ordered to land cleanup before
+This plan groups 13 issues into 11 reviewable PRs, ordered to land cleanup before
 new features and to let later units depend on earlier scaffolding (e.g., the age
 key reuses the unified PGP-data plumbing landed in the prior unit).
 
@@ -518,7 +518,7 @@ plan steps.
 - Modify: `src/scripts/command-palette.ts` — gate the `"reveal hidden flag"` result and its trigger queries
 - Modify: `src/scripts/terminal/commands/basic.ts` — gate `flag` from `help` listing and tab-completion; keep the command itself executable
 - Modify: `src/components/desktop/ResetConfirm.astro` — remove the "captured CTF flags" line and "find every flag again" copy. Reset still clears `mills.flags.v1`, just doesn't name it
-- Modify: `src/components/desktop/apps/Flags.astro` — render a neutral placeholder pre-capture (no `0 / 11` counter, no challenge list)
+- Modify: `src/components/desktop/apps/Flags.astro` — render a neutral placeholder pre-capture (no `0 / N` counter, no challenge list)
 - Modify: `src/scripts/flags.ts` — first-capture detection + banner trigger + unlock-broadcast event
 - Modify: `src/styles/desktop.css` — extend `.flag-toast` with a `[data-first-capture]` variant for the larger alert-style banner
 - Modify: `src/scripts/util/events.ts` — add (or reuse existing) "flags-unlocked" event for the live unlock without reload
