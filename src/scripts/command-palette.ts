@@ -11,7 +11,7 @@
  */
 
 import { apps } from '../data/apps';
-import { captureById } from './flags';
+import { captureById, flagsUnlocked } from './flags';
 import { escapeHtml } from './util/html';
 
 const SECRET_QUERIES = ['hack', 'hackers', 'hack the planet', 'mills'];
@@ -41,16 +41,26 @@ class CommandPalette {
 		this.bindGlobalKeys();
 		this.bindInput();
 		this.bindList();
+
+		// Re-build entries on first capture so the flags app appears live
+		// without a reload. Subsequent captures don't change visibility.
+		window.addEventListener('mills:flags-unlocked', () => {
+			this.entries = this.buildEntries();
+			if (!this.overlay.hidden) this.render();
+		});
 	}
 
 	private buildEntries(): Entry[] {
-		return apps.map<Entry>((a) => ({
-			id: a.id,
-			label: a.title,
-			hint: `open ${a.id}`,
-			glyph: a.glyph,
-			run: () => this.openApp(a.id),
-		}));
+		const unlocked = flagsUnlocked();
+		return apps
+			.filter((a) => unlocked || a.id !== 'flags')
+			.map<Entry>((a) => ({
+				id: a.id,
+				label: a.title,
+				hint: `open ${a.id}`,
+				glyph: a.glyph,
+				run: () => this.openApp(a.id),
+			}));
 	}
 
 	private secretEntry(): Entry {
@@ -155,7 +165,9 @@ class CommandPalette {
 				e.label.toLowerCase().includes(q) ||
 				e.hint.toLowerCase().includes(q),
 		);
-		if (SECRET_QUERIES.includes(q)) entries = [this.secretEntry(), ...entries];
+		// Secret entry only surfaces post-unlock — pre-capture it would
+		// reveal there's a CTF surface to find, defeating the gate.
+		if (flagsUnlocked() && SECRET_QUERIES.includes(q)) entries = [this.secretEntry(), ...entries];
 		this.visibleEntries = entries;
 		this.activeIdx = Math.min(this.activeIdx, entries.length - 1);
 		if (this.activeIdx < 0) this.activeIdx = 0;
