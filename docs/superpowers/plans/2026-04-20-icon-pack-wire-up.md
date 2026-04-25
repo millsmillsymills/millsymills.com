@@ -104,7 +104,7 @@ For each app in the `apps` array, add an `iconUrl` line. Insert it directly afte
 | `flags` | line ~68 | `iconUrl: '/images/icons/vaporwave/arcade-game.png',` |
 | `projects` | line ~79 | `iconUrl: '/images/icons/web10/under-construction-1.png',` |
 | `uses` | line ~90 | `iconUrl: '/images/icons/web10/dial-up-days.png',` |
-| `music` | line ~101 | `iconUrl: '/images/icons/vaporwave/casette-tape.png',` |
+| `music` | line ~101 | `iconUrl: '/images/icons/vaporwave/cassette-tape.png',` |
 | `memes` | line ~112 | `iconUrl: '/images/icons/vaporwave/japanese-wave.png',` |
 | `mail` | line ~123 | `iconUrl: '/images/icons/web10/netscape-floppy.png',` |
 | `trash` | line ~134 | `iconUrl: '/images/icons/vaporwave/dixie-cup.png',` |
