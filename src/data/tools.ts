@@ -33,7 +33,12 @@ export interface Tool {
 	readonly install?: string;
 	/** canonical docs URL */
 	readonly docsUrl?: string;
-	/** aliases from .zshrc that mask this tool (e.g. grep→rg) */
+	/**
+	 * aliases from .zshrc that mask this tool (e.g. grep→rg). Strings are
+	 * display-friendly: parenthetical decoration is allowed (e.g.
+	 * `'grep (aliased)'`) and `findTool` matches only the leading bare token,
+	 * so both `tools grep` and `tools rg` resolve to ripgrep.
+	 */
 	readonly aliases?: readonly string[];
 	/** bullets explaining why this tool fits an AI-native stack */
 	readonly aiRationale: readonly string[];
@@ -332,7 +337,7 @@ export const tools: readonly Tool[] = [
 		id: '1password',
 		name: '1Password (SSH agent)',
 		category: 'security',
-		tagline: 'routes SSH through the desktop app; raw keys never hit disk or memory',
+		tagline: 'routes SSH through the desktop app; keys never leave the 1Password vault boundary',
 		docsUrl: 'https://developer.1password.com/docs/ssh/',
 		aiRationale: [
 			'agent-executed ssh/git-push never handles raw private keys — the 1P socket mediates every auth',

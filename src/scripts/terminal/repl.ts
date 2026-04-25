@@ -78,7 +78,10 @@ export function bootTerminal({ root, onExit }: Options): void {
 	async function execute(line: string): Promise<void> {
 		const trimmed = line.trim();
 		if (!trimmed) return;
-		const parts = trimmed.split(/\s+/);
+		// U+00A0 (non-breaking space) is included alongside \s because
+		// mobile keyboards sometimes insert NBSP after autocorrect, and
+		// JavaScript regex \s coverage of NBSP is engine-dependent.
+		const parts = trimmed.split(/[\s\u00a0]+/);
 		const name = parts[0];
 		const args = parts.slice(1);
 		const cmd = lookup(name);
