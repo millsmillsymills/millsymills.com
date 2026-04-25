@@ -9,6 +9,20 @@ import { buildTree, renderTree, attachTree } from './file-tree';
 import { renderTabs, attachTabBar } from './tabs';
 import { renderEditor } from './editor';
 import { loadState, saveState, addTab, closeTab, switchTab } from './state';
+import { attachQuickOpen } from './quick-open';
+
+/**
+ * Vscode is "focused" when its `.window` ancestor is the topmost open
+ * window. Window-manager.ts assigns z-index by stacking order (see
+ * window-manager.ts:applyZ), so a numeric compare is enough — no need
+ * to subscribe to focus events.
+ */
+function isVscodeFocused(): boolean {
+	const visible = Array.from(
+		document.querySelectorAll<HTMLElement>('.window:not([hidden])'),
+	).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0));
+	return visible[0]?.dataset.windowId === 'vscode';
+}
 
 export function initVscode(root: HTMLElement): void {
 	const sidebar = root.querySelector<HTMLElement>('.vscode-sidebar-tree');
@@ -61,6 +75,16 @@ export function initVscode(root: HTMLElement): void {
 		state = closeTab(state, ev.detail.path);
 		refreshAll();
 	}) as EventListener);
+
+	attachQuickOpen({
+		root,
+		nodes,
+		isFocused: isVscodeFocused,
+		onOpen: (path) => {
+			state = addTab(state, path);
+			refreshAll();
+		},
+	});
 
 	refreshAll();
 }
