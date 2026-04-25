@@ -17,14 +17,26 @@ import gitConfig from './dotfiles/git-config?raw';
 import dotfilesReadme from './dotfiles/readme.md?raw';
 import claudeMd from './dotfiles/claude-md.md?raw';
 
-export interface Entry {
-	type: 'file' | 'dir';
-	content?: string;
-	/** if true, requires sudo to read in terminal; hidden from vscode.exe tree */
-	priv?: boolean;
-	/** optional free-form language hint consumed by vscode.exe's status bar */
-	language?: string;
-}
+export type Language =
+	| 'astro'
+	| 'bash'
+	| 'conf'
+	| 'lua'
+	| 'markdown'
+	| 'text'
+	| 'typescript'
+	| 'zsh';
+
+export type Entry =
+	| { type: 'dir' }
+	| {
+			type: 'file';
+			content: string;
+			/** if true, requires sudo to read in terminal; hidden from vscode.exe tree */
+			priv?: true;
+			/** language hint consumed by vscode.exe's status bar */
+			language?: Language;
+	  };
 
 const trim = (s: string) => s.replace(/^\n/, '').replace(/\n+$/, '\n');
 
@@ -94,7 +106,10 @@ this terminal is a toy. ls / cat / cd / nmap / curl / ssh / sudo / flag — try 
 real shells exit. this one closes the window.
 `);
 
-export const virtualFs: Record<string, Entry> = {
+// Each entry is frozen so terminal commands (or any other consumer) can't
+// mutate the source-of-truth tree by accident. To "modify" an entry, build a
+// new one — see sudo's elevated-fs construction in commands/fun.ts.
+const entries: Record<string, Entry> = {
 	'/': { type: 'dir' },
 	'/home': { type: 'dir' },
 	'/home/mills': { type: 'dir' },
@@ -122,3 +137,7 @@ export const virtualFs: Record<string, Entry> = {
 	'/etc/hosts': { type: 'file', content: hosts, language: 'text' },
 	'/etc/motd': { type: 'file', content: motd, language: 'text' },
 };
+
+for (const entry of Object.values(entries)) Object.freeze(entry);
+
+export const virtualFs: Readonly<Record<string, Readonly<Entry>>> = Object.freeze(entries);
