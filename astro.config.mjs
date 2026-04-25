@@ -21,6 +21,41 @@ function readGitSha() {
 }
 const gitSha = readGitSha();
 
+/**
+ * Capture the last `n` commits at build time for vscode.exe's SCM panel.
+ * Format: TAB-separated `hash<TAB>subject<TAB>iso-date`. Plain `git log`
+ * is enough — no shell, fixed argv (no injection surface) like readGitSha.
+ *
+ * Soft-fails to `[]` rather than throwing in CI: the SCM panel is
+ * decorative chrome, not a verifiability artifact like the SHA. Worst
+ * case the panel renders "no commit history available" and the rest of
+ * the site ships fine.
+ *
+ * @param {number} n
+ * @returns {Array<{hash: string, subject: string, dateIso: string}>}
+ */
+function readGitLog(n) {
+	try {
+		const raw = execFileSync(
+			'git',
+			['log', '-n', String(n), '--pretty=format:%H%x09%s%x09%aI'],
+			{ encoding: 'utf8' },
+		).trim();
+		if (!raw) return [];
+		return raw.split('\n').map((line) => {
+			const [hash, subject, dateIso] = line.split('\t');
+			return { hash, subject, dateIso };
+		});
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		console.warn(
+			`[astro.config] git log failed (${msg}); PUBLIC_GIT_LOG=[] (vscode.exe SCM panel will be empty).`,
+		);
+		return [];
+	}
+}
+const gitLog = readGitLog(20);
+
 const siteUrl = process.env.SITE_URL ?? 'https://millsymills.com';
 const noIndex = process.env.NO_INDEX === 'true';
 
@@ -79,6 +114,9 @@ export default defineConfig({
 		define: {
 			'import.meta.env.NO_INDEX': JSON.stringify(noIndex ? 'true' : 'false'),
 			'import.meta.env.PUBLIC_GIT_SHA': JSON.stringify(gitSha),
+			// Single JSON.stringify: Vite substitutes the literal `[{...}, ...]`
+			// at build time, so consumers get a real array (no JSON.parse needed).
+			'import.meta.env.PUBLIC_GIT_LOG': JSON.stringify(gitLog),
 		},
 		plugins: [scrubVscodeSnippets()],
 	},
