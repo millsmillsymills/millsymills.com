@@ -114,6 +114,14 @@ export const challenges = [
 		digest: '7c4472a13cd7a2ab2b8bc08de2a7f294bd45989da767b07149546f04d4c0ea9d',
 		tag: 'delight',
 	},
+	{
+		id: 'vscode',
+		title: 'just an evocative text editor',
+		hint: 'open vscode.exe and read the project README',
+		difficulty: 'easy',
+		digest: 'fdca04fc114c8e778d74a0861aef0ec2381a32966858c9b582b6af2a384dd94f',
+		tag: 'discoverability',
+	},
 ] as const satisfies readonly Challenge[];
 /* eslint-enable max-len */
 
