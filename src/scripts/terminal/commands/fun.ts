@@ -19,7 +19,7 @@ register(
 			out('');
 			out('    #1) Respect the privacy of others.');
 			out('    #2) Think before you type.');
-			out('    #3) With great power comes great responsibility.');
+			out('    #3) spiderman');
 			out('');
 
 			let attempts = 0;
