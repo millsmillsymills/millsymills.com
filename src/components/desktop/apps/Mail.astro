@@ -36,6 +36,14 @@ import { pgp } from '../../../data/pgp';
 	<a href={pgp.downloadPath} download>download {pgp.downloadPath}</a>
 </p>
 
+{pgp.age && (
+	<p class="pgp">
+		age: <code>{pgp.age.recipient}</code>
+		&nbsp;·&nbsp;
+		<a href={pgp.ageDownloadPath} download>download {pgp.ageDownloadPath}</a>
+	</p>
+)}
+
 <p>
 	or shout into the void on <a href={profile.github}>github</a>.
 </p>
