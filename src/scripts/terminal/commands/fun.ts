@@ -39,7 +39,14 @@ register(
 					}
 					const restoredFs = ctx.fs;
 					const elevated: typeof ctx.fs = {};
-					for (const [k, v] of Object.entries(restoredFs)) elevated[k] = { ...v, priv: false };
+					for (const [k, v] of Object.entries(restoredFs)) {
+						if (v.type === 'file') {
+							const { priv: _priv, ...rest } = v;
+							elevated[k] = rest;
+						} else {
+							elevated[k] = v;
+						}
+					}
 					// Inherit from ctx via prototype so accessor properties
 					// (notably the `get cwd()` installed by the REPL — see
 					// repl.ts:91) survive. A naive { ...ctx, ... } spread

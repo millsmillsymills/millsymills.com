@@ -1,10 +1,10 @@
 /*
  * Thin adapter over src/data/virtual-fs.ts.
  *
- * Existed historically as the data owner; now just clones the shared tree so
- * terminal mutations (if any are added later) can't leak into other consumers
- * like vscode.exe. Re-exports `Entry` so existing importers (registry.ts)
- * don't have to change.
+ * Returns a writable map so callers can add/remove paths (sudo builds an
+ * elevated view this way), but the entries themselves are frozen at the
+ * source — to "modify" an entry, construct a new one. Re-exports `Entry`
+ * so existing importers (registry.ts) don't have to change.
  */
 
 import { virtualFs, type Entry } from '../../data/virtual-fs';
