@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 function readGitSha() {
 	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
@@ -55,6 +56,54 @@ function readGitLog(n) {
 	}
 }
 const gitLog = readGitLog(20);
+
+/**
+ * Build-time PoW manifest for /mail/. The address is XOR-encrypted with a
+ * key derived from the *first* SHA-256 nonce that produces a digest with
+ * `bits` leading zero bits. The browser worker reproduces the search to
+ * find the same nonce, then decrypts. Casual scrapers (curl, wget, simple
+ * bots) see only the encrypted blob; running JS scrapers also have to
+ * spend ~16K hashes (~150-800ms wall-clock) to win.
+ *
+ * Determinism: both ends must agree on the *lowest* satisfying nonce, so
+ * the search is monotonic from 0. Difficulty 14 = ~16K iterations average.
+ *
+ * @param {string} email
+ * @param {string} salt
+ * @param {number} bits
+ * @returns {{salt: string, difficultyBits: number, encryptedB64: string}}
+ */
+function buildMailPowManifest(email, salt, bits) {
+	let nonce = 0;
+	const cap = 1 << 24;
+	while (nonce < cap) {
+		const h = createHash('sha256').update(`${salt}:${nonce}`).digest();
+		if (leadingZeroBitsBuf(h) >= bits) break;
+		nonce++;
+	}
+	if (nonce === cap) {
+		throw new Error(`astro.config: mail-pow could not find a nonce within 2^24 attempts at difficulty ${bits}.`);
+	}
+	const key = createHash('sha256').update(`${salt}:${nonce}:key`).digest();
+	const data = Buffer.from(email, 'utf8');
+	const cipher = Buffer.alloc(data.length);
+	for (let i = 0; i < data.length; i++) cipher[i] = data[i] ^ key[i % key.length];
+	return { salt, difficultyBits: bits, encryptedB64: cipher.toString('base64') };
+}
+
+/** @param {Buffer} buf */
+function leadingZeroBitsBuf(buf) {
+	let zeros = 0;
+	for (const b of buf) {
+		if (b === 0) { zeros += 8; continue; }
+		let x = b;
+		while ((x & 0x80) === 0) { zeros++; x <<= 1; }
+		return zeros;
+	}
+	return zeros;
+}
+
+const mailPow = buildMailPowManifest('mills@millsymills.com', 'mills.mail.v1', 14);
 
 const siteUrl = process.env.SITE_URL ?? 'https://millsymills.com';
 const noIndex = process.env.NO_INDEX === 'true';
@@ -117,6 +166,8 @@ export default defineConfig({
 			// Single JSON.stringify: Vite substitutes the literal `[{...}, ...]`
 			// at build time, so consumers get a real array (no JSON.parse needed).
 			'import.meta.env.PUBLIC_GIT_LOG': JSON.stringify(gitLog),
+			// Single JSON.stringify: substituted as a literal object at build.
+			'import.meta.env.PUBLIC_MAIL_POW': JSON.stringify(mailPow),
 		},
 		plugins: [scrubVscodeSnippets()],
 	},

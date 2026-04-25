@@ -344,7 +344,7 @@ export const tools: readonly Tool[] = [
 		id: 'gpg',
 		name: 'GnuPG (gpg)',
 		category: 'security',
-		tagline: 'commit signing + WKD key publication for the mills@millsymills.com identity',
+		tagline: "commit signing + WKD key publication for mills' identity",
 		install: 'brew install gnupg',
 		docsUrl: 'https://www.gnupg.org/',
 		aiRationale: [
@@ -352,7 +352,7 @@ export const tools: readonly Tool[] = [
 			'WKD publication at /.well-known/openpgpkey/ means downstream verifiers auto-discover the key',
 		],
 		examples: [
-			{ cmd: 'gpg --locate-keys --auto-key-locate wkd mills@millsymills.com', description: 'fetch + verify my key via WKD' },
+			{ cmd: 'gpg --locate-keys --auto-key-locate wkd <maintainer-email>', description: 'fetch + verify my key via WKD (substitute the address from /mail/)' },
 			{ cmd: 'git commit -S -m ...', description: 'signed commit (default with commit.gpgsign=true)' },
 		],
 	},
