@@ -114,7 +114,7 @@ register(
 			if (!entry) return out(`cat: ${args[0]}: no such file`, 't-err');
 			if (entry.type !== 'file') return out(`cat: ${args[0]}: is a directory`, 't-err');
 			if (entry.priv) return out(`cat: ${args[0]}: permission denied`, 't-err');
-			(entry.content ?? '').split('\n').forEach((line) => out(line));
+			entry.content.split('\n').forEach((line) => out(line));
 		},
 	},
 	{
