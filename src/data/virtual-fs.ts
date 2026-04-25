@@ -36,6 +36,15 @@ export type Entry =
 			priv?: true;
 			/** language hint consumed by vscode.exe's status bar */
 			language?: Language;
+			/**
+			 * Short summary surfaced by the terminal `dotfiles` command.
+			 * Setting this field is the inclusion signal — files under
+			 * `/home/mills/` with a description appear in the listing,
+			 * everything else is hidden from it. Lets us keep e.g.
+			 * `.bashrc` (boring stub) and `.claude/CLAUDE.md` (duplicate
+			 * mirror of `.dotfiles/CLAUDE.md`) out of the curated index.
+			 */
+			description?: string;
 	  };
 
 const trim = (s: string) => s.replace(/^\n/, '').replace(/\n+$/, '\n');
@@ -118,16 +127,46 @@ const entries: Record<string, Entry> = {
 	'/home/mills/skills.txt': { type: 'file', content: skillsTxt, language: 'text' },
 	'/home/mills/resume.md': { type: 'file', content: '(see /files/resume.md served from public/)', language: 'markdown' },
 	'/home/mills/.bashrc': { type: 'file', content: bashrc, language: 'bash' },
-	'/home/mills/.zshrc': { type: 'file', content: zshrc, language: 'zsh' },
-	'/home/mills/.tmux.conf': { type: 'file', content: tmuxConf, language: 'conf' },
+	'/home/mills/.zshrc': {
+		type: 'file',
+		content: zshrc,
+		language: 'zsh',
+		description: 'zsh — starship, atuin, eza/bat/fd/rg, direnv',
+	},
+	'/home/mills/.tmux.conf': {
+		type: 'file',
+		content: tmuxConf,
+		language: 'conf',
+		description: '(stub) — mills does not use tmux',
+	},
 	'/home/mills/.config': { type: 'dir' },
 	'/home/mills/.config/nvim': { type: 'dir' },
-	'/home/mills/.config/nvim/init.lua': { type: 'file', content: nvimInit, language: 'lua' },
+	'/home/mills/.config/nvim/init.lua': {
+		type: 'file',
+		content: nvimInit,
+		language: 'lua',
+		description: '(stub) — mills does not use nvim; primary editor is vscode',
+	},
 	'/home/mills/.config/git': { type: 'dir' },
-	'/home/mills/.config/git/config': { type: 'file', content: gitConfig, language: 'conf' },
+	'/home/mills/.config/git/config': {
+		type: 'file',
+		content: gitConfig,
+		language: 'conf',
+		description: 'git — signed commits, autosquash, zdiff3 merges',
+	},
 	'/home/mills/.dotfiles': { type: 'dir' },
-	'/home/mills/.dotfiles/README.md': { type: 'file', content: dotfilesReadme, language: 'markdown' },
-	'/home/mills/.dotfiles/CLAUDE.md': { type: 'file', content: claudeMd, language: 'markdown' },
+	'/home/mills/.dotfiles/README.md': {
+		type: 'file',
+		content: dotfilesReadme,
+		language: 'markdown',
+		description: 'intro + source-of-truth link',
+	},
+	'/home/mills/.dotfiles/CLAUDE.md': {
+		type: 'file',
+		content: claudeMd,
+		language: 'markdown',
+		description: 'claude-code operating contract (plugins, guardrails)',
+	},
 	// Mirrored at the installed path — same bytes, so `cat` in either place works.
 	'/home/mills/.claude': { type: 'dir' },
 	'/home/mills/.claude/CLAUDE.md': { type: 'file', content: claudeMd, language: 'markdown' },
