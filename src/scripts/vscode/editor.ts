@@ -13,7 +13,7 @@ export function renderEditor(container: HTMLElement, node: VfsNode | null): { li
 		return { line: 1, col: 1, language: 'plain text' };
 	}
 
-	const content = node.content ?? '';
+	const content = node.content;
 	const lines = content.split('\n');
 
 	const gutter = document.createElement('pre');

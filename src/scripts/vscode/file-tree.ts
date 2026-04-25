@@ -5,13 +5,45 @@
  */
 
 import { virtualFs, type Entry } from '../../data/virtual-fs';
-import type { VfsNode } from './types';
+import type { VfsNode, VfsDirNode } from './types';
+import { VSCODE_SNIPPET_SOURCES } from './snippet-sources.mjs';
 
-// Real-repo-file raw imports (Vite bakes these at build time)
+// Real-repo-file raw imports (Vite bakes these at build time). The three
+// URL-bearing imports below MUST stay registered in snippet-sources.mjs so
+// astro.config.mjs's scrubVscodeSnippets plugin rewrites the production URL
+// literal before bundling — otherwise assert-no-url-leakage.sh fails CI.
 import appsTsRaw from '../../data/apps.ts?raw';
 import indexAstroRaw from '../../pages/index.astro?raw';
 import resumeRaw from '../../../public/files/resume.md?raw';
 import vscodeReadme from '../../data/vscode-readme.md?raw';
+
+// Mirror of the URL-bearing literal `?raw` imports immediately above. Vite
+// requires literal specifiers, so we can't iterate the registry to import.
+// The bidirectional check below catches drift in either direction (a new
+// import that forgot to register, or a registry entry whose import was
+// removed).
+const URL_BEARING_RAW_IMPORTS = [
+	'/src/data/apps.ts',
+	'/src/pages/index.astro',
+	'/public/files/resume.md',
+] as const;
+
+{
+	const missingFromRegistry = URL_BEARING_RAW_IMPORTS.filter(
+		(p) => !VSCODE_SNIPPET_SOURCES.includes(p),
+	);
+	const orphanedInRegistry = VSCODE_SNIPPET_SOURCES.filter(
+		(p) => !(URL_BEARING_RAW_IMPORTS as readonly string[]).includes(p),
+	);
+	if (missingFromRegistry.length || orphanedInRegistry.length) {
+		throw new Error(
+			'vscode/file-tree.ts: ?raw imports and snippet-sources.mjs registry disagree.\n' +
+				`  unregistered imports: ${missingFromRegistry.join(', ') || '(none)'}\n` +
+				`  orphaned registry:    ${orphanedInRegistry.join(', ') || '(none)'}\n` +
+				'Update src/scripts/vscode/snippet-sources.mjs and the literal ?raw imports here so they agree.',
+		);
+	}
+}
 
 /** Slice to at most N lines for the project/src/ snippets. */
 function first(raw: string, lines: number): string {
@@ -49,9 +81,9 @@ function addDirsFor(path: string, nodes: Map<string, VfsNode>): void {
 		const dirPath = '/' + parts.slice(0, i).join('/');
 		if (!nodes.has(dirPath)) {
 			nodes.set(dirPath, {
+				type: 'dir',
 				path: dirPath,
 				name: parts[i - 1],
-				type: 'dir',
 				children: [],
 			});
 		}
@@ -68,21 +100,18 @@ export function buildTree(): Map<string, VfsNode> {
 		const parts = path.split('/').filter(Boolean);
 		if (parts.length === 0) continue;           // skip root
 		const name = parts[parts.length - 1];
-		nodes.set(path, {
-			path,
-			name,
-			type: entry.type,
-			content: entry.type === 'file' ? entry.content : undefined,
-			language: entry.type === 'file' ? entry.language : undefined,
-			children: entry.type === 'dir' ? [] : undefined,
-		});
+		if (entry.type === 'file') {
+			nodes.set(path, { type: 'file', path, name, content: entry.content, language: entry.language });
+		} else {
+			nodes.set(path, { type: 'dir', path, name, children: [] });
+		}
 		addDirsFor(path, nodes);
 	}
 
 	// 2. Curated project/ subtree from real-repo snippets.
 	for (const [path, { content, language }] of Object.entries(projectFiles)) {
 		const name = path.split('/').filter(Boolean).pop()!;
-		nodes.set(path, { path, name, type: 'file', content, language });
+		nodes.set(path, { type: 'file', path, name, content, language });
 		addDirsFor(path, nodes);
 	}
 
@@ -102,9 +131,9 @@ export function buildTree(): Map<string, VfsNode> {
 
 	// 4. Synthesize root.
 	nodes.set('/', {
+		type: 'dir',
 		path: '/',
 		name: '',
-		type: 'dir',
 		children: [...nodes.keys()]
 			.filter((p) => p !== '/' && p.lastIndexOf('/') === 0)
 			.sort((a, b) => {
@@ -120,7 +149,8 @@ export function buildTree(): Map<string, VfsNode> {
 
 /** Render the tree into a container element. Emits 'vscode:open-file' CustomEvent on file click. */
 export function renderTree(container: HTMLElement, nodes: Map<string, VfsNode>, expanded: Set<string>): void {
-	const root = nodes.get('/')!;
+	const root = nodes.get('/');
+	if (!root || root.type !== 'dir') return;
 	container.replaceChildren(renderChildren(root, nodes, expanded));
 }
 
@@ -147,10 +177,10 @@ export function attachTree(
 	});
 }
 
-function renderChildren(parent: VfsNode, nodes: Map<string, VfsNode>, expanded: Set<string>): HTMLElement {
+function renderChildren(parent: VfsDirNode, nodes: Map<string, VfsNode>, expanded: Set<string>): HTMLElement {
 	const ul = document.createElement('ul');
 	ul.className = 'vscode-tree-list';
-	for (const childPath of parent.children ?? []) {
+	for (const childPath of parent.children) {
 		const node = nodes.get(childPath);
 		if (!node) continue;
 		const li = document.createElement('li');
