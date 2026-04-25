@@ -68,7 +68,8 @@ Rules for when claude should act autonomously vs. pause for approval.
 
 - Read/write inside the current project directory — files, tests, docs.
 - Running the project's own commands — `npm run dev`, `npm test`,
-  `./scripts/ci-local.sh`, `terraform plan`, etc.
+  `./scripts/ci-local.sh`, `terraform plan` (read-only; no apply; pause if
+  state contains sensitive outputs), etc.
 - Local git operations that don't touch the remote — `commit`, `branch`,
   `rebase`, `worktree add/remove`, `stash`.
 - Search and inspection — `rg`, `fd`, `cat`, `ls`, `git log`, `git diff`,
