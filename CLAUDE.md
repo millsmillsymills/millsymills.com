@@ -8,6 +8,10 @@ Personal/portfolio website. Currently hosted on Squarespace; this repo is the re
 - **Hosting**: AWS S3 + CloudFront + Route53 + ACM — `infra/` contains Terraform
 - **IaC**: Terraform 1.10+
 
+## Documented solutions
+
+`docs/solutions/` — documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+
 ## Aesthetic conventions
 
 - **Theme:** neon-noir vaporwave — dark navy/black surfaces, hot pink + cyan accents, lilac/cream supporting. Tokens live in `src/styles/desktop.css :root` (`--bg-void`, `--bg-deep`, `--neon-pink`, `--neon-cyan`, etc.). Legacy `--pink-*` / `--cream` / `--border` names are repointed to new values, not renamed, so any code referencing them keeps working.
