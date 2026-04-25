@@ -1,9 +1,6 @@
 ---
 import { profile } from '../../../data/profile';
 import { pgp } from '../../../data/pgp';
-
-const subject = encodeURIComponent('hi from millsymills.com');
-const body = encodeURIComponent('');
 ---
 
 <h1>mail.exe</h1>
@@ -12,11 +9,26 @@ const body = encodeURIComponent('');
 	the contact form is a <code>mailto:</code> for now. swap to formspree / SES + lambda later.
 </p>
 
-<p>
-	<a href={`mailto:${profile.email}?subject=${subject}&body=${body}`} style="font-size:24px"
-		>→ {profile.email}</a
+<p class="mail-row">
+	<a
+		data-mail-pow-link
+		data-mail-subject="hi from millsymills.com"
+		href="#"
+		data-pow-state="solving"
+		class="mail-link"
+		>→ <span class="mail-spinner">solving proof-of-work…</span></a
 	>
+	<button type="button" data-mail-pow-reveal class="mail-fallback" hidden>reveal email</button>
 </p>
+
+<noscript>
+	<p class="mail-noscript">
+		javascript is required to reveal the address — a small proof-of-work
+		gate keeps it out of the static html so casual scrapers don't get a
+		free <code>mailto:</code>. without js, ping mills via <a href={profile.github}>github</a>
+		instead.
+	</p>
+</noscript>
 
 <p class="pgp">
 	encrypt: <code>{pgp.fingerprint}</code>
@@ -29,6 +41,37 @@ const body = encodeURIComponent('');
 </p>
 
 <style>
+	.mail-row {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+	}
+	.mail-link {
+		font-size: 24px;
+	}
+	.mail-spinner {
+		color: var(--ink-soft);
+		font-style: italic;
+	}
+	.mail-fallback {
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		padding: 0.2rem 0.55rem;
+		background: var(--pink-50);
+		color: var(--pink-600);
+		border: 1px solid var(--pink-300);
+		border-radius: 3px;
+		cursor: pointer;
+	}
+	.mail-fallback:disabled {
+		opacity: 0.6;
+		cursor: progress;
+	}
+	.mail-noscript {
+		color: var(--ink-soft);
+		font-size: 0.85rem;
+	}
 	.pgp {
 		margin-top: 0.3rem;
 		font-size: 0.85rem;
