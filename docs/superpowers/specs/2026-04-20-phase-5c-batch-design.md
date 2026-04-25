@@ -238,7 +238,10 @@ WKD requires the binary key at `/.well-known/openpgpkey/hu/<zbase32(sha1(localpa
 #!/usr/bin/env bash
 set -euo pipefail
 UID_EMAIL="mills@millsymills.com"
-HASH=$(gpg --with-wkd-hash --list-keys "$UID_EMAIL" | awk '/@/ {split($1, a, "@"); print a[1]}' | head -1)
+HASH=$(gpg --with-wkd-hash --list-keys "$UID_EMAIL" \
+  | grep -oE '\b[a-z0-9]{32}@' \
+  | head -1 \
+  | sed 's/@$//')
 test -n "$HASH"
 mkdir -p public/.well-known/openpgpkey/hu
 gpg --yes --output "public/.well-known/openpgpkey/hu/$HASH" \

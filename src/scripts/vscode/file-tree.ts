@@ -64,7 +64,7 @@ export function buildTree(): Map<string, VfsNode> {
 
 	// 1. From virtualFs: everything under /home/ and /etc/, skip priv:true.
 	for (const [path, entry] of Object.entries(virtualFs) as [string, Entry][]) {
-		if (entry.priv) continue;
+		if (entry.type === 'file' && entry.priv) continue;
 		const parts = path.split('/').filter(Boolean);
 		if (parts.length === 0) continue;           // skip root
 		const name = parts[parts.length - 1];
@@ -72,8 +72,8 @@ export function buildTree(): Map<string, VfsNode> {
 			path,
 			name,
 			type: entry.type,
-			content: entry.content,
-			language: entry.language,
+			content: entry.type === 'file' ? entry.content : undefined,
+			language: entry.type === 'file' ? entry.language : undefined,
 			children: entry.type === 'dir' ? [] : undefined,
 		});
 		addDirsFor(path, nodes);
