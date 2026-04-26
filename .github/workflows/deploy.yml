@@ -76,9 +76,22 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
         run: npm run build
 
+      # Generate an SPDX-JSON SBOM from the source tree and place it
+      # inside dist/ so it ships with the site at /.well-known/sbom.spdx.json.
+      # The action also uploads a copy as a workflow artifact (90-day
+      # retention) for retroactive lookup. Closes #143.
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/.well-known/sbom.spdx.json
+          artifact-name: sbom.spdx.json
+
       # Symmetric to deploy-rehearsal.yml's leakage check — catches a hardcoded
       # rehearsal URL accidentally shipping to prod. No untrusted github.event
-      # context used.
+      # context used. Run after SBOM generation so the SBOM is included in the
+      # grep — a future dep referencing https://millsymills.com would surface here.
       - name: Assert no rehearsal URL leakage
         run: ./scripts/assert-no-rehearsal-leakage.sh
 
