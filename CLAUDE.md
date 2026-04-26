@@ -85,14 +85,14 @@ Before running the migration above on millsymills.com, the same runbook is rehea
 
 ## Email (ProtonMail)
 
-Managed in `infra/email.tf`. The config is safe to deploy before Proton is set up — in the "no Proton" state it publishes a null MX (RFC 7505), `v=spf1 -all`, and a strict `DMARC p=reject`, so the domain cannot be spoofed. When you're ready to activate email:
+Managed in `infra/email.tf`. The config is safe to deploy before Proton is set up — in the "no Proton" state it publishes a null MX (RFC 7505), `v=spf1 -all`, and a strict `DMARC p=reject`, so the domain cannot be spoofed. The `_smtp._tls` TLS-RPT record (RFC 8460) is also published unconditionally — until Proton is live, no remote MTA delivers mail here, so it stays silent until the inbox actually exists. When you're ready to activate email:
 
 1. Sign up for a ProtonMail plan that supports custom domains (Mail Plus and up).
 2. In Proton admin → **Settings → Domains**, add `millsymills.com`. Proton gives you a verification token.
 3. Put the token in `infra/terraform.tfvars` as `protonmail_verification_token = "..."` and run `terraform apply`. This flips MX to Proton and adds the verification TXT.
 4. Wait for Proton to confirm DNS verification.
 5. Proton now shows three DKIM CNAME targets. Add them to `terraform.tfvars` as `protonmail_dkim_selectors = { protonmail = "...", protonmail2 = "...", protonmail3 = "..." }` and `terraform apply`.
-6. Create `dmarc@millsymills.com` (and whatever other addresses you want) in Proton.
+6. Create `dmarc@millsymills.com` and `tls-rpt@millsymills.com` (and whatever other addresses you want) in Proton — these are the rua landing addresses for DMARC aggregate reports and SMTP TLS reports.
 
 DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip the `p=quarantine` training phase because Proton is the only legitimate sender and aligned DKIM/SPF should pass on day one.
 
