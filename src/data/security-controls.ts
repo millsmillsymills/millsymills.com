@@ -37,8 +37,13 @@ export interface SecurityControl {
 	readonly why: string;
 	/** Honest tradeoffs, caveats, or known limits. Empty if there are none worth flagging. */
 	readonly tradeoffs?: string;
-	/** Repo paths that implement the control. Rendered as links to GitHub. */
-	readonly code: readonly string[];
+	/**
+	 * Repo paths that implement the control. Rendered as links to GitHub.
+	 * Optional because roadmap entries don't have an implementation to
+	 * cite yet — `code: []` would be sentinel-as-required-field, the
+	 * absence-of-key form expresses "not yet shipped" more honestly.
+	 */
+	readonly code?: readonly string[];
 	/** PR numbers (just the digits) that landed the control. Rendered as links to GitHub PRs. */
 	readonly prs?: readonly number[];
 	/** External verification link (dnsviz, securityheaders, mxtoolbox, etc.). */
@@ -257,7 +262,6 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'Static `mta-sts.<domain>/.well-known/mta-sts.txt` policy + `_mta-sts` TXT record telling sending MTAs to enforce TLS to inbound mail.',
 		why: 'Upgrades opportunistic SMTP TLS to enforced — blocks passive downgrade attacks visible to peer MTAs.',
 		tradeoffs: 'Gated on Proton activation. Will deploy in `mode: testing` first so TLS-RPT can surface failures before flipping to `enforce`.',
-		code: [],
 	},
 	{
 		id: 'dane',
@@ -267,7 +271,6 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'TLSA records pinning Proton\'s TLS cert chain, validated via DNSSEC.',
 		why: 'Belt + suspenders alongside MTA-STS. Receivers that support DANE refuse to deliver if Proton\'s cert doesn\'t match the pin.',
 		tradeoffs: 'Requires DNSSEC live (✓), Proton active (✗), and Proton cert rotation visibility.',
-		code: [],
 	},
 	{
 		id: 'bimi',
@@ -277,7 +280,6 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'Tiny-PS SVG logo at `/bimi/logo.svg` + `default._bimi` TXT record.',
 		why: 'Surfaces the brand logo in supporting clients (Fastmail, Proton, some Apple Mail) for mail that already passed DMARC.',
 		tradeoffs: 'No VMC (Verified Mark Certificate) — Gmail won\'t render the logo without one. Proton/Fastmail will.',
-		code: [],
 	},
 	{
 		id: 'csp-nonces',
@@ -286,7 +288,6 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'roadmap',
 		what: 'CloudFront Function injects a per-request nonce, replacing the `\'unsafe-inline\'` concession in `style-src` (and any inline scripts) with `\'nonce-XXX\'`.',
 		why: 'Closes the remaining XSS-via-injected-style vector and removes the only weak link in the current CSP allow-list.',
-		code: [],
 	},
 	{
 		id: 'coop-coep',
@@ -296,7 +297,6 @@ export const securityControls: readonly SecurityControl[] = [
 		what: '`Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp` + per-resource `Cross-Origin-Resource-Policy: same-origin`.',
 		why: 'Mitigates Spectre-class side-channel attacks and cross-origin window leaks. Signals readiness for SharedArrayBuffer-using features.',
 		tradeoffs: 'Requires an audit of every same-origin resource to confirm CORP headers ship correctly. The audit is the work.',
-		code: [],
 	},
 	{
 		id: 'signed-commits',
@@ -305,7 +305,6 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'roadmap',
 		what: 'Branch protection rule requiring signed commits on `main`; CONTRIBUTING.md documents SSH commit-signing setup.',
 		why: 'Rooted provenance — every commit on the protected branch carries a verified signing identity, so a stolen GitHub credential can\'t silently inject code.',
-		code: [],
 	},
 	{
 		id: 'hsts-preload',
