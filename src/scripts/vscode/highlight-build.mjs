@@ -110,5 +110,15 @@ export async function prerenderHighlights() {
 		}
 	}
 	highlighter.dispose();
+
+	// CI safety net: a green build with zero highlights is the exact symptom
+	// you'd miss in QA — every editor file silently falling through to plain
+	// text. Locally we soft-fail (logged warning above), in CI we refuse to
+	// ship the regression. Mirrors the SHA-or-bust pattern in readGitSha.
+	if (process.env.CI === 'true' && Object.keys(out).length === 0 && SOURCES.length > 0) {
+		throw new Error(
+			`[vscode-highlights] all ${SOURCES.length} sources failed to prerender in CI. Refusing to ship a build where vscode.exe's editor would silently render plain text. See warnings above for the underlying error.`,
+		);
+	}
 	return out;
 }

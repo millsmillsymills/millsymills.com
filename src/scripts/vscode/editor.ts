@@ -17,7 +17,7 @@
 
 import type { VfsNode } from './types';
 
-const HIGHLIGHTS = (import.meta.env.PUBLIC_VSCODE_HIGHLIGHTS ?? {}) as Record<string, string>;
+const HIGHLIGHTS = import.meta.env.PUBLIC_VSCODE_HIGHLIGHTS;
 
 export function renderEditor(container: HTMLElement, node: VfsNode | null): { line: number; col: number; language: string } {
 	if (!node || node.type !== 'file') {
