@@ -49,6 +49,20 @@ jobs:
           CI: 'true'
         run: npm run build
 
+      # Generate an SPDX-JSON SBOM from the source tree and ship it
+      # alongside the site at /.well-known/sbom.spdx.json. Mirrors the
+      # production deploy step — the rehearsal stack should produce
+      # identical artifacts. Closes #143.
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/.well-known/sbom.spdx.json
+          artifact-name: sbom.spdx.json
+
+      # Run after SBOM generation so the SBOM is included in the grep —
+      # a future dep referencing https://p41m0n.com would surface here.
       - name: Assert no URL leakage
         run: ./scripts/assert-no-url-leakage.sh
 
