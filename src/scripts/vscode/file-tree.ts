@@ -49,10 +49,17 @@ const RAW_BY_PATH: Record<string, string> = {
  * `assert-no-url-leakage.sh` rejects literal hardcodes in dist/.
  */
 const projectFiles: Record<string, { content: string; language: string }> = Object.fromEntries(
-	PROJECT_SNIPPETS.map((entry) => [
-		entry.vscodePath,
-		{ content: applySnippet(RAW_BY_PATH[entry.rawImportPath], entry), language: entry.language },
-	]),
+	PROJECT_SNIPPETS.map((entry) => {
+		const raw = RAW_BY_PATH[entry.rawImportPath];
+		// Defensive: the drift assertion above already throws on this case,
+		// but if the assertion is ever moved or refactored away, we want a
+		// targeted error pointing at the manifest rather than a cryptic
+		// `undefined.split is not a function` from inside applySnippet.
+		if (raw === undefined) {
+			throw new Error(`vscode/file-tree.ts: no ?raw import registered for manifest entry ${entry.rawImportPath}`);
+		}
+		return [entry.vscodePath, { content: applySnippet(raw, entry), language: entry.language }];
+	}),
 );
 
 /** Add intermediate dir entries for a given file path. */

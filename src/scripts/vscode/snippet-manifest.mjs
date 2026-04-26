@@ -14,14 +14,12 @@
  * `assert-no-url-leakage.sh` happened to fire — silent UX bugs (highlighted
  * source one suffix wording, displayed source another) could land green.
  *
- * This module owns all three and provides a single helper, `applySnippet`,
- * that both file-tree.ts and highlight-build.mjs call to produce the byte-
- * identical snippet content from a raw source.
- *
- * The `?raw` imports in file-tree.ts STILL have to use literal specifiers
- * — Vite requires them. file-tree.ts asserts at module load that the set
- * of literal imports matches `PROJECT_SNIPPETS`, mirroring the existing
- * snippet-manifest↔file-tree drift check pattern.
+ * Note on scrubbing: applySnippet runs the URL scrub on every `scrubUrl`
+ * entry. For file-tree.ts's `?raw` imports the Vite plugin has already
+ * scrubbed the raw bytes by the time applySnippet sees them, so the regex
+ * matches nothing — defense in depth, not a no-op by accident. For
+ * highlight-build.mjs, which reads files via fs.readFile and bypasses Vite
+ * entirely, applySnippet is the ONLY scrubber on that path.
  */
 
 const SNIPPET_LINES = 40;
@@ -76,9 +74,14 @@ export const PROJECT_SNIPPETS = Object.freeze([
 ]);
 
 /**
- * Apply truncation + suffix + URL scrub to a raw source string. Both
+ * Apply URL scrub + truncation + suffix to a raw source string. Both
  * display-time (file-tree.ts) and build-time (highlight-build.mjs) call
  * this so their byte output is identical for the same input.
+ *
+ * Order matters: scrub BEFORE truncate. If the production URL ever
+ * straddles the line-N boundary (e.g. `Astro.site ?? 'https://millsymi`
+ * | line N+1: `lls.com/'`), truncating first would split the literal
+ * and the regex would miss the prefix half — partial URL bleed in dist/.
  *
  * @param {string} raw
  * @param {ProjectSnippet} entry
@@ -86,21 +89,11 @@ export const PROJECT_SNIPPETS = Object.freeze([
  */
 export function applySnippet(raw, entry) {
 	let out = raw;
-	if (entry.snippet) {
-		out = out.split('\n').slice(0, entry.snippet.lines).join('\n') + entry.snippet.suffix;
-	}
 	if (entry.scrubUrl) {
 		out = out.replace(/https:\/\/millsymills\.com/g, '<site>');
 	}
+	if (entry.snippet) {
+		out = out.split('\n').slice(0, entry.snippet.lines).join('\n') + entry.snippet.suffix;
+	}
 	return out;
 }
-
-/**
- * Derived for back-compat: astro.config.mjs's scrubVscodeSnippets plugin
- * iterates this list to decide which `?raw` modules to rewrite. Anything
- * with `scrubUrl: false` is excluded (e.g. vscode-readme.md, which is
- * curated content with no production URL).
- */
-export const VSCODE_SNIPPET_SOURCES = Object.freeze(
-	PROJECT_SNIPPETS.filter((s) => s.scrubUrl).map((s) => s.rawImportPath),
-);
