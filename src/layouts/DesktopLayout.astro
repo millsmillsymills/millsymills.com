@@ -20,6 +20,10 @@ if (!Astro.site) {
 	throw new Error('DesktopLayout: Astro.site is undefined. Check astro.config.mjs site value.');
 }
 const siteHref = Astro.site.href; // e.g. "https://p41m0n.com/"
+// Brand text rendered at every social-share unfurl + structured-data
+// crawler. Derived from Astro.site so the rehearsal build's identity
+// follows the rehearsal URL instead of pretending to be millsymills.com.
+const siteHost = Astro.site.host; // "millsymills.com" or "p41m0n.com"
 const forceNoIndex = import.meta.env.NO_INDEX === 'true';
 
 const jsonLd = {
@@ -43,7 +47,7 @@ const jsonLd = {
 			'@type': 'WebSite',
 			'@id': `${siteHref}#website`,
 			url: siteHref,
-			name: 'millsymills.com',
+			name: siteHost,
 			description: 'mills — corporate security engineer. portfolio + links.',
 			author: { '@id': `${siteHref}#mills` },
 			license: 'https://github.com/millsmillsymills/millsymills.com/blob/main/LICENSE',
@@ -65,7 +69,7 @@ const jsonLd = {
 		<meta property="og:title" content={title} />
 		{description && <meta property="og:description" content={description} />}
 		<meta property="og:type" content="website" />
-		<meta property="og:site_name" content="millsymills.com" />
+		<meta property="og:site_name" content={siteHost} />
 		{ogUrl && <meta property="og:url" content={ogUrl} />}
 		{ogImage && <meta property="og:image" content={ogImage} />}
 		{ogImage && <meta property="og:image:width" content="1200" />}
