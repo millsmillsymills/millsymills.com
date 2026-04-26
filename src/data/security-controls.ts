@@ -91,7 +91,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'KMS-backed key-signing key signs the Route53 zone; the chain to the parent (.com) closes once the DS record is published at the registrar.',
 		why: 'Resolvers can verify that the answers they get for `millsymills.com` actually came from the authoritative servers, not a cache-poisoning attacker between you and them. Required prerequisite for DANE TLSA.',
-		tradeoffs: 'Reversal is asymmetric — REMOVE the DS at the registrar FIRST, wait for parent TTL (.com is up to ~48h), THEN disable Terraform signing. Doing it in the wrong order takes ~50% of validating resolvers offline until the cached DS expires. PR #207 adds Terraform-level `prevent_destroy` guards on the KSK + KMS key.',
+		tradeoffs: 'Reversal is asymmetric — REMOVE the DS at the registrar FIRST, wait for parent TTL (.com is up to ~48h), THEN disable Terraform signing. Doing it in the wrong order takes ~50% of validating resolvers offline until the cached DS expires. A follow-up PR (#207, in flight) adds Terraform-level `prevent_destroy` guards on the KSK + KMS key as a machine guard for the documented protocol.',
 		code: ['infra/dnssec.tf'],
 		prs: [201, 207],
 		verify: { label: 'dnsviz.net', href: 'https://dnsviz.net/d/millsymills.com/dnssec/' },
@@ -215,7 +215,7 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'The mailbox address on `/mail/` is decrypted client-side after a ~16K-iteration sha-256 PoW (~150–800ms in a web worker).',
 		why: 'Keeps the address out of static HTML so casual scrapers don\'t get a free mailto. Real humans wait less than a second; bulk scrapers don\'t spend the CPU.',
 		tradeoffs: 'Determined scrapers will eat the CPU cost; PoW raises cost, doesn\'t eliminate it. Address is also published in clear in `security.txt` and PGP UID anyway — by design, since researchers should be able to reach you.',
-		code: ['src/scripts/mail-pow.ts'],
+		code: ['src/scripts/mail-pow.ts', 'src/scripts/mail-pow.worker.ts'],
 	},
 
 	// ─── privacy ───────────────────────────────────────────────────────
@@ -245,7 +245,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Standard CloudFront access logs (URL, IP, user-agent, timestamp, status code) land in a private S3 bucket and auto-expire after 90 days. No further processing, no profile-building.',
 		why: 'Logs exist so outages are debuggable; nothing more. The lifecycle policy means there\'s no archive to subpoena, leak, or accidentally retain.',
-		code: ['infra/cloudfront_logging.tf'],
+		code: ['infra/cloudfront_logging.tf', 'infra/s3.tf'],
 	},
 
 	// ─── roadmap ───────────────────────────────────────────────────────

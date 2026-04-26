@@ -145,6 +145,36 @@ issue or PR on the repo: <https://github.com/millsmillsymills>.
 
 ---
 
+## security
+
+Shipped security controls — full registry with code links lives at
+<https://millsymills.com/security/> and is rendered from the typed
+data file `src/data/security-controls.ts`. Categories:
+
+- web platform: HSTS (with preload), CSP + X-Content-Type-Options
+  + Referrer-Policy + frame-ancestors, all served by a CloudFront
+  response-headers policy.
+- dns + domain: DNSSEC (KMS-backed KSK, Route53 zone signing),
+  CAA records restricting public-CA issuance to ACM (no wildcards).
+- email auth: null MX (RFC 7505) when ProtonMail isn't active,
+  SPF, DMARC `p=reject; adkim=s; aspf=s` from day one,
+  TLS-RPT (RFC 8460) advertising the daily-aggregate report endpoint.
+- supply chain: OIDC-only deploy (no long-lived AWS keys; trust
+  policy pins repo + branch + workflow file), SPDX SBOM published
+  with every deploy.
+- monitoring: Lambda + SNS daily poll of CT logs for unexpected
+  cert issuance.
+- identity + contact: RFC 9116 security.txt with PGP encryption +
+  Policy field, WKD discovery for `mills@millsymills.com`,
+  client-side proof-of-work on the mail address reveal.
+- privacy: zero analytics + zero third-party fetches, build-time
+  invariants asserting privacy claims and font/CSP honesty,
+  90-day TTL on CloudFront access logs.
+
+Roadmap (tracked, not yet shipped): MTA-STS, DANE TLSA, BIMI,
+strict CSP with per-request nonces, COOP/COEP/CORP, signed
+commits required on main, HSTS preload-list submission.
+
 ## tech stack / infrastructure
 
 - Frontend: Astro 6, static output. No JS frameworks for app

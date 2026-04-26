@@ -30,20 +30,49 @@ const groupedShipped = SHIPPED_ORDER.map((cat) => ({
 const codeUrl = (path: string) => `${REPO_URL}/blob/main/${path}`;
 const prUrl = (n: number) => `${REPO_URL}/pull/${n}`;
 
+// Allow-list of href schemes that mdInline() will emit. `javascript:`,
+// `data:`, `vbscript:`, etc. are deliberately excluded — see SAFE_HREF
+// below for why this matters even with strict CSP in place.
+const SAFE_HREF_PREFIXES = ['http://', 'https://', 'mailto:', '/', '#'];
+
+function isSafeHref(href: string): boolean {
+	const trimmed = href.trim();
+	return SAFE_HREF_PREFIXES.some((p) => trimmed.toLowerCase().startsWith(p));
+}
+
+// HTML-entity-escape for use inside double-quoted attributes. Distinct from
+// the text-context escape() below because attribute context also requires
+// quote escaping; `<` / `>` are belt-and-suspenders here (not strictly
+// required inside an attribute value but cheap and safer if the renderer
+// or a future refactor changes the surrounding context).
+function escapeAttr(str: string): string {
+	return str
+		.replace(/&/g, '&amp;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
+}
+
 // Tiny inline-markdown helper: backtick-spans -> <code>, [label](href) -> <a>.
-// Escapes < > & first so the data file can never accidentally inject HTML —
-// only the two whitelisted markers emit tags. Used via `set:html` because
-// the rendered fragments include <code>/<a> tags we want preserved, not
-// escaped a second time.
+// Used via `set:html`, so output is rendered as-is — every emitted tag has to
+// be safe by construction. Two layers of defense:
+//   1. Text-context: < > & escaped before any substitution runs, so no
+//      attacker-controlled string ever becomes an HTML element.
+//   2. Link substitution: href is allow-listed against SAFE_HREF_PREFIXES
+//      (rejects javascript:, data:, vbscript:, etc.) and attribute-escaped
+//      so a quote in the captured group can't break out of the attribute.
+//      Unsafe hrefs render as plain text, not links.
 function mdInline(s: string): string {
 	const escape = (str: string) =>
 		str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 	let out = escape(s);
 	out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
-	out = out.replace(
-		/\[([^\]]+)\]\(([^)]+)\)/g,
-		(_, label, href) => `<a href="${href}" target="_blank" rel="noopener">${label}</a>`,
-	);
+	out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, href) => {
+		if (!isSafeHref(href)) return match; // leave as literal text
+		const safeHref = escapeAttr(href);
+		return `<a href="${safeHref}" target="_blank" rel="noopener">${label}</a>`;
+	});
 	return out;
 }
 
