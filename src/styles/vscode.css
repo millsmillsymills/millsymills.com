@@ -192,18 +192,37 @@
 .vscode-editor-gutter,
 .vscode-editor-code {
 	margin: 0;
-	padding: 0.4rem 0.6rem;
 	font-family: var(--font-mono);
 	font-size: 0.82rem;
 	line-height: 1.4;
 	white-space: pre;
 }
 .vscode-editor-gutter {
+	padding: 0.4rem 0.6rem;
 	color: var(--ink-muted);
 	background: var(--bg-deep);
 	text-align: right;
 	user-select: none;
 	border-right: 1px solid var(--bg-edge);
+}
+/*
+ * .vscode-editor-code wraps either a plain <pre> (no highlight available)
+ * or shiki's prerendered <pre class="shiki neon-noir">. Padding lives on
+ * the inner <pre> so shiki's transparent background extends to the cell
+ * edge while text stays inset, matching the gutter's vertical alignment.
+ */
+.vscode-editor-code > pre {
+	margin: 0;
+	padding: 0.4rem 0.6rem;
+	background: transparent;
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+}
+.vscode-editor-code .shiki code {
+	display: block;
+	font-family: inherit;
 }
 .vscode-editor-empty {
 	padding: 1rem;

@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { VSCODE_SNIPPET_SOURCES } from './src/scripts/vscode/snippet-sources.mjs';
+import { prerenderHighlights } from './src/scripts/vscode/highlight-build.mjs';
 
 function readGitSha() {
 	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
@@ -106,6 +107,14 @@ function leadingZeroBitsBuf(buf) {
 
 const mailPow = buildMailPowManifest('mills@millsymills.com', 'mills.mail.v1', 14);
 
+/**
+ * Prerendered shiki HTML for vscode.exe's editor pane. Computed once at
+ * config-eval time; baked into the bundle as a literal so shiki itself
+ * never reaches the runtime. See src/scripts/vscode/highlight-build.mjs
+ * for the inputs and the soft-fail rationale.
+ */
+const vscodeHighlights = await prerenderHighlights();
+
 const siteUrl = process.env.SITE_URL ?? 'https://millsymills.com';
 const noIndex = process.env.NO_INDEX === 'true';
 
@@ -165,6 +174,10 @@ export default defineConfig({
 			'import.meta.env.PUBLIC_GIT_LOG': JSON.stringify(gitLog),
 			// Single JSON.stringify: substituted as a literal object at build.
 			'import.meta.env.PUBLIC_MAIL_POW': JSON.stringify(mailPow),
+			// Prerendered shiki HTML for vscode.exe — substituted as a literal
+			// `Record<vscodePath, html>` object. editor.ts reads this once and
+			// looks up by tab path; missing entries fall through to plain text.
+			'import.meta.env.PUBLIC_VSCODE_HIGHLIGHTS': JSON.stringify(vscodeHighlights),
 		},
 		plugins: [scrubVscodeSnippets()],
 	},
