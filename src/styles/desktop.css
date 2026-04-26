@@ -74,6 +74,10 @@
 	--neon-cyan-lo: #00a8c2;
 	--neon-lilac: #c8a8ff;
 
+	/* Signal — destructive-action red. Outside the neon-noir palette
+	 * by design: this is a UI signal color, not a theme token. */
+	--danger: #ff3333;
+
 	/* Motif layers */
 	--scanlines: repeating-linear-gradient(
 		0deg,
@@ -102,9 +106,9 @@
 	--lilac-100: #2a1654;
 	--lilac-300: #c8a8ff;
 
-	--cream: #f5edff;
-	--ink: #f5edff;
-	--ink-soft: #c8a8ff;
+	--cream: var(--ink-primary);
+	--ink: var(--ink-primary);
+	--ink-soft: var(--ink-muted);
 	--border: #00e5ff;
 
 	--titlebar-bg: linear-gradient(90deg, #ff4fa8 0%, #c8a8ff 50%, #00e5ff 100%);
@@ -1579,13 +1583,13 @@ body:not([data-flags-unlocked='true']) [data-flags-gated] {
 .reset-confirm__btn--yes {
 	background: var(--neon-pink-lo);
 	color: var(--ink-primary);
-	border-color: #ff3333;
-	box-shadow: 3px 3px 0 #ff3333;
+	border-color: var(--danger);
+	box-shadow: 3px 3px 0 var(--danger);
 }
 
 .reset-confirm__btn--yes:hover,
 .reset-confirm__btn--yes:focus-visible {
-	background: #ff3333;
+	background: var(--danger);
 	color: var(--ink-primary);
 	outline: none;
 }
