@@ -7,17 +7,19 @@ import {
 	type SecurityControl,
 } from '../../../data/security-controls';
 
-// Render order for shipped categories. Roadmap is rendered separately at
-// the bottom — order doesn't matter there.
-const SHIPPED_ORDER: readonly ControlCategory[] = [
-	'web',
-	'dns',
-	'email',
-	'supply-chain',
-	'monitoring',
-	'identity',
-	'privacy',
-];
+// Render order for shipped categories is the declaration order of
+// CATEGORY_LABELS in security-controls.ts. Roadmap is rendered separately
+// at the bottom — order doesn't matter there.
+//
+// Why derive instead of redeclare: CATEGORY_LABELS is already typed
+// `Record<ControlCategory, string>`, so adding a new value to the
+// `ControlCategory` union *requires* a new key in CATEGORY_LABELS (TS
+// error otherwise), and that addition is the same edit that places it
+// in render order. A separate hand-typed SHIPPED_ORDER array would be
+// vulnerable to a silent drop — adding a category to the union without
+// adding it to the order array meant its controls just never rendered.
+// Maintainability review on PR #208 caught the gap.
+const SHIPPED_ORDER = Object.keys(CATEGORY_LABELS) as ControlCategory[];
 
 const shipped = securityControls.filter((c) => c.status === 'shipped');
 const roadmap = securityControls.filter((c) => c.status === 'roadmap');
