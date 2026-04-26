@@ -6,73 +6,54 @@
 
 import { virtualFs, type Entry } from '../../data/virtual-fs';
 import type { VfsNode, VfsDirNode } from './types';
-import { VSCODE_SNIPPET_SOURCES } from './snippet-sources.mjs';
+import { PROJECT_SNIPPETS, applySnippet } from './snippet-manifest.mjs';
 
-// Real-repo-file raw imports (Vite bakes these at build time). The three
-// URL-bearing imports below MUST stay registered in snippet-sources.mjs so
-// astro.config.mjs's scrubVscodeSnippets plugin rewrites the production URL
-// literal before bundling — otherwise assert-no-url-leakage.sh fails CI.
+// Real-repo-file raw imports. Vite requires literal specifiers, so we can't
+// drive these from the manifest at the import site. Instead, the bidirectional
+// check below ensures every literal `?raw` import path is registered in the
+// manifest (and vice versa) — a new import that forgot to register, or a
+// manifest entry whose import was removed, fires at module load.
+import vscodeReadmeRaw from '../../data/vscode-readme.md?raw';
+import resumeRaw from '../../../public/files/resume.md?raw';
 import appsTsRaw from '../../data/apps.ts?raw';
 import indexAstroRaw from '../../pages/index.astro?raw';
-import resumeRaw from '../../../public/files/resume.md?raw';
-import vscodeReadme from '../../data/vscode-readme.md?raw';
 
-// Mirror of the URL-bearing literal `?raw` imports immediately above. Vite
-// requires literal specifiers, so we can't iterate the registry to import.
-// The bidirectional check below catches drift in either direction (a new
-// import that forgot to register, or a registry entry whose import was
-// removed).
-const URL_BEARING_RAW_IMPORTS = [
-	'/src/data/apps.ts',
-	'/src/pages/index.astro',
-	'/public/files/resume.md',
-] as const;
+/** Mirror of the literal `?raw` imports above, keyed by manifest's `rawImportPath`. */
+const RAW_BY_PATH: Record<string, string> = {
+	'/src/data/vscode-readme.md': vscodeReadmeRaw,
+	'/src/data/apps.ts': appsTsRaw,
+	'/src/pages/index.astro': indexAstroRaw,
+	'/public/files/resume.md': resumeRaw,
+};
 
 {
-	const missingFromRegistry = URL_BEARING_RAW_IMPORTS.filter(
-		(p) => !VSCODE_SNIPPET_SOURCES.includes(p),
-	);
-	const orphanedInRegistry = VSCODE_SNIPPET_SOURCES.filter(
-		(p) => !(URL_BEARING_RAW_IMPORTS as readonly string[]).includes(p),
-	);
-	if (missingFromRegistry.length || orphanedInRegistry.length) {
+	const importedPaths = Object.keys(RAW_BY_PATH).sort();
+	const manifestPaths = PROJECT_SNIPPETS.map((s) => s.rawImportPath).sort();
+	const missingFromManifest = importedPaths.filter((p) => !manifestPaths.includes(p));
+	const missingFromImports = manifestPaths.filter((p) => !importedPaths.includes(p));
+	if (missingFromManifest.length || missingFromImports.length) {
 		throw new Error(
-			'vscode/file-tree.ts: ?raw imports and snippet-sources.mjs registry disagree.\n' +
-				`  unregistered imports: ${missingFromRegistry.join(', ') || '(none)'}\n` +
-				`  orphaned registry:    ${orphanedInRegistry.join(', ') || '(none)'}\n` +
-				'Update src/scripts/vscode/snippet-sources.mjs and the literal ?raw imports here so they agree.',
+			'vscode/file-tree.ts: literal ?raw imports and snippet-manifest.mjs disagree.\n' +
+				`  imports not in manifest:  ${missingFromManifest.join(', ') || '(none)'}\n` +
+				`  manifest not in imports:  ${missingFromImports.join(', ') || '(none)'}\n` +
+				'Update src/scripts/vscode/snippet-manifest.mjs and the literal ?raw imports here so they agree.',
 		);
 	}
 }
 
-/** Slice to at most N lines for the project/src/ snippets. */
-function first(raw: string, lines: number): string {
-	return raw.split('\n').slice(0, lines).join('\n');
-}
-
-const SNIPPET_LINES = 40;
-
 /**
- * Files shown under project/ — curated, distinct from home/ and etc/.
- *
- * Note: the production-URL literal baked inside `src/pages/index.astro` and
- * other snippet sources is scrubbed to `<site>` at build time by the
- * `scrubVscodeSnippets` Vite plugin in astro.config.mjs. That plugin keeps
- * `scripts/assert-no-url-leakage.sh` green — see the plugin comment there
- * for the rationale.
+ * Files shown under project/ — derived from the shared manifest so that
+ * the byte content matches what highlight-build.mjs prerenders for the
+ * same path. Production-URL scrubbing applies here for the same reason
+ * astro.config.mjs's scrubVscodeSnippets plugin scrubs at build time:
+ * `assert-no-url-leakage.sh` rejects literal hardcodes in dist/.
  */
-const projectFiles: Record<string, { content: string; language: string }> = {
-	'/project/README.md': { content: vscodeReadme, language: 'markdown' },
-	'/project/resume.md': { content: resumeRaw, language: 'markdown' },
-	'/project/src/data/apps.ts': {
-		content: first(appsTsRaw, SNIPPET_LINES) + '\n/* ...snippet — see the real file on github... */\n',
-		language: 'typescript',
-	},
-	'/project/src/pages/index.astro': {
-		content: first(indexAstroRaw, SNIPPET_LINES) + '\n{/* ...snippet — see the real file on github... */}\n',
-		language: 'astro',
-	},
-};
+const projectFiles: Record<string, { content: string; language: string }> = Object.fromEntries(
+	PROJECT_SNIPPETS.map((entry) => [
+		entry.vscodePath,
+		{ content: applySnippet(RAW_BY_PATH[entry.rawImportPath], entry), language: entry.language },
+	]),
+);
 
 /** Add intermediate dir entries for a given file path. */
 function addDirsFor(path: string, nodes: Map<string, VfsNode>): void {

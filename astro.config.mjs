@@ -2,7 +2,7 @@
 import { defineConfig } from 'astro/config';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { VSCODE_SNIPPET_SOURCES } from './src/scripts/vscode/snippet-sources.mjs';
+import { VSCODE_SNIPPET_SOURCES } from './src/scripts/vscode/snippet-manifest.mjs';
 import { prerenderHighlights } from './src/scripts/vscode/highlight-build.mjs';
 
 function readGitSha() {
@@ -145,8 +145,9 @@ if (process.env.CI === 'true' && !process.env.SITE_URL) {
  * check rejects the literal anywhere in dist/. The snippets are evocative
  * view-source teasers, not runtime logic, so scrubbing is safe here.
  *
- * The list of files to scrub lives in src/scripts/vscode/snippet-sources.mjs
- * so file-tree.ts can assert its literal `?raw` imports stay aligned.
+ * The list of files to scrub is derived from src/scripts/vscode/snippet-manifest.mjs
+ * (entries with `scrubUrl: true`) — the same manifest file-tree.ts and
+ * highlight-build.mjs read so all three consumers agree on the curated set.
  *
  * @returns {import('vite').Plugin}
  */
