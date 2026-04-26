@@ -73,7 +73,8 @@ One-shot cutover checklist. Do these roughly in order; the email steps (Proton) 
    - Both resolve over IPv4 and IPv6 (`dig A` and `dig AAAA`).
    - `curl -I https://millsymills.com/` shows HSTS, CSP, X-Content-Type-Options, Referrer-Policy.
 9. **Email activation.** Follow the ProtonMail runbook below — independent of web, can happen before or after.
-10. **Decommission Squarespace.** Cancel the plan once you're happy with the new site + email for at least a billing cycle.
+10. **DNSSEC chain at registrar.** Route53 starts signing on first apply (#125), but the parent zone (`.com`) only enforces validation once a DS record is published at the registrar. Order matters — getting it wrong takes ~50% of the world's resolvers offline until parent-TTL expires. See `infra/dnssec.tf` for the full ordering; the short version: confirm signing is live with `dig +dnssec @ns-XXX.awsdns-XX.com millsymills.com`, then paste `terraform output -raw dnssec_ds_record` into the registrar's DS field, then verify a green run on https://dnsviz.net/d/millsymills.com/dnssec/. **Reversal is asymmetric: REMOVE the DS record at the registrar FIRST and wait the parent TTL BEFORE disabling signing in Terraform**, or the zone goes BOGUS for validating resolvers.
+11. **Decommission Squarespace.** Cancel the plan once you're happy with the new site + email for at least a billing cycle.
 
 ## Dress rehearsal on p41m0n.com
 
