@@ -23,15 +23,16 @@
 # Wired into scripts/ci-local.sh next to the other post-build asserts.
 
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
+. "$(git rev-parse --show-toplevel)/scripts/lib/lint.sh"
+lint::cd_to_repo_root
 
 DIST_FILE="dist/llms.txt"
 APPS_FILE="src/data/apps.ts"
 PGP_FILE="src/data/pgp.ts"
 
 if [ ! -s "$DIST_FILE" ]; then
-	printf '\033[1;31m✗ %s missing or empty — run `npm run build` first\033[0m\n' "$DIST_FILE" >&2
-	exit 1
+	printf '  Hint: run `npm run build` first.\n' >&2
+	lint::refuse_blind "$DIST_FILE missing or empty"
 fi
 
 # Extract every literal `id: '<value>'` declaration from apps.ts. The
@@ -47,8 +48,7 @@ done < <(
 )
 
 if [ "${#APP_IDS[@]}" -eq 0 ]; then
-	printf '\033[1;31m✗ no app ids extracted from %s — refusing to assert blind\033[0m\n' "$APPS_FILE" >&2
-	exit 1
+	lint::refuse_blind "no app ids extracted from $APPS_FILE"
 fi
 
 printf 'apps.ts declares %d distinct ids\n' "${#APP_IDS[@]}"
@@ -59,7 +59,7 @@ for id in "${APP_IDS[@]}"; do
 	# from the well-known section by anchoring on the trailing slash that
 	# only app routes carry.
 	if ! grep -qE "\(https?://[^)]+/${id}/\)" "$DIST_FILE"; then
-		printf '\033[1;31m✗ apps.ts id %q not found in %s\033[0m\n' "$id" "$DIST_FILE" >&2
+		lint::fail "apps.ts id '$id' not found in $DIST_FILE"
 		missing=1
 	fi
 done
@@ -75,7 +75,7 @@ WELL_KNOWN=(
 )
 for path in "${WELL_KNOWN[@]}"; do
 	if ! grep -qF "$path" "$DIST_FILE"; then
-		printf '\033[1;31m✗ well-known path %s not found in %s\033[0m\n' "$path" "$DIST_FILE" >&2
+		lint::fail "well-known path $path not found in $DIST_FILE"
 		missing=1
 	fi
 done
@@ -88,19 +88,17 @@ done
 PGP_FINGERPRINT=$(grep -oE "fingerprint: '[A-F0-9 ]+'" "$PGP_FILE" \
 	| sed -E "s/fingerprint: '([A-F0-9 ]+)'/\\1/")
 if [ -z "$PGP_FINGERPRINT" ]; then
-	printf '\033[1;31m✗ no PGP fingerprint extracted from %s — refusing to assert blind\033[0m\n' "$PGP_FILE" >&2
-	exit 1
+	lint::refuse_blind "no PGP fingerprint extracted from $PGP_FILE"
 fi
 if ! grep -qF "$PGP_FINGERPRINT" "$DIST_FILE"; then
-	printf '\033[1;31m✗ PGP fingerprint %s not found in %s\033[0m\n' "$PGP_FINGERPRINT" "$DIST_FILE" >&2
+	lint::fail "PGP fingerprint $PGP_FINGERPRINT not found in $DIST_FILE"
 	missing=1
 fi
 
 if [ "$missing" -ne 0 ]; then
 	printf '\nFix: src/pages/llms.txt.ts must surface every app from apps.ts,\n' >&2
 	printf '     every documented well-known path, and the PGP fingerprint.\n' >&2
-	exit 1
+	lint::fatal "dist/llms.txt is missing required entries"
 fi
 
-printf '\033[1;32m✓ dist/llms.txt covers all %d apps + %d well-known paths + PGP fingerprint\033[0m\n' \
-	"${#APP_IDS[@]}" "${#WELL_KNOWN[@]}"
+lint::ok "dist/llms.txt covers all ${#APP_IDS[@]} apps + ${#WELL_KNOWN[@]} well-known paths + PGP fingerprint"
