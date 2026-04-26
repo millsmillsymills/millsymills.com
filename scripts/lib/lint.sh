@@ -43,13 +43,29 @@ lint::fail() {
 	printf '\033[1;31m✗ %s\033[0m\n' "$1" >&2
 }
 
-# lint::refuse_blind "<reason>"
+# lint::fatal "<message>"
+#   Red ✗ to stderr + exit 1. Use for terminal-after-loop checks
+#   ("if any failures accumulated above, stop here") so the per-script
+#   `lint::fail "..."; exit 1` boilerplate stays uniform across the
+#   four sibling lints. lint::fail is for the accumulating case;
+#   lint::fatal is for the final-stop case.
+lint::fatal() {
+	lint::fail "$1"
+	exit 1
+}
+
+# lint::refuse_blind "<short-reason>"
 #   Print a red "refusing to assert blind" failure to stderr and exit
 #   1. Use when the lint's own extraction step came back empty — that
 #   means the underlying data shape changed (regex stopped matching,
 #   data file moved, etc.) and a subsequent pass-or-fail result would
 #   be meaningless. The refuse-blind class is what stops a regex
 #   regression from silently turning a real lint into a green no-op.
+#
+#   Contract: pass a SHORT FRAGMENT (e.g. `"$DATA_FILE missing or empty"`).
+#   The helper appends ` — refusing to assert blind`. Don't pre-include
+#   that suffix in the caller's message, or actionable hints — those
+#   should follow on a separate stderr line via printf if needed.
 lint::refuse_blind() {
 	printf '\033[1;31m✗ %s — refusing to assert blind\033[0m\n' "$1" >&2
 	exit 1

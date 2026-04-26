@@ -70,17 +70,17 @@ if [ -d "$DIST" ]; then
 	[ "$miss" -eq 0 ] || exit 1
 
 	# 3. CSP `font-src 'self'` is the policy; this is the assertion
-	#    that the build agrees with it. Match only the URL form
-	#    (`https://fonts.{googleapis,gstatic}.com`); a real font-load
-	#    has to use a URL, while bare-hostname mentions inside `<code>`
-	#    blocks (e.g. the /security page's roadmap describing what this
-	#    very lint catches) are documentation, not fetches. Earlier
-	#    versions of the regex matched `fonts\.(googleapis|gstatic)\.com`
-	#    unconditionally and false-positived on /security/index.html.
-	if grep -rInIE 'https?://fonts\.(googleapis|gstatic)\.com' "$DIST" >&2; then
-		lint::fail "CSP drift: $DIST/ contains Google Fonts URLs"
+	#    that the build agrees with it. Match URL forms only — real
+	#    font-loading needs an actual URL, while bare-hostname mentions
+	#    inside `<code>` blocks (e.g. the /security page's roadmap
+	#    describing what this lint catches) are documentation, not
+	#    fetches. The optional `(https?:)?//` allows protocol-relative
+	#    forms (`//fonts.googleapis.com/...`) too — Astro doesn't
+	#    synthesize those today and CSP would block them anyway, but
+	#    catching them at lint-time is free belt-and-suspenders.
+	if grep -rInIE '(https?:)?//fonts\.(googleapis|gstatic)\.com' "$DIST" >&2; then
 		printf '  Fix: self-host the offending font under public/fonts/ and update the @font-face src.\n' >&2
-		exit 1
+		lint::fatal "CSP drift: $DIST/ contains Google Fonts URLs"
 	fi
 else
 	printf '(dist/ not present — skipping post-build checks; run `npm run build` first)\n'

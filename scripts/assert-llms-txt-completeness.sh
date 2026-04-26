@@ -31,7 +31,8 @@ APPS_FILE="src/data/apps.ts"
 PGP_FILE="src/data/pgp.ts"
 
 if [ ! -s "$DIST_FILE" ]; then
-	lint::refuse_blind "$DIST_FILE missing or empty — run \`npm run build\` first"
+	printf '  Hint: run `npm run build` first.\n' >&2
+	lint::refuse_blind "$DIST_FILE missing or empty"
 fi
 
 # Extract every literal `id: '<value>'` declaration from apps.ts. The
@@ -97,7 +98,7 @@ fi
 if [ "$missing" -ne 0 ]; then
 	printf '\nFix: src/pages/llms.txt.ts must surface every app from apps.ts,\n' >&2
 	printf '     every documented well-known path, and the PGP fingerprint.\n' >&2
-	exit 1
+	lint::fatal "dist/llms.txt is missing required entries"
 fi
 
 lint::ok "dist/llms.txt covers all ${#APP_IDS[@]} apps + ${#WELL_KNOWN[@]} well-known paths + PGP fingerprint"

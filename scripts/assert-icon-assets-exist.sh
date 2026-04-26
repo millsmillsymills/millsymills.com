@@ -32,8 +32,7 @@ while IFS= read -r url; do
 done < <(grep -oE "iconUrl: '[^']+'" "$APPS_FILE" | sed -E "s/.*'([^']+)'.*/\1/")
 
 if [ "$missing" -gt 0 ]; then
-	lint::fail "$missing iconUrl value(s) do not resolve to a file in $PUBLIC_DIR/."
-	exit 1
+	lint::fatal "$missing iconUrl value(s) do not resolve to a file in $PUBLIC_DIR/."
 fi
 
 lint::ok "all $total iconUrl values resolve to files under $PUBLIC_DIR/"

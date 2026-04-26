@@ -83,7 +83,7 @@ done
 if [ "$missing" -ne 0 ]; then
 	printf '\nFix: update %s so every `code:` entry points at a real file in the repo.\n' "$DATA_FILE" >&2
 	printf '     Either restore the missing file, or remove/rename the entry to match reality.\n' >&2
-	exit 1
+	lint::fatal "security-controls.ts cites paths that do not exist"
 fi
 
 lint::ok "all security-controls.ts code paths resolve"
