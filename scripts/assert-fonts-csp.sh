@@ -22,7 +22,8 @@
 # Run after `npm run build` so dist/ exists. Wired into ci-local.sh.
 
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
+. "$(git rev-parse --show-toplevel)/scripts/lib/lint.sh"
+lint::cd_to_repo_root
 
 PUBLIC_FONTS=public/fonts
 DIST=dist
@@ -41,8 +42,7 @@ done < <(
 )
 
 if [ "${#REFERENCED[@]}" -eq 0 ]; then
-	printf '\033[1;31m✗ no /fonts/ references found in src/ — refusing to assert blind\033[0m\n' >&2
-	exit 1
+	lint::refuse_blind "no /fonts/ references found in src/"
 fi
 
 printf 'fonts referenced in src/: %d\n' "${#REFERENCED[@]}"
@@ -52,7 +52,7 @@ for f in "${REFERENCED[@]}"; do printf '  /fonts/%s\n' "$f"; done
 miss=0
 for f in "${REFERENCED[@]}"; do
 	if [ ! -s "$PUBLIC_FONTS/$f" ]; then
-		printf '\033[1;31m✗ missing source font: %s/%s\033[0m\n' "$PUBLIC_FONTS" "$f" >&2
+		lint::fail "missing source font: $PUBLIC_FONTS/$f"
 		miss=1
 	fi
 done
@@ -63,16 +63,22 @@ done
 if [ -d "$DIST" ]; then
 	for f in "${REFERENCED[@]}"; do
 		if [ ! -s "$DIST/fonts/$f" ]; then
-			printf '\033[1;31m✗ missing built font: %s/fonts/%s\033[0m\n' "$DIST" "$f" >&2
+			lint::fail "missing built font: $DIST/fonts/$f"
 			miss=1
 		fi
 	done
 	[ "$miss" -eq 0 ] || exit 1
 
 	# 3. CSP `font-src 'self'` is the policy; this is the assertion
-	#    that the build agrees with it.
-	if grep -rInE 'fonts\.(googleapis|gstatic)\.com' "$DIST" >&2; then
-		printf '\033[1;31m✗ CSP drift: %s/ contains Google Fonts references\033[0m\n' "$DIST" >&2
+	#    that the build agrees with it. Match only the URL form
+	#    (`https://fonts.{googleapis,gstatic}.com`); a real font-load
+	#    has to use a URL, while bare-hostname mentions inside `<code>`
+	#    blocks (e.g. the /security page's roadmap describing what this
+	#    very lint catches) are documentation, not fetches. Earlier
+	#    versions of the regex matched `fonts\.(googleapis|gstatic)\.com`
+	#    unconditionally and false-positived on /security/index.html.
+	if grep -rInIE 'https?://fonts\.(googleapis|gstatic)\.com' "$DIST" >&2; then
+		lint::fail "CSP drift: $DIST/ contains Google Fonts URLs"
 		printf '  Fix: self-host the offending font under public/fonts/ and update the @font-face src.\n' >&2
 		exit 1
 	fi
@@ -80,4 +86,4 @@ else
 	printf '(dist/ not present — skipping post-build checks; run `npm run build` first)\n'
 fi
 
-printf '\033[1;32m✓ all referenced fonts ship; no Google Fonts leakage\033[0m\n'
+lint::ok "all referenced fonts ship; no Google Fonts leakage"

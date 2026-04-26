@@ -8,8 +8,8 @@
 # Runs in milliseconds; cheap to wire into ci-local.sh.
 
 set -euo pipefail
-
-cd "$(git rev-parse --show-toplevel)"
+. "$(git rev-parse --show-toplevel)/scripts/lib/lint.sh"
+lint::cd_to_repo_root
 
 APPS_FILE="src/data/apps.ts"
 PUBLIC_DIR="public"
@@ -26,14 +26,14 @@ while IFS= read -r url; do
 	total=$((total + 1))
 	path="$PUBLIC_DIR${url}"
 	if [ ! -f "$path" ]; then
-		printf '\033[1;31m✗ missing asset: %s (referenced as %s in %s)\033[0m\n' "$path" "$url" "$APPS_FILE"
+		lint::fail "missing asset: $path (referenced as $url in $APPS_FILE)"
 		missing=$((missing + 1))
 	fi
 done < <(grep -oE "iconUrl: '[^']+'" "$APPS_FILE" | sed -E "s/.*'([^']+)'.*/\1/")
 
 if [ "$missing" -gt 0 ]; then
-	printf '\n\033[1;31m%d iconUrl value(s) do not resolve to a file in %s/.\033[0m\n' "$missing" "$PUBLIC_DIR"
+	lint::fail "$missing iconUrl value(s) do not resolve to a file in $PUBLIC_DIR/."
 	exit 1
 fi
 
-printf '\033[1;32m✓ all %d iconUrl values resolve to files under %s/\033[0m\n' "$total" "$PUBLIC_DIR"
+lint::ok "all $total iconUrl values resolve to files under $PUBLIC_DIR/"
