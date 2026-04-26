@@ -62,3 +62,15 @@ variable "caa_iodef_address" {
   type        = string
   default     = ""
 }
+
+variable "ct_monitor_alert_address" {
+  description = "Mailbox / alias that receives CT log monitoring alerts (SNS email subscription). Leave blank to default to `security@<var.domain>`. The address must confirm the AWS subscription email after first apply or alerts go nowhere."
+  type        = string
+  default     = ""
+}
+
+variable "ct_monitor_extra_issuers" {
+  description = "Extra issuer-name substrings to add to the CT-monitor allow-list, alongside the always-included `Amazon`. Use only if you start issuing certs for this domain from a CA other than ACM."
+  type        = list(string)
+  default     = []
+}
