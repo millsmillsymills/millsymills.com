@@ -33,9 +33,10 @@ infra/terraform.tfstate.backup
 infra/*.tfvars
 !infra/terraform.tfvars.example
 
-# local-only state (brainstorming session scratch, misc)
+# local-only state (brainstorming scratch, claude scheduled tasks + settings, misc)
 .superpowers/
 .local/
+.claude/
 
 # git worktrees
 .worktrees/
