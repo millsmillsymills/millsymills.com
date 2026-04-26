@@ -98,7 +98,7 @@ export const securityControls: readonly SecurityControl[] = [
 		why: 'Resolvers can verify that the answers they get for `millsymills.com` actually came from the authoritative servers, not a cache-poisoning attacker between you and them. Required prerequisite for DANE TLSA.',
 		tradeoffs: 'Reversal is asymmetric — REMOVE the DS at the registrar FIRST, wait for parent TTL (.com is up to ~24h on the DS RRset), THEN disable Terraform signing. Doing it in the wrong order takes ~50% of validating resolvers offline until the cached DS expires. Terraform-level `prevent_destroy` guards on the KSK + KMS key (PR #207) are the machine guard for the documented protocol; PR #213 pre-stages the rotation block so the planned-rotation procedure is uncomment-and-apply, not invent-Terraform-mid-incident; PR #212 documents an emergency-response path that disables the suspected key immediately rather than dual-publishing.',
 		code: ['infra/dnssec.tf'],
-		prs: [201, 207],
+		prs: [201, 207, 212, 213],
 		verify: { label: 'dnsviz.net', href: 'https://dnsviz.net/d/millsymills.com/dnssec/' },
 	},
 	{
