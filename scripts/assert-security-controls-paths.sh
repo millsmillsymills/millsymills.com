@@ -26,21 +26,31 @@ cd "$(git rev-parse --show-toplevel)"
 DATA_FILE="src/data/security-controls.ts"
 
 if [ ! -s "$DATA_FILE" ]; then
-	printf '\033[1;31m✗ %s missing or empty — refusing to assert blind\033[0m\n' "$DATA_FILE" >&2
+	printf '\033[1;31m✗ %s missinging or empty — refusing to assert blind\033[0m\n' "$DATA_FILE" >&2
 	exit 1
 fi
 
 # Extract every `code: [ ... ]` array's contents and pull out each
 # quoted path. `code` lines are typically multi-line:
 #   code: ['foo.tf', 'bar.tf'],
-# or single-line. Awk here folds multi-line `code: [` blocks into one
-# stream, then a grep peels out the quoted strings inside.
-PATHS=()
+# or single-line. Awk anchors `code:` to the start of an indented line
+# (the data file's convention) — without that anchor, prose that happens
+# to contain the substring `code: [` (a future tradeoffs blurb, a JSDoc
+# example, a string literal mentioning the field name) would falsely
+# open a block and pull unrelated quoted strings into the lint as bogus
+# paths. The leading sub() also strips `// ...` line comments so a
+# commented-out path inside a `code: [ ... ]` array doesn't get checked
+# as if it were live.
+#
+# bash 3.2 (macOS) chokes on `#` comments inside `< <(...)` process
+# substitution, so the explanation lives out here, not inline.
+CITED_PATHS=()
 while IFS= read -r p; do
-	PATHS+=("$p")
+	CITED_PATHS+=("$p")
 done < <(
 	awk '
-		/code:[[:space:]]*\[/ { in_block = 1 }
+		{ sub(/[[:space:]]*\/\/.*$/, ""); }
+		/^[[:space:]]+code:[[:space:]]*\[/ { in_block = 1 }
 		in_block { buf = buf " " $0 }
 		in_block && /\]/ {
 			print buf
@@ -53,7 +63,7 @@ done < <(
 		| sort -u
 )
 
-if [ "${#PATHS[@]}" -eq 0 ]; then
+if [ "${#CITED_PATHS[@]}" -eq 0 ]; then
 	# Either no shipped controls cite code (unlikely) or the regex stopped
 	# matching after a refactor. Either way, fail loudly rather than rubber-
 	# stamp the lint.
@@ -61,19 +71,19 @@ if [ "${#PATHS[@]}" -eq 0 ]; then
 	exit 1
 fi
 
-printf 'security-controls.ts cites %d distinct code path(s)\n' "${#PATHS[@]}"
+printf 'security-controls.ts cites %d distinct code path(s)\n' "${#CITED_PATHS[@]}"
 
-miss=0
-for p in "${PATHS[@]}"; do
+missing=0
+for p in "${CITED_PATHS[@]}"; do
 	if [ ! -e "$p" ]; then
-		printf '\033[1;31m✗ missing: %s\033[0m\n' "$p" >&2
-		miss=1
+		printf '\033[1;31m✗ missinging: %s\033[0m\n' "$p" >&2
+		missing=1
 	fi
 done
 
-if [ "$miss" -ne 0 ]; then
+if [ "$missing" -ne 0 ]; then
 	printf '\nFix: update %s so every `code:` entry points at a real file in the repo.\n' "$DATA_FILE" >&2
-	printf '     Either restore the missing file, or remove/rename the entry to match reality.\n' >&2
+	printf '     Either restore the missinging file, or remove/rename the entry to match reality.\n' >&2
 	exit 1
 fi
 
