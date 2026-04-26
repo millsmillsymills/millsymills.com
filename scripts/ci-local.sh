@@ -39,6 +39,10 @@ section "node: build"
 npm run build
 ok "npm run build"
 
+section "node: assert fonts present + no Google Fonts leakage"
+./scripts/assert-fonts-csp.sh
+ok "fonts ship + CSP font-src 'self' is honest"
+
 section "node: assert no URL leakage in rehearsal build"
 ./scripts/assert-no-url-leakage.sh
 ok "no URL leakage (rehearsal direction)"
