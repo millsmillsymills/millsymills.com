@@ -31,7 +31,8 @@ locals {
   # Default to the `dmarc@<domain>` convention when the var is unset,
   # so a fork that changes `var.domain` doesn't accidentally leak
   # DMARC telemetry to the upstream operator's mailbox.
-  dmarc_rua = var.dmarc_report_address != "" ? var.dmarc_report_address : "dmarc@${var.domain}"
+  dmarc_rua  = var.dmarc_report_address != "" ? var.dmarc_report_address : "dmarc@${var.domain}"
+  tlsrpt_rua = var.tlsrpt_report_address != "" ? var.tlsrpt_report_address : "tls-rpt@${var.domain}"
 }
 
 resource "aws_route53_record" "mx" {
@@ -79,5 +80,20 @@ resource "aws_route53_record" "dmarc" {
   ttl     = 3600
   records = [
     "v=DMARC1; p=reject; sp=reject; rua=mailto:${local.dmarc_rua}; fo=1; adkim=s; aspf=s",
+  ]
+}
+
+# SMTP TLS Reporting (RFC 8460): sending MTAs publish daily aggregate
+# reports about TLS failures negotiating with our inbound mail. Safe to
+# publish before Proton exists — null MX means no remote MTA will try
+# delivery anyway, so no reports are generated. Once Proton is live,
+# this becomes the telemetry layer for any future MTA-STS rollout.
+resource "aws_route53_record" "tlsrpt" {
+  zone_id = data.aws_route53_zone.site.zone_id
+  name    = "_smtp._tls.${var.domain}"
+  type    = "TXT"
+  ttl     = 3600
+  records = [
+    "v=TLSRPTv1; rua=mailto:${local.tlsrpt_rua}",
   ]
 }
