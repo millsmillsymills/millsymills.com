@@ -56,3 +56,9 @@ variable "tlsrpt_report_address" {
   type        = string
   default     = ""
 }
+
+variable "caa_iodef_address" {
+  description = "Mailbox that receives CAA violation reports (iodef). Leave blank to default to `security@<var.domain>`. Configure the chosen address as an address or alias in ProtonMail. Reporting is best-effort — not all CAs honor iodef."
+  type        = string
+  default     = ""
+}
