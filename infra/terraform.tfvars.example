@@ -32,3 +32,7 @@ github_repo = "owner/repo"
 # Mailbox / alias that receives SMTP TLS Reporting (RFC 8460)
 # aggregate reports. Leave blank to default to `tls-rpt@<var.domain>`.
 # tlsrpt_report_address = "tls-rpt@example.com"
+
+# Mailbox / alias that receives CAA iodef violation reports. Leave
+# blank to default to `security@<var.domain>`.
+# caa_iodef_address = "security@example.com"
