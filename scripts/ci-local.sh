@@ -31,6 +31,10 @@ section "node: assert PGP fingerprint + WKD binary consistency"
 ./scripts/assert-pgp-consistency.sh
 ok "pgp.ts, pgp.asc, and WKD binary agree"
 
+section "node: assert browserStorage keys documented in privacy-copy"
+node scripts/assert-privacy-storage-keys.mjs
+ok "privacy-copy.ts matches src/scripts/ storage usage"
+
 section "node: build"
 npm run build
 ok "npm run build"
