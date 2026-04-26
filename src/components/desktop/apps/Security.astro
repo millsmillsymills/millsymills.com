@@ -70,7 +70,13 @@ function mdInline(s: string): string {
 		str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 	let out = escape(s);
 	out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
-	out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, href) => {
+	// Href character class allows ONE level of balanced parens so URLs
+	// like https://en.wikipedia.org/wiki/Foo_(bar) round-trip correctly.
+	// Two-deep nesting (vanishingly rare in citation URLs) still
+	// truncates at the second `)`; safe-href + escapeAttr defenses
+	// downstream still apply, so the worst case is a broken link, not
+	// an injection.
+	out = out.replace(/\[([^\]]+)\]\(((?:[^()]|\([^)]*\))*)\)/g, (match, label, href) => {
 		if (!isSafeHref(href)) return match; // leave as literal text
 		const safeHref = escapeAttr(href);
 		return `<a href="${safeHref}" target="_blank" rel="noopener">${label}</a>`;
@@ -113,7 +119,7 @@ const isExternal = (href: string) => /^https?:\/\//.test(href);
 								)}
 								<dt>code</dt>
 								<dd>
-									{c.code.length === 0 ? (
+									{!c.code || c.code.length === 0 ? (
 										<span class="muted">—</span>
 									) : (
 										c.code.map((p, i) => (
