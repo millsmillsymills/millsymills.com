@@ -36,3 +36,13 @@ github_repo = "owner/repo"
 # Mailbox / alias that receives CAA iodef violation reports. Leave
 # blank to default to `security@<var.domain>`.
 # caa_iodef_address = "security@example.com"
+
+# Mailbox / alias that receives CT log monitoring alerts. Leave blank
+# to default to `security@<var.domain>`. Address must confirm the AWS
+# SNS subscription email after first apply or alerts go nowhere.
+# ct_monitor_alert_address = "security@example.com"
+
+# Extra issuer-name substrings to add to the CT-monitor allow-list
+# alongside the always-included "Amazon". Only set this if you begin
+# issuing certs from a CA other than ACM.
+# ct_monitor_extra_issuers = ["Let's Encrypt"]
