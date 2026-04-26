@@ -35,6 +35,17 @@ resource "aws_kms_key" "dnssec" {
   deletion_window_in_days  = 7
   description              = "DNSSEC key-signing key for ${var.domain}"
 
+  # Belt-and-suspenders against the BOGUS-zone footgun: a stray
+  # `terraform destroy` while the DS record is still at the registrar
+  # would schedule this key for deletion and break signing for ~50% of
+  # resolvers until parent-TTL expires. The Reversibility note above is
+  # the human protocol; this is the machine guard. Set to false +
+  # `terraform apply` only after the registrar-side DS record is gone
+  # and parent-TTL has expired.
+  lifecycle {
+    prevent_destroy = true
+  }
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -74,6 +85,15 @@ resource "aws_route53_key_signing_key" "ksk" {
   hosted_zone_id             = data.aws_route53_zone.site.zone_id
   key_management_service_arn = aws_kms_key.dnssec.arn
   name                       = "${replace(var.domain, ".", "-")}-ksk"
+
+  # Same rationale as the KMS key: destroying the KSK while the DS
+  # record is still published at the registrar breaks the chain of
+  # trust until parent-TTL flushes. Removal procedure is in the file
+  # header — flip this to false only after the registrar-side DS is
+  # gone and the cache window has cleared.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_route53_hosted_zone_dnssec" "site" {
