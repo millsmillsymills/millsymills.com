@@ -170,6 +170,18 @@ const _APPS_DATA = [
 		height: 520,
 	},
 	{
+		id: 'security',
+		label: 'security',
+		glyph: '🛡️',
+		iconUrl: '/images/icons/vaporwave/keyed-file.png',
+		title: 'security.txt',
+		ogDescription: 'controls shipped on this site — DNSSEC, CAA, CT monitoring, SBOM, mail-auth stack. every claim links to the implementation.',
+		x: 220,
+		y: 100,
+		width: 720,
+		height: 580,
+	},
+	{
 		id: 'trash',
 		label: 'trash',
 		glyph: '🗑️',

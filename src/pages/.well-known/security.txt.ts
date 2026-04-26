@@ -21,6 +21,7 @@ export const GET: APIRoute = ({ site }) => {
 	const body = [
 		`Contact: mailto:mills@${hostname}`,
 		`Encryption: ${origin}${pgp.downloadPath}`,
+		`Policy: ${origin}/security/`,
 		`Expires: ${expiresUtc.toISOString()}`,
 		`Canonical: ${origin}/.well-known/security.txt`,
 		`Preferred-Languages: en`,

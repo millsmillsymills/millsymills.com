@@ -12,6 +12,10 @@ Personal/portfolio website. Currently hosted on Squarespace; this repo is the re
 
 `docs/solutions/` — documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
 
+## Security controls
+
+Every shipped security control (DNSSEC, CAA, CT monitor, CSP headers, SBOM, mail-auth, etc.) has an entry in `src/data/security-controls.ts`, which renders the public-facing `/security/` page. **When you ship a new control — or move one from `roadmap` to `shipped` — update that file in the same PR.** The page's whole credibility is "every claim cites the implementation"; drift between page and reality is worse than no page at all. `Policy:` field of `/.well-known/security.txt` points at `/security/` so researchers land there from the canonical contact surface.
+
 ## Aesthetic conventions
 
 - **Theme:** neon-noir vaporwave — dark navy/black surfaces, hot pink + cyan accents, lilac/cream supporting. Tokens live in `src/styles/desktop.css :root` (`--bg-void`, `--bg-deep`, `--neon-pink`, `--neon-cyan`, etc.). Legacy `--pink-*` / `--cream` / `--border` names are repointed to new values, not renamed, so any code referencing them keeps working.
