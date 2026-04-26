@@ -21,13 +21,13 @@
 # Wired into scripts/ci-local.sh.
 
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
+. "$(git rev-parse --show-toplevel)/scripts/lib/lint.sh"
+lint::cd_to_repo_root
 
 DATA_FILE="src/data/security-controls.ts"
 
 if [ ! -s "$DATA_FILE" ]; then
-	printf '\033[1;31m✗ %s missinging or empty — refusing to assert blind\033[0m\n' "$DATA_FILE" >&2
-	exit 1
+	lint::refuse_blind "$DATA_FILE missing or empty"
 fi
 
 # Extract every `code: [ ... ]` array's contents and pull out each
@@ -67,8 +67,7 @@ if [ "${#CITED_PATHS[@]}" -eq 0 ]; then
 	# Either no shipped controls cite code (unlikely) or the regex stopped
 	# matching after a refactor. Either way, fail loudly rather than rubber-
 	# stamp the lint.
-	printf '\033[1;31m✗ no code paths extracted from %s — refusing to assert blind\033[0m\n' "$DATA_FILE" >&2
-	exit 1
+	lint::refuse_blind "no code paths extracted from $DATA_FILE"
 fi
 
 printf 'security-controls.ts cites %d distinct code path(s)\n' "${#CITED_PATHS[@]}"
@@ -76,15 +75,15 @@ printf 'security-controls.ts cites %d distinct code path(s)\n' "${#CITED_PATHS[@
 missing=0
 for p in "${CITED_PATHS[@]}"; do
 	if [ ! -e "$p" ]; then
-		printf '\033[1;31m✗ missinging: %s\033[0m\n' "$p" >&2
+		lint::fail "missing: $p"
 		missing=1
 	fi
 done
 
 if [ "$missing" -ne 0 ]; then
 	printf '\nFix: update %s so every `code:` entry points at a real file in the repo.\n' "$DATA_FILE" >&2
-	printf '     Either restore the missinging file, or remove/rename the entry to match reality.\n' >&2
-	exit 1
+	printf '     Either restore the missing file, or remove/rename the entry to match reality.\n' >&2
+	lint::fatal "security-controls.ts cites paths that do not exist"
 fi
 
-printf '\033[1;32m✓ all security-controls.ts code paths resolve\033[0m\n'
+lint::ok "all security-controls.ts code paths resolve"
