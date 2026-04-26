@@ -18,39 +18,128 @@
 #   6. dig +dnssec ${var.domain} | grep ' ad'
 #                             AD flag should be set
 #
-# Reversibility: REMOVE THE DS RECORD AT THE REGISTRAR FIRST and wait
-# for parent-TTL to expire BEFORE disabling Route53 signing. Doing it
-# in the wrong order makes the zone go BOGUS for validating resolvers
-# until the cached DS expires from .com — anywhere from minutes to
-# 48 hours of partial outage.
+# Reversibility (planned shutdown): REMOVE THE DS RECORD AT THE
+# REGISTRAR FIRST and wait for parent-TTL to expire BEFORE disabling
+# Route53 signing. Doing it in the wrong order makes the zone go
+# BOGUS for validating resolvers until the cached DS expires from
+# .com (the relevant TTL is the DS-RRset TTL, ~86400s = 24h on
+# typical .com glue, not the 172800s NS TTL).
 #
-# Emergency KSK rotation (suspected key compromise — kms:Sign abuse,
-# AWS account takeover, hypothetical KMS service incident). Do NOT
-# `terraform destroy` the KSK or KMS key — the prevent_destroy guards
-# would refuse, but even bypassing them would break the chain of
-# trust mid-rotation. Instead, dual-publish:
+# ─── Suspected key compromise (do this FIRST, do not dual-publish) ───
 #
-#   1. Provision a SECOND KSK alongside this one (new KMS key + new
-#      aws_route53_key_signing_key) without removing the existing one.
-#   2. Run `terraform apply` — both KSKs are now active and signing.
-#   3. At the registrar, ADD the new DS record next to the existing
-#      one (most registrars allow multiple DS records per domain).
-#   4. Wait for parent-TTL (.com is up to ~48h) so cached DS records
-#      everywhere include the new key.
-#   5. REMOVE the old DS record at the registrar; wait parent-TTL
-#      again so resolvers stop expecting the old key.
-#   6. Flip the OLD KSK + KMS key's `prevent_destroy` to `false` and
-#      `terraform apply` to retire them.
+# Threat model: kms:Sign abuse via stolen IAM credential, an
+# attacker-minted KMS grant, or hypothetical KMS service incident.
+# (NOT scoped: full AWS account takeover — see step 0.)
 #
-# At no point during this is the chain of trust broken — both old
-# and new keys are valid simultaneously across the rollover window.
-# Same shape as the planned-rotation procedure; the only difference
-# is wallclock urgency. The 7-day deletion_window_in_days on the KMS
-# key gives a recovery floor if step 6 is rushed and turns out to be
-# wrong — `aws kms cancel-key-deletion` restores the key during that
-# window. The KSK itself, however, is irrecoverable once destroyed.
+# The dual-publish ceremony in the planned-rotation section below is
+# the wrong shape under active threat. It preserves the chain of
+# trust during a controlled rollover, which during compromise means
+# giving the attacker forged-but-validated answers for the entire
+# parent-TTL window (potentially days). Compromise response prefers
+# the inverse tradeoff: brief BOGUS state for validating resolvers
+# (~50% of the internet, falling back to the unsigned answer; the
+# other ~50% see the answer normally) over forge-capable signing.
 #
-# Cost: ~$1/month for the asymmetric KMS key, near-zero for signing
+#   0. If account takeover is suspected, regain account control
+#      FIRST: rotate root credentials, audit IAM and SCP, revoke
+#      STS sessions. Otherwise every step below runs against
+#      attacker-controlled state.
+#
+#   1. STOP THE BLEEDING. Disable the suspected key via the AWS CLI:
+#
+#         aws kms disable-key --key-id <kms-key-id>
+#
+#      Effect: kms:Sign returns DisabledException; Route53 zone
+#      signing fails; validating resolvers see BOGUS for ~the cached
+#      DNSKEY/RRSIG TTL (minutes-to-hours, configurable on the
+#      hosted_zone_dnssec resource — much shorter than parent-TTL).
+#      This is fast, recoverable (`enable-key`), and stops attacker
+#      kms:Sign immediately. Do not `terraform destroy` here — the
+#      prevent_destroy guards refuse, and resource removal isn't
+#      what stops signing anyway (disabled-but-present is what does).
+#
+#   2. Audit and revoke non-Route53 grants on the disabled key:
+#
+#         aws kms list-grants --key-id <kms-key-id>
+#         aws kms revoke-grant --key-id <kms-key-id> --grant-id <id>
+#
+#      Reason: the key policy explicitly allows `dnssec-route53` to
+#      mint persistent grants. An attacker with prior IAM access
+#      could have minted additional grants that survive policy
+#      edits and key disable; explicit `revoke-grant` is the only
+#      cleanup. Leave the legitimate Route53 service grant alone.
+#
+#   3. Plan the rotation calmly (post-containment). With kms:Sign
+#      blocked, there is no time pressure. Either follow the
+#      planned-rotation procedure below, or — if the registrar
+#      side is the bottleneck (see Squarespace caveat) — accept
+#      a brief BOGUS window: remove the old DS at the registrar
+#      first, wait DS-RRset TTL, then provision a fresh KSK and
+#      publish its DS. The disabled key stays disabled forever or
+#      gets terraform-destroyed via the planned-rotation step 6.
+#
+# ─── Planned rotation (annual / post-personnel-change, no adversary) ───
+#
+# Use this only when no compromise is suspected. Goal is to swap
+# keys without breaking the chain of trust at any point.
+#
+# Pre-stage (today, NOT mid-rotation): the resources below are
+# hardcoded singletons. A real rotation needs a second resource
+# block (new aws_kms_key, new aws_kms_alias, new aws_route53_key_
+# signing_key with a non-colliding `name`, plus an outputs.tf
+# entry to expose the second DS digest). Tracked as follow-up:
+# refactor to `for_each` on a key-id map, or stage a commented-out
+# rotation block. AN ON-CALL SHOULD NOT BE WRITING NEW TERRAFORM
+# DURING A ROTATION.
+#
+# AWS hard limit: Route53 caps KSKs at 2 per hosted zone. Step 6
+# must complete before any subsequent rotation can begin.
+#
+#   1. Uncomment / `for_each`-flip in the pre-staged second KSK
+#      resource set. The new KSK gets `prevent_destroy = false`
+#      until promotion (step 5) so step 4 has a rollback path.
+#   2. `terraform apply` — both KSKs ACTIVE; aws_route53_hosted_
+#      zone_dnssec needs no change, it auto-covers both keys.
+#   2a. `dig +dnssec @ns-XXX.awsdns-XX.com ${var.domain} DNSKEY` —
+#       confirm BOTH DNSKEY RRs (old + new) return before touching
+#       the registrar. (If the new DNSKEY is missing, fix here, do
+#       not proceed.)
+#   3. ADD the new DS record at the registrar alongside the old
+#      one. Verify in advance that the active registrar supports
+#      multiple simultaneous DS records — Gandi confirmed (up to 4
+#      via interface); Squarespace's UI is uncertain and worth
+#      pre-confirming. If the registrar is single-DS-only, fall
+#      back to the brief-BOGUS-window variant from compromise
+#      step 3.
+#   4. Wait for the parent-zone DS-RRset TTL (.com publishes
+#      `DS 86400` ≈ 24h; verify with
+#      `dig DS ${var.domain} @a.gtld-servers.net +noall +answer`).
+#      During this wait, https://dnsviz.net/d/${var.domain}/dnssec/
+#      should show the new DS validating cleanly. Rollback if not:
+#      remove the new DS at the registrar, wait DS-RRset TTL,
+#      `terraform destroy -target=<new KSK>` then
+#      `-target=<new KMS key>` (since prevent_destroy is still
+#      false from step 1).
+#   5. REMOVE the old DS at the registrar; wait DS-RRset TTL again.
+#      Flip prevent_destroy = true on the new KSK + KMS key in
+#      Terraform; this is the "promotion" step. Apply.
+#   6. Retire the OLD KSK + KMS key. To actually destroy (not just
+#      flip lifecycle metadata): set `prevent_destroy = false` on
+#      the old resources, REMOVE their resource blocks, then
+#      `terraform apply` (or `terraform destroy -target=<old KSK>`
+#      then `-target=<old KMS key>`). Flipping the lifecycle alone
+#      is a no-op for retirement.
+#
+# Recovery within the 7-day KMS deletion window: if step 6 was
+# rushed and the old key turns out to still be needed,
+# `aws kms cancel-key-deletion --key-id <id>` restores the KMS
+# material. The KSK metadata (the `aws_route53_key_signing_key`
+# resource) is gone but recreatable — point a fresh KSK at the
+# rescued KMS key and the resulting DS digest is computed over
+# owner+algo+pubkey, so it matches the original DS. Restore the
+# old DS at the registrar and the chain of trust resumes.
+#
+# Cost: ~$1/month per asymmetric KMS key, near-zero for signing
 # requests at our query volume.
 
 resource "aws_kms_key" "dnssec" {
