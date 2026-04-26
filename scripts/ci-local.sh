@@ -47,6 +47,10 @@ section "node: assert fonts present + no Google Fonts leakage"
 ./scripts/assert-fonts-csp.sh
 ok "fonts ship + CSP font-src 'self' is honest"
 
+section "node: assert llms.txt enumerates every app + well-known path"
+./scripts/assert-llms-txt-completeness.sh
+ok "dist/llms.txt covers apps.ts + well-known paths + PGP fingerprint"
+
 section "node: assert no URL leakage in rehearsal build"
 ./scripts/assert-no-url-leakage.sh
 ok "no URL leakage (rehearsal direction)"
