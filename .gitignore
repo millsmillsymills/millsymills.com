@@ -40,3 +40,6 @@ infra/*.tfvars
 
 # git worktrees
 .worktrees/
+
+# Compound Engineering local config — machine-local, never committed
+.compound-engineering/*.local.yaml
