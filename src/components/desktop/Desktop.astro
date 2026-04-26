@@ -14,6 +14,7 @@ import Trash from './apps/Trash.astro';
 import Projects from './apps/Projects.astro';
 import Uses from './apps/Uses.astro';
 import Privacy from './apps/Privacy.astro';
+import Security from './apps/Security.astro';
 import Incidents from './apps/Incidents.astro';
 import VSCode from './apps/VSCode.astro';
 import { apps } from '../../data/apps';
@@ -44,6 +45,8 @@ const contentFor = (id: string) => {
 			return Uses;
 		case 'privacy':
 			return Privacy;
+		case 'security':
+			return Security;
 		case 'incidents':
 			return Incidents;
 		case 'vscode':
