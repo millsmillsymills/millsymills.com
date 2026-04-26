@@ -83,21 +83,20 @@
 # Use this only when no compromise is suspected. Goal is to swap
 # keys without breaking the chain of trust at any point.
 #
-# Pre-stage (today, NOT mid-rotation): the resources below are
-# hardcoded singletons. A real rotation needs a second resource
-# block (new aws_kms_key, new aws_kms_alias, new aws_route53_key_
-# signing_key with a non-colliding `name`, plus an outputs.tf
-# entry to expose the second DS digest). Tracked as follow-up:
-# refactor to `for_each` on a key-id map, or stage a commented-out
-# rotation block. AN ON-CALL SHOULD NOT BE WRITING NEW TERRAFORM
-# DURING A ROTATION.
+# Pre-stage: the rotation KSK + KMS key + alias + outputs are
+# committed to this file as a commented-out block at the bottom
+# (search for "ROTATION KSK PRE-STAGE"). A real rotation is the
+# uncomment + apply path; an on-call should NOT be writing new
+# Terraform under pressure.
 #
 # AWS hard limit: Route53 caps KSKs at 2 per hosted zone. Step 6
 # must complete before any subsequent rotation can begin.
 #
-#   1. Uncomment / `for_each`-flip in the pre-staged second KSK
-#      resource set. The new KSK gets `prevent_destroy = false`
-#      until promotion (step 5) so step 4 has a rollback path.
+#   1. Uncomment the ROTATION KSK PRE-STAGE block at the bottom
+#      of this file (and its matching `dnssec_ds_record_rotation`
+#      output in outputs.tf). The block is shaped intentionally —
+#      `prevent_destroy = false` on creation so step 4 has a
+#      rollback path; flip to `true` at promotion (step 5).
 #   2. `terraform apply` — both KSKs ACTIVE; aws_route53_hosted_
 #      zone_dnssec needs no change, it auto-covers both keys.
 #   2a. `dig +dnssec @ns-XXX.awsdns-XX.com ${var.domain} DNSKEY` —
@@ -216,3 +215,102 @@ resource "aws_route53_hosted_zone_dnssec" "site" {
 
   depends_on = [aws_route53_key_signing_key.ksk]
 }
+
+# ─── ROTATION KSK PRE-STAGE ─────────────────────────────────────────
+#
+# Uncomment this block + the `dnssec_ds_record_rotation` output in
+# outputs.tf to provision a second KSK alongside the primary one,
+# per the planned-rotation procedure documented at the top of this
+# file. The shape mirrors the primary resources (same KMS spec, same
+# policy, same Route53 wiring) so a fresh `terraform apply` brings
+# the second key online without inventing anything new.
+#
+# Two intentional differences from the primary block:
+#
+#   1. `prevent_destroy = false` on creation. Step 4 of the rotation
+#      procedure waits for parent-TTL with the new DS published at
+#      the registrar; if dnsviz shows the new chain is broken during
+#      that window, the rollback is `terraform destroy -target=<new
+#      KSK>` then `-target=<new KMS key>`, which only works while
+#      the lifecycle guard is off. Flip to `true` at promotion
+#      (procedure step 5) once the new DS is verified-good and the
+#      old DS has been removed at the registrar.
+#
+#   2. Resource names + alias suffix `-rotation` so the two KSKs
+#      coexist without colliding on `aws_kms_alias.name` (must be
+#      unique per region) or `aws_route53_key_signing_key.name`
+#      (must be unique per zone).
+#
+# Once retired (procedure step 6: old KSK + KMS key removed), the
+# rotation block becomes the new primary on the next rotation by
+# either renaming back to `dnssec` / `ksk` (with `terraform state
+# mv` for state continuity) or leaving the names as-is and
+# uncommenting a fresh rotation block above. The state-mv form is
+# nicer for terraform state hygiene; the leave-as-is form is
+# simpler at 3am. Either works.
+#
+# Apply cost: ~$1/month while the second KMS key is active. Free
+# while commented out.
+#
+# resource "aws_kms_key" "dnssec_rotation" {
+#   provider = aws.us_east_1
+#
+#   customer_master_key_spec = "ECC_NIST_P256"
+#   key_usage                = "SIGN_VERIFY"
+#   deletion_window_in_days  = 7
+#   description              = "DNSSEC rotation key-signing key for ${var.domain}"
+#
+#   lifecycle {
+#     prevent_destroy = false
+#   }
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Sid       = "EnableIAMUserPermissions"
+#         Effect    = "Allow"
+#         Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+#         Action    = "kms:*"
+#         Resource  = "*"
+#       },
+#       {
+#         Sid       = "AllowRoute53DNSSECService"
+#         Effect    = "Allow"
+#         Principal = { Service = "dnssec-route53.amazonaws.com" }
+#         Action    = ["kms:DescribeKey", "kms:GetPublicKey", "kms:Sign", "kms:Verify"]
+#         Resource  = "*"
+#       },
+#       {
+#         Sid       = "AllowRoute53DNSSECCreateGrant"
+#         Effect    = "Allow"
+#         Principal = { Service = "dnssec-route53.amazonaws.com" }
+#         Action    = "kms:CreateGrant"
+#         Resource  = "*"
+#         Condition = { Bool = { "kms:GrantIsForAWSResource" = "true" } }
+#       },
+#     ]
+#   })
+# }
+#
+# resource "aws_kms_alias" "dnssec_rotation" {
+#   provider      = aws.us_east_1
+#   name          = "alias/${replace(var.domain, ".", "-")}-dnssec-rotation"
+#   target_key_id = aws_kms_key.dnssec_rotation.key_id
+# }
+#
+# resource "aws_route53_key_signing_key" "ksk_rotation" {
+#   hosted_zone_id             = data.aws_route53_zone.site.zone_id
+#   key_management_service_arn = aws_kms_key.dnssec_rotation.arn
+#   name                       = "${replace(var.domain, ".", "-")}-ksk-rotation"
+#
+#   # Intentionally false until promotion (procedure step 5).
+#   # Step 4's rollback path needs `terraform destroy -target` to work.
+#   lifecycle {
+#     prevent_destroy = false
+#   }
+# }
+#
+# (No second `aws_route53_hosted_zone_dnssec` resource — Route53's
+# zone-signing config auto-covers any KSK on the zone, and only one
+# such resource is supported per zone.)
