@@ -24,6 +24,32 @@
 # until the cached DS expires from .com — anywhere from minutes to
 # 48 hours of partial outage.
 #
+# Emergency KSK rotation (suspected key compromise — kms:Sign abuse,
+# AWS account takeover, hypothetical KMS service incident). Do NOT
+# `terraform destroy` the KSK or KMS key — the prevent_destroy guards
+# would refuse, but even bypassing them would break the chain of
+# trust mid-rotation. Instead, dual-publish:
+#
+#   1. Provision a SECOND KSK alongside this one (new KMS key + new
+#      aws_route53_key_signing_key) without removing the existing one.
+#   2. Run `terraform apply` — both KSKs are now active and signing.
+#   3. At the registrar, ADD the new DS record next to the existing
+#      one (most registrars allow multiple DS records per domain).
+#   4. Wait for parent-TTL (.com is up to ~48h) so cached DS records
+#      everywhere include the new key.
+#   5. REMOVE the old DS record at the registrar; wait parent-TTL
+#      again so resolvers stop expecting the old key.
+#   6. Flip the OLD KSK + KMS key's `prevent_destroy` to `false` and
+#      `terraform apply` to retire them.
+#
+# At no point during this is the chain of trust broken — both old
+# and new keys are valid simultaneously across the rollover window.
+# Same shape as the planned-rotation procedure; the only difference
+# is wallclock urgency. The 7-day deletion_window_in_days on the KMS
+# key gives a recovery floor if step 6 is rushed and turns out to be
+# wrong — `aws kms cancel-key-deletion` restores the key during that
+# window. The KSK itself, however, is irrecoverable once destroyed.
+#
 # Cost: ~$1/month for the asymmetric KMS key, near-zero for signing
 # requests at our query volume.
 
