@@ -1,0 +1,307 @@
+---
+import {
+	securityControls,
+	CATEGORY_LABELS,
+	REPO_URL,
+	type ControlCategory,
+	type SecurityControl,
+} from '../../../data/security-controls';
+
+// Render order for shipped categories. Roadmap is rendered separately at
+// the bottom — order doesn't matter there.
+const SHIPPED_ORDER: readonly ControlCategory[] = [
+	'web',
+	'dns',
+	'email',
+	'supply-chain',
+	'monitoring',
+	'identity',
+	'privacy',
+];
+
+const shipped = securityControls.filter((c) => c.status === 'shipped');
+const roadmap = securityControls.filter((c) => c.status === 'roadmap');
+
+const groupedShipped = SHIPPED_ORDER.map((cat) => ({
+	cat,
+	items: shipped.filter((c) => c.category === cat),
+})).filter((g) => g.items.length > 0);
+
+const codeUrl = (path: string) => `${REPO_URL}/blob/main/${path}`;
+const prUrl = (n: number) => `${REPO_URL}/pull/${n}`;
+
+// Tiny inline-markdown helper: backtick-spans -> <code>, [label](href) -> <a>.
+// Escapes < > & first so the data file can never accidentally inject HTML —
+// only the two whitelisted markers emit tags. Used via `set:html` because
+// the rendered fragments include <code>/<a> tags we want preserved, not
+// escaped a second time.
+function mdInline(s: string): string {
+	const escape = (str: string) =>
+		str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+	let out = escape(s);
+	out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+	out = out.replace(
+		/\[([^\]]+)\]\(([^)]+)\)/g,
+		(_, label, href) => `<a href="${href}" target="_blank" rel="noopener">${label}</a>`,
+	);
+	return out;
+}
+
+// External link guard — internal anchors and root-relative paths skip
+// target=_blank so in-tab navigation works as expected.
+const isExternal = (href: string) => /^https?:\/\//.test(href);
+---
+
+<article class="security">
+	<h1>security.txt</h1>
+	<p class="lede">
+		controls shipped in service of "this site shouldn't be the easy target." every
+		claim cites the implementation — read the code, fork it, copy what you like.
+	</p>
+
+	{
+		groupedShipped.map(({ cat, items }) => (
+			<section class="security__group">
+				<h2>{CATEGORY_LABELS[cat]}</h2>
+				<ul class="security__controls">
+					{items.map((c: SecurityControl) => (
+						<li class="control" id={c.id}>
+							<header class="control__head">
+								<span class="control__title">{c.title}</span>
+								<span class="control__status control__status--shipped">shipped</span>
+							</header>
+							<p class="control__what" set:html={mdInline(c.what)} />
+							<dl class="control__meta">
+								<dt>why</dt>
+								<dd set:html={mdInline(c.why)} />
+								{c.tradeoffs && (
+									<>
+										<dt>tradeoffs</dt>
+										<dd set:html={mdInline(c.tradeoffs)} />
+									</>
+								)}
+								<dt>code</dt>
+								<dd>
+									{c.code.length === 0 ? (
+										<span class="muted">—</span>
+									) : (
+										c.code.map((p, i) => (
+											<>
+												{i > 0 && ' · '}
+												<a href={codeUrl(p)} target="_blank" rel="noopener">
+													<code>{p}</code>
+												</a>
+											</>
+										))
+									)}
+									{c.prs && c.prs.length > 0 && (
+										<>
+											{' · prs: '}
+											{c.prs.map((n, i) => (
+												<>
+													{i > 0 && ', '}
+													<a href={prUrl(n)} target="_blank" rel="noopener">
+														#{n}
+													</a>
+												</>
+											))}
+										</>
+									)}
+									{c.verify && (
+										<>
+											{' · verify: '}
+											<a
+												href={c.verify.href}
+												target={isExternal(c.verify.href) ? '_blank' : undefined}
+												rel={isExternal(c.verify.href) ? 'noopener' : undefined}
+											>
+												{c.verify.label}
+											</a>
+										</>
+									)}
+								</dd>
+							</dl>
+						</li>
+					))}
+				</ul>
+			</section>
+		))
+	}
+
+	{
+		roadmap.length > 0 && (
+			<section class="security__group security__group--roadmap">
+				<h2>roadmap</h2>
+				<p class="security__roadmap-blurb">
+					tracked but not yet live. ships when the prerequisite (proton activation, audit pass,
+					etc.) clears.
+				</p>
+				<ul class="security__controls">
+					{roadmap.map((c: SecurityControl) => (
+						<li class="control control--roadmap" id={c.id}>
+							<header class="control__head">
+								<span class="control__title">{c.title}</span>
+								<span class="control__status control__status--roadmap">roadmap</span>
+							</header>
+							<p class="control__what" set:html={mdInline(c.what)} />
+							<dl class="control__meta">
+								<dt>why</dt>
+								<dd set:html={mdInline(c.why)} />
+								{c.tradeoffs && (
+									<>
+										<dt>blocker / tradeoff</dt>
+										<dd set:html={mdInline(c.tradeoffs)} />
+									</>
+								)}
+							</dl>
+						</li>
+					))}
+				</ul>
+			</section>
+		)
+	}
+
+	<footer class="security__footer">
+		<p>
+			source of truth: <a href={`${REPO_URL}/blob/main/src/data/security-controls.ts`} target="_blank" rel="noopener"><code>src/data/security-controls.ts</code></a>.
+			every PR that ships a new control updates that file in the same diff — drift between
+			page + reality is a CI failure waiting to happen.
+		</p>
+	</footer>
+</article>
+
+<style>
+	.security {
+		padding: 1rem 1.25rem;
+		color: var(--ink);
+		font-family: var(--font-xp-ui, system-ui, sans-serif);
+		line-height: 1.5;
+	}
+	.security h1 {
+		font-family: var(--font-pixel, monospace);
+		text-transform: lowercase;
+		margin: 0 0 0.5rem;
+	}
+	.security .lede {
+		font-style: italic;
+		color: var(--ink-soft);
+		border-left: 3px solid var(--pink-400);
+		padding-left: 0.75rem;
+		margin: 0 0 1.25rem;
+	}
+	.security__group {
+		margin-bottom: 1.5rem;
+	}
+	.security__group h2 {
+		font-family: var(--font-screen, monospace);
+		font-size: 1rem;
+		color: var(--pink-600);
+		margin: 0 0 0.5rem;
+		text-transform: lowercase;
+		letter-spacing: 0.04em;
+	}
+	.security__group--roadmap {
+		margin-top: 2rem;
+		border-top: 1px dashed var(--pink-300);
+		padding-top: 1rem;
+	}
+	.security__roadmap-blurb {
+		color: var(--ink-soft);
+		font-size: 0.9rem;
+		margin: 0 0 0.75rem;
+	}
+	.security__controls {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		gap: 0.75rem;
+	}
+	.control {
+		background: var(--bg-edge, transparent);
+		border: 1px solid var(--lilac-300, transparent);
+		border-radius: 4px;
+		padding: 0.6rem 0.75rem;
+	}
+	.control--roadmap {
+		opacity: 0.85;
+		border-style: dashed;
+	}
+	.control__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+		margin-bottom: 0.3rem;
+	}
+	.control__title {
+		font-family: var(--font-screen, monospace);
+		font-size: 0.95rem;
+		color: var(--ink);
+	}
+	.control__status {
+		font-family: var(--font-pixel);
+		font-size: 0.65rem;
+		padding: 0.05rem 0.4rem;
+		border-radius: 2px;
+		text-transform: lowercase;
+		letter-spacing: 0.04em;
+	}
+	.control__status--shipped {
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		color: var(--ink-soft);
+	}
+	.control__status--roadmap {
+		background: transparent;
+		border: 1px dashed var(--ink-soft);
+		color: var(--ink-soft);
+	}
+	.control__what {
+		margin: 0 0 0.4rem;
+		color: var(--ink);
+	}
+	.control__meta {
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 0.1rem 0.75rem;
+		margin: 0;
+		font-size: 0.9rem;
+	}
+	.control__meta dt {
+		font-family: var(--font-pixel);
+		font-size: 0.7rem;
+		color: var(--ink-soft);
+		text-transform: lowercase;
+		padding-top: 0.15rem;
+	}
+	.control__meta dd {
+		margin: 0 0 0.3rem;
+		color: var(--ink-soft);
+	}
+	.control__meta code {
+		font-size: 0.85rem;
+	}
+	.control__meta a {
+		color: var(--pink-600);
+	}
+	.control__meta .muted {
+		color: var(--ink-soft);
+		opacity: 0.6;
+	}
+	.security__footer {
+		margin-top: 1.5rem;
+		padding-top: 0.75rem;
+		border-top: 1px dashed var(--pink-300);
+		font-size: 0.85rem;
+		color: var(--ink-soft);
+	}
+	.security__footer a {
+		color: var(--pink-600);
+	}
+	.security__footer code {
+		background: var(--bg-edge);
+		padding: 0.1rem 0.35rem;
+		border-radius: 3px;
+	}
+</style>
