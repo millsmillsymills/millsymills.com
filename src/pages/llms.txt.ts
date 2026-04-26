@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { apps } from '../data/apps';
 import { profile } from '../data/profile';
+import { pgp } from '../data/pgp';
+import { REPO_URL } from '../data/security-controls';
 
 // /llms.txt — agent-readable summary, derived from typed data sources.
 //
@@ -16,7 +18,6 @@ export const GET: APIRoute = ({ site }) => {
 		throw new Error('llms.txt: Astro.site is undefined. Check astro.config.mjs site value.');
 	}
 	const origin = site.href.replace(/\/$/, '');
-	const repoUrl = 'https://github.com/millsmillsymills/millsymills.com';
 
 	const pages = apps
 		.map((a) => `- [${a.label}](${origin}/${a.id}/): ${a.ogDescription}`)
@@ -53,11 +54,12 @@ ${pages}
 - Astro 6 static output.
 - Terraform for AWS (S3 + CloudFront + Route53 + ACM).
 - CI via GitHub Actions with OIDC deploy role.
-- Source: <${repoUrl}>.
+- Source: <${REPO_URL}>.
 
 ## contact
 
 - email: <mailto:${profile.email}>
+- pgp: <${origin}${pgp.downloadPath}> (fingerprint \`${pgp.fingerprint}\`, expires ${pgp.expiresAt})
 - github: <${profile.github}>
 `;
 
