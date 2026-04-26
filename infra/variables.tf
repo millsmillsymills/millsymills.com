@@ -50,3 +50,9 @@ variable "dmarc_report_address" {
   type        = string
   default     = ""
 }
+
+variable "tlsrpt_report_address" {
+  description = "Mailbox that receives SMTP TLS Reporting (RFC 8460) aggregate reports. Leave blank to default to `tls-rpt@<var.domain>`. Configure the chosen address as an address or alias in ProtonMail."
+  type        = string
+  default     = ""
+}
