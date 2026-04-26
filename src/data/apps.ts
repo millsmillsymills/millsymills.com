@@ -173,7 +173,11 @@ const _APPS_DATA = [
 		id: 'security',
 		label: 'security',
 		glyph: '🛡️',
-		iconUrl: '/images/icons/vaporwave/keyed-file.png',
+		// Deliberately no iconUrl — privacy already uses keyed-file.png
+		// for the padlock motif. The 🛡️ glyph reads distinctly in both
+		// the desktop icon grid and the start-menu / taskbar, and stays
+		// thematically separate from privacy ("what we store") vs
+		// security ("controls in place").
 		title: 'security.txt',
 		ogDescription: 'controls shipped on this site — DNSSEC, CAA, CT monitoring, SBOM, mail-auth stack. every claim links to the implementation.',
 		x: 220,
