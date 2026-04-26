@@ -92,9 +92,11 @@
 # AWS hard limit: Route53 caps KSKs at 2 per hosted zone. Step 6
 # must complete before any subsequent rotation can begin.
 #
-#   1. Uncomment the ROTATION KSK PRE-STAGE block at the bottom
-#      of this file (and its matching `dnssec_ds_record_rotation`
-#      output in outputs.tf). The block is shaped intentionally —
+#   1. UNCOMMENT TWO PLACES: the ROTATION KSK PRE-STAGE block at
+#      the bottom of this file AND the `dnssec_ds_record_rotation`
+#      output in outputs.tf. They are paired — uncommenting only
+#      the first leaves the registrar-paste step (step 3) without
+#      a DS digest to fetch. The block is shaped intentionally —
 #      `prevent_destroy = false` on creation so step 4 has a
 #      rollback path; flip to `true` at promotion (step 5).
 #   2. `terraform apply` — both KSKs ACTIVE; aws_route53_hosted_
@@ -115,10 +117,16 @@
 #      `dig DS ${var.domain} @a.gtld-servers.net +noall +answer`).
 #      During this wait, https://dnsviz.net/d/${var.domain}/dnssec/
 #      should show the new DS validating cleanly. Rollback if not:
-#      remove the new DS at the registrar, wait DS-RRset TTL,
-#      `terraform destroy -target=<new KSK>` then
-#      `-target=<new KMS key>` (since prevent_destroy is still
-#      false from step 1).
+#      remove the new DS at the registrar, wait DS-RRset TTL, then
+#      `terraform destroy -target=aws_route53_key_signing_key.ksk_rotation`
+#      followed by `-target=aws_kms_alias.dnssec_rotation` and
+#      `-target=aws_kms_key.dnssec_rotation` (in that order — the
+#      alias depends on the KMS key, so destroying the key first
+#      orphans the alias and forces a re-apply to clean up). The
+#      `prevent_destroy = false` on creation is what lets these
+#      destroys plan; the primary's prevent_destroy = true is
+#      untouched throughout, so the existing chain of trust is
+#      never at risk during rollback.
 #   5. REMOVE the old DS at the registrar; wait DS-RRset TTL again.
 #      Flip prevent_destroy = true on the new KSK + KMS key in
 #      Terraform; this is the "promotion" step. Apply.
@@ -242,12 +250,25 @@ resource "aws_route53_hosted_zone_dnssec" "site" {
 #      (must be unique per zone).
 #
 # Once retired (procedure step 6: old KSK + KMS key removed), the
-# rotation block becomes the new primary on the next rotation by
-# either renaming back to `dnssec` / `ksk` (with `terraform state
-# mv` for state continuity) or leaving the names as-is and
-# uncommenting a fresh rotation block above. The state-mv form is
-# nicer for terraform state hygiene; the leave-as-is form is
-# simpler at 3am. Either works.
+# leave-as-is form is the recommended path: the rotation resources
+# stay named `dnssec_rotation` / `ksk_rotation`, and the next
+# rotation will hand-author its own pre-stage block above (or
+# revisit this comment to re-introduce a `_rotation2`-style staged
+# block). State-mv-back-to-primary is possible but not the default —
+# at 3am-of-cleanup the leave-as-is form has fewer moving parts.
+#
+# If you DO want the state-mv path (post-incident, calmly): rename
+# the rotation resources to the original `dnssec` / `ksk` names in
+# this file FIRST (after the old blocks are removed), then run:
+#
+#   terraform state mv aws_kms_key.dnssec_rotation aws_kms_key.dnssec
+#   terraform state mv aws_kms_alias.dnssec_rotation aws_kms_alias.dnssec
+#   terraform state mv aws_route53_key_signing_key.ksk_rotation \\
+#     aws_route53_key_signing_key.ksk
+#
+# Then `terraform apply` — should be a no-op diff since the
+# resource state matches the file. Repeat per stack (millsymills,
+# p41m0n).
 #
 # Apply cost: ~$1/month while the second KMS key is active. Free
 # while commented out.
@@ -260,6 +281,9 @@ resource "aws_route53_hosted_zone_dnssec" "site" {
 #   deletion_window_in_days  = 7
 #   description              = "DNSSEC rotation key-signing key for ${var.domain}"
 #
+#   # Intentionally false until promotion (procedure step 5).
+#   # Step 4's rollback path needs `terraform destroy -target` to
+#   # work on this key.
 #   lifecycle {
 #     prevent_destroy = false
 #   }
