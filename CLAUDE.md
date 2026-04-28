@@ -55,19 +55,20 @@ npm run check        # astro check (typecheck .astro + .ts)
 
 ## Terraform notes
 
-- ACM certificate must be provisioned in us-east-1 (CloudFront requirement) — handled via the `aws.us_east_1` provider alias in `main.tf`
+- Primary AWS region is `us-west-2` (set in `infra/variables.tf`'s `aws_region` default and reaffirmed per stack in `infra/stacks/<stack>.tfvars`). The state bucket lives in `us-west-2` too — see `infra/stacks/<stack>.backend.hcl`.
+- ACM certificate, DNSSEC KMS keys, and CloudFront-logs delivery are pinned to us-east-1 via the `aws.us_east_1` provider alias in `main.tf` (CloudFront / Route53 DNSSEC service constraints). These are unaffected by the primary-region setting.
 - Route53 hosted zone for millsymills.com must exist before running `terraform apply` (data source lookup, not managed)
 - S3 bucket is private; CloudFront accesses it via Origin Access Control (OAC). Because OAC talks to the S3 REST endpoint (not the S3 website endpoint), the REST endpoint does not auto-resolve `/some/path/` to `/some/path/index.html`. A CloudFront Function (`infra/cloudfront_function_index.js`, attached as a viewer-request association in `cloudfront.tf`) rewrites directory URIs before they reach the origin — otherwise every non-root Astro route would 404.
-- Backend S3 bucket for state (`millsymills-terraform-state`) must be created manually with versioning + SSE-S3 enabled. The `backend "s3" {}` block in `main.tf` is intentionally empty — all fields (bucket, key, region, encrypt, use_lockfile) come from `infra/stacks/<stack>.backend.hcl` via `terraform init -backend-config=...`, wired up by `scripts/tf.sh`. Uses `encrypt = true` and S3-native state locking (`use_lockfile = true`), requiring Terraform >= 1.10.
+- Backend S3 bucket for state (`millsymills-terraform-state`, in `us-west-2`) must be created manually with versioning + SSE-S3 enabled. The `backend "s3" {}` block in `main.tf` is intentionally empty — all fields (bucket, key, region, encrypt, use_lockfile) come from `infra/stacks/<stack>.backend.hcl` via `terraform init -backend-config=...`, wired up by `scripts/tf.sh`. Uses `encrypt = true` and S3-native state locking (`use_lockfile = true`), requiring Terraform >= 1.10.
 
 ## Migration runbook (Squarespace → AWS)
 
 One-shot cutover checklist. Do these roughly in order; the email steps (Proton) can run in parallel with the web steps.
 
-1. **State bucket.** Create the S3 bucket for Terraform state (default name `millsymills-terraform-state`) in the AWS console — versioning on, SSE-S3 on, public access blocked. The `backend "s3" {}` block in `infra/main.tf` is already activated as an empty block; all fields (bucket, key, region, encrypt, use_lockfile) are supplied per-stack via `infra/stacks/<stack>.backend.hcl` at `terraform init` time.
+1. **State bucket.** Create the S3 bucket for Terraform state (default name `millsymills-terraform-state`) in `us-west-2` via the AWS console — versioning on, SSE-S3 on, public access blocked. Both stacks (millsymills + p41m0n) share this bucket via distinct keys, so it only needs creating once. The `backend "s3" {}` block in `infra/main.tf` is already activated as an empty block; all fields (bucket, key, region, encrypt, use_lockfile) are supplied per-stack via `infra/stacks/<stack>.backend.hcl` at `terraform init` time.
 2. **Hosted zone.** In Route53, create a public hosted zone for `millsymills.com`. Do **not** update registrar nameservers yet.
 3. **tfvars.** Copy `infra/terraform.tfvars.example` → `infra/terraform.tfvars` and fill in `github_repo` (required) and any Proton values you already have.
-4. **First apply.** From the repo root: `./scripts/tf.sh millsymills init` then `./scripts/tf.sh millsymills apply`. Creates S3 buckets, CloudFront, ACM cert (DNS-validated via Route53), IAM deploy role, email DNS records, etc. Takes ~15–20 min mostly waiting on CloudFront to deploy. See `infra/stacks/` for the per-stack config; `./scripts/tf.sh` is the stack-aware wrapper and refuses to touch the wrong state by mistake.
+4. **First apply.** From the repo root: `./scripts/tf.sh millsymills init` then `./scripts/tf.sh millsymills apply`. Creates S3 buckets, CloudFront, ACM cert (DNS-validated via Route53), IAM deploy role, email DNS records, etc. Takes ~15–20 min mostly waiting on CloudFront to deploy. See `infra/stacks/` for the per-stack config; `./scripts/tf.sh` is the stack-aware wrapper and refuses to touch the wrong state by mistake. **If the apply fails partway through the DNSSEC chain** (KMS key/Route53 KSK provisioning is the slowest, eventual-consistency-prone step in us-east-1), recover by completing the us-east-1 chain first with `./scripts/tf.sh <stack> apply -target=aws_kms_key.dnssec -target=aws_kms_alias.dnssec -target=aws_route53_key_signing_key.ksk -target=aws_route53_hosted_zone_dnssec.site`, then re-run the full apply.
 5. **Smoke test via CloudFront domain.** `terraform output cloudfront_domain` gives you `d1234abcd.cloudfront.net`. Put a single test file at `s3://millsymills.com/index.html` (or build + `aws s3 sync`) and confirm `https://d1234abcd.cloudfront.net/` serves it. Validates CloudFront + OAC + S3 before DNS cutover.
 6. **Wire up GitHub Actions.** Configure the `production` environment with required reviewers, set the four repo variables (see "Deploy workflow" below), push to `main`, approve the run. Confirm `dist/` is live at the CloudFront domain.
 7. **Registrar cutover.** At the domain registrar, replace the nameserver records with the four NS records from `terraform output` (or from the Route53 hosted zone page). This is the point of no return. Downtime window depends on the OLD nameserver TTL; for squarespace.com → Route53, usually <1 hour.
@@ -122,7 +123,7 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
    - Optionally scope the environment to `main` only.
 4. In GitHub repo settings → **Variables**, set these as *repository variables* (not secrets — they're not sensitive):
    - `AWS_DEPLOY_ROLE_ARN` — the ARN from step 2.
-   - `AWS_REGION` — e.g. `us-east-1`.
+   - `AWS_REGION` — `us-west-2` (matches `infra/variables.tf` default and the per-stack tfvars; ACM/DNSSEC pinning to us-east-1 happens inside Terraform via the provider alias regardless).
    - `SITE_DOMAIN` — `millsymills.com`.
    - `CLOUDFRONT_DISTRIBUTION_ID` — from `terraform output cloudfront_distribution_id`.
    - `SITE_URL` — `https://millsymills.com` (or equivalent for the `rehearsal` environment: `https://p41m0n.com`). **Required** — `astro.config.mjs` refuses CI builds that do not set `SITE_URL`.
