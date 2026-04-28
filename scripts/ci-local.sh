@@ -90,8 +90,11 @@ fi
 # force-unlock targets remote state too; must be guarded same as plan/apply.
 # Assert on stderr containing "refusing:" — non-zero exit alone would also
 # fire if terraform reached the backend and failed for a different reason
-# (no such lock id), masking a real guard regression.
-if ! ./scripts/tf.sh p41m0n force-unlock fake-id 2>&1 1>/dev/null | grep -q 'refusing:'; then
+# (no such lock id), masking a real guard regression. Capture stderr into a
+# variable rather than piping so `pipefail` doesn't conflate tf.sh's expected
+# nonzero exit (4) with a pipeline failure.
+unlock_stderr=$(./scripts/tf.sh p41m0n force-unlock fake-id 2>&1 1>/dev/null || true)
+if ! grep -q 'refusing:' <<<"$unlock_stderr"; then
 	printf '\033[1;31m✗ tf.sh did not guard force-unlock against wrong stack\033[0m\n' >&2
 	exit 1
 fi
@@ -104,7 +107,10 @@ section "infra: per-stack deploy_workflow files exist"
 # (and then OIDC trust would be wrong). Catch it locally.
 for tfv in infra/stacks/*.tfvars; do
 	stack=$(basename "$tfv" .tfvars)
-	wf=$(grep -E '^deploy_workflow' "$tfv" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+	# `|| true` because grep returns 1 when no `deploy_workflow` is set
+	# (tfvars relies on the variable's default in that case); under
+	# `pipefail` an unmatched grep would otherwise abort the loop.
+	wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
 	wf=${wf:-deploy.yml}
 	if [ ! -f ".github/workflows/$wf" ]; then
 		printf '\033[1;31m✗ stack %s references missing workflow .github/workflows/%s\033[0m\n' "$stack" "$wf" >&2
