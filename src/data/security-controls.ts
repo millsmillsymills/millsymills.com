@@ -101,6 +101,16 @@ export const securityControls: readonly SecurityControl[] = [
 			href: 'https://www.ssllabs.com/ssltest/analyze.html?d=millsymills.com',
 		},
 	},
+	{
+		id: 'coop-coep',
+		title: 'Cross-origin isolation (COOP / COEP / CORP)',
+		category: 'web',
+		status: 'shipped',
+		what: '`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, `Cross-Origin-Resource-Policy: same-origin` on every response.',
+		why: 'Closes Spectre-class side channels and cross-origin window-reference leaks. The combination puts the document in a cross-origin isolated agent cluster, also unlocking precision-timer + SharedArrayBuffer features if we ever need them.',
+		tradeoffs: 'COEP `require-corp` is the strict variant — every cross-origin subresource has to opt in via CORP/CORS. Site is fully self-hosted (no third-party scripts, fonts, images, or iframes; `assert-fonts-csp.sh` keeps it that way), so the strict variant ships without breaking anything. Same-origin CORP also blocks third-party hot-linking of static assets.',
+		code: ['infra/cloudfront.tf', 'scripts/assert-coop-coep-corp.sh'],
+	},
 
 	// ─── dns + domain ──────────────────────────────────────────────────
 	{
@@ -302,15 +312,6 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'roadmap',
 		what: 'CloudFront Function injects a per-request nonce, replacing the `\'unsafe-inline\'` concession in `style-src` (and any inline scripts) with `\'nonce-XXX\'`.',
 		why: 'Closes the remaining XSS-via-injected-style vector and removes the only weak link in the current CSP allow-list.',
-	},
-	{
-		id: 'coop-coep',
-		title: 'COOP / COEP / CORP',
-		category: 'web',
-		status: 'roadmap',
-		what: '`Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp` + per-resource `Cross-Origin-Resource-Policy: same-origin`.',
-		why: 'Mitigates Spectre-class side-channel attacks and cross-origin window leaks. Signals readiness for SharedArrayBuffer-using features.',
-		tradeoffs: 'Requires an audit of every same-origin resource to confirm CORP headers ship correctly. The audit is the work.',
 	},
 	{
 		id: 'signed-commits',

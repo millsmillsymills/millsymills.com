@@ -37,6 +37,32 @@ resource "aws_cloudfront_response_headers_policy" "site" {
       override                = true
     }
   }
+
+  # Cross-origin isolation. The site is fully same-origin (no third-party
+  # scripts, fonts, images, iframes), so `require-corp` + `same-origin` CORP
+  # is enforceable today without breaking subresources. Spectre-class
+  # mitigation + signals readiness for SharedArrayBuffer-using features.
+  # AWS CloudFront's first-class `security_headers_config` doesn't expose
+  # COOP/COEP/CORP yet — they ship via custom_headers_config.
+  custom_headers_config {
+    items {
+      header   = "Cross-Origin-Opener-Policy"
+      value    = "same-origin"
+      override = true
+    }
+
+    items {
+      header   = "Cross-Origin-Embedder-Policy"
+      value    = "require-corp"
+      override = true
+    }
+
+    items {
+      header   = "Cross-Origin-Resource-Policy"
+      value    = "same-origin"
+      override = true
+    }
+  }
 }
 
 resource "aws_cloudfront_distribution" "site" {
