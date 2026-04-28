@@ -149,7 +149,7 @@ No styling, CSP, or header changes. The rehearsal tests deployment + URL plumbin
 - Environment: `rehearsal` (new GitHub Environment, required reviewer = repo owner).
 - Environment-scoped repo variables:
   - `AWS_DEPLOY_ROLE_ARN` → `p41m0n-com-github-deploy` ARN (from `./scripts/tf.sh p41m0n output github_deploy_role_arn`)
-  - `AWS_REGION` → `us-east-1`
+  - `AWS_REGION` → `us-west-2`
   - `SITE_DOMAIN` → `p41m0n.com`
   - `SITE_URL` → `https://p41m0n.com`
   - `CLOUDFRONT_DISTRIBUTION_ID` → from Terraform output
