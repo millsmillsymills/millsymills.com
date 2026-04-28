@@ -1,7 +1,7 @@
 variable "aws_region" {
-  description = "Primary AWS region"
+  description = "Primary AWS region. ACM + DNSSEC KMS keys + CloudFront-logs delivery are pinned to us-east-1 via the `aws.us_east_1` provider alias regardless of this value (CloudFront / Route53 DNSSEC service constraints) — see `infra/main.tf` and `infra/dnssec.tf` for the alias usage."
   type        = string
-  default     = "us-east-1"
+  default     = "us-west-2"
 }
 
 variable "domain" {

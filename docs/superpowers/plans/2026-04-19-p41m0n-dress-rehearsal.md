@@ -849,7 +849,7 @@ Run: `mkdir -p infra/stacks`
 ```hcl
 bucket       = "millsymills-terraform-state"
 key          = "millsymills.com/terraform.tfstate"
-region       = "us-east-1"
+region       = "us-west-2"
 encrypt      = true
 use_lockfile = true
 ```
@@ -859,7 +859,7 @@ use_lockfile = true
 ```hcl
 bucket       = "millsymills-terraform-state"
 key          = "p41m0n.com/terraform.tfstate"
-region       = "us-east-1"
+region       = "us-west-2"
 encrypt      = true
 use_lockfile = true
 ```
@@ -867,7 +867,7 @@ use_lockfile = true
 - [ ] **Step 4: Write `infra/stacks/millsymills.tfvars`**
 
 ```hcl
-aws_region    = "us-east-1"
+aws_region    = "us-west-2"
 domain        = "millsymills.com"
 github_repo   = "millsmillsymills/millsymills.com"
 deploy_branch = "main"
@@ -881,7 +881,7 @@ deploy_branch = "main"
 - [ ] **Step 5: Write `infra/stacks/p41m0n.tfvars`**
 
 ```hcl
-aws_region    = "us-east-1"
+aws_region    = "us-west-2"
 domain        = "p41m0n.com"
 github_repo   = "millsmillsymills/millsymills.com"
 deploy_branch = "main"
