@@ -87,6 +87,20 @@ export const securityControls: readonly SecurityControl[] = [
 		tradeoffs: '`style-src \'self\' \'unsafe-inline\'` is the one knowing concession to make Astro\'s scoped styles work; tightening to nonces is tracked as #129.',
 		code: ['infra/cloudfront.tf'],
 	},
+	{
+		id: 'tls-pqc',
+		title: 'TLS 1.3-only with hybrid post-quantum key agreement',
+		category: 'web',
+		status: 'shipped',
+		what: 'CloudFront security policy is `TLSv1.3_2025`, which floors viewer connections at TLS 1.3 and auto-negotiates `X25519MLKEM768` / `SecP256r1MLKEM768` hybrid post-quantum key agreement when the client offers it. PQC is enabled by AWS on every TLS 1.3 connection — flooring the protocol guarantees every viewer is eligible.',
+		why: 'Harvest-now-decrypt-later: an adversary recording today\'s ciphertext could decrypt it once a cryptanalytically relevant quantum computer exists. Hybrid key agreement combines a classical curve (X25519) with a post-quantum KEM (ML-KEM-768) so the session key is safe as long as either remains unbroken — defense before the threat is operational, not after.',
+		tradeoffs: 'TLS 1.3 floor excludes pre-2018 browsers (Chrome <70, Firefox <63, Safari <14). PQC handshakes add ~1.6KB and ~80–150µs per connection; only viewers that already speak ML-KEM-768 actually negotiate it (most major browsers and OpenSSL 3.5+ in 2025–2026, still rolling out). Verify post-cutover with `openssl s_client -connect millsymills.com:443 -groups X25519MLKEM768 2>/dev/null </dev/null | grep "Server Temp Key"` (requires openssl ≥ 3.5); expected output is `Server Temp Key: X25519MLKEM768, 1184 bits`.',
+		code: ['infra/cloudfront.tf'],
+		verify: {
+			label: 'ssllabs.com TLS report',
+			href: 'https://www.ssllabs.com/ssltest/analyze.html?d=millsymills.com',
+		},
+	},
 
 	// ─── dns + domain ──────────────────────────────────────────────────
 	{
