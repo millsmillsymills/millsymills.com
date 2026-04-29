@@ -32,6 +32,12 @@ variable "deploy_workflow" {
   default     = "deploy.yml"
 }
 
+variable "deploy_environment" {
+  description = "GitHub Actions Environment that the deploy workflow targets via its `environment:` block. When a job declares an environment, GitHub overrides the OIDC `sub` claim from the ref form (`repo:owner/name:ref:refs/heads/main`) to the environment form (`repo:owner/name:environment:<name>`) — so the IAM trust policy must match the environment form. Surfaced by the p41m0n rehearsal: a ref-form trust policy denies AssumeRoleWithWebIdentity even when the workflow file ref + branch are correct."
+  type        = string
+  default     = "production"
+}
+
 variable "protonmail_verification_token" {
   description = "ProtonMail domain-verification token (from Proton admin after adding the domain). Blank means email is not yet active: DNS deploys null MX + sender-free SPF so the domain is unspoofable."
   type        = string
