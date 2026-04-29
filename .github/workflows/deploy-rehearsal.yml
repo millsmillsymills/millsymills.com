@@ -20,9 +20,12 @@ jobs:
     name: Build + sync to S3 + invalidate CloudFront (rehearsal)
     runs-on: ubuntu-latest
 
-    # The `rehearsal` environment MUST have required reviewers
-    # configured in the repository settings. Same required-reviewer
-    # pattern as `production`, different approver list if desired.
+    # Targets the `rehearsal` GitHub Environment for variable scoping.
+    # On the free-private plan there is no required-reviewer gate
+    # available — see the trust-model block in `deploy.yml`'s header
+    # for the full model. Workflow_dispatch is the only trigger here,
+    # so each rehearsal run already requires a deliberate human
+    # action at trigger time.
     environment:
       name: rehearsal
       url: https://${{ vars.SITE_DOMAIN }}

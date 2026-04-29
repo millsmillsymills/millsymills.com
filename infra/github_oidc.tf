@@ -114,6 +114,6 @@ resource "aws_iam_role_policy" "github_deploy" {
 }
 
 output "github_deploy_role_arn" {
-  description = "Pass this to the GitHub Actions deploy workflow as the AWS_DEPLOY_ROLE_ARN repo variable."
+  description = "Pass this to the GitHub Actions deploy workflow as the AWS_DEPLOY_ROLE_ARN env-scoped variable on the matching GitHub Environment (production for deploy.yml, rehearsal for deploy-rehearsal.yml)."
   value       = aws_iam_role.github_deploy.arn
 }
