@@ -1,10 +1,11 @@
 /*
  * Reset everything mills-flavored back to first-load state:
  *   - desktop window positions + open set    (mills.desktop.v1)
- *   - mobile shell current app               (mills.mobile.v1)
  *   - captured CTF flags                     (mills.flags.v1)
  *   - boot-animation seen flag               (mills.boot.played, sessionStorage)
- *   - any other key starting with `mills.`   (future-proofing)
+ *   - vscode.exe open tabs + active tab      (mills.vscode.v1)
+ *   - any other key starting with `mills.`   (future-proofing — sweeps
+ *     legacy keys like `mills.mobile.v1` from older builds too)
  *
  * Triggers (any of):
  *   - terminal `reset` command
