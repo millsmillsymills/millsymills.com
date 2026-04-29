@@ -87,7 +87,18 @@ One-shot cutover checklist. Do these roughly in order; the email steps (Proton) 
    - `curl -I https://millsymills.com/` shows HSTS, CSP, X-Content-Type-Options, Referrer-Policy, COOP/COEP/CORP.
    - `openssl s_client -connect millsymills.com:443 -groups X25519MLKEM768 </dev/null 2>/dev/null | grep "Server Temp Key"` returns `Server Temp Key: X25519MLKEM768` (post-quantum hybrid KEX is negotiating; requires openssl ≥ 3.5 client-side).
 10. **Email activation.** Follow the ProtonMail runbook below — independent of web, can happen before or after.
-11. **DNSSEC chain at registrar.** Route53 starts signing on first apply (#125), but the parent zone (`.com`) only enforces validation once a DS record is published at the registrar. Order matters — getting it wrong takes ~50% of the world's resolvers offline until parent-TTL expires. See `infra/dnssec.tf` for the full ordering; the short version: confirm signing is live with `dig +dnssec @ns-XXX.awsdns-XX.com millsymills.com`, then paste `terraform output -raw dnssec_ds_record` into the registrar's DS field, then verify a green run on https://dnsviz.net/d/millsymills.com/dnssec/. **Reversal is asymmetric: REMOVE the DS record at the registrar FIRST and wait the parent TTL BEFORE disabling signing in Terraform**, or the zone goes BOGUS for validating resolvers.
+11. **DNSSEC chain at registrar.** Route53 starts signing on first apply (#125), but the parent zone (`.com`) only enforces validation once a DS record is published at the registrar. Order matters — getting it wrong takes ~50% of the world's resolvers offline until parent-TTL expires. See `infra/dnssec.tf` for the full ordering; the short version: confirm signing is live with `dig +dnssec @ns-XXX.awsdns-XX.com millsymills.com`, submit the DS to the registrar (see API call below if Gandi), then verify a green run on https://dnsviz.net/d/millsymills.com/dnssec/. **Reversal is asymmetric: REMOVE the DS record at the registrar FIRST and wait the parent TTL BEFORE disabling signing in Terraform**, or the zone goes BOGUS for validating resolvers.
+    - **Submitting DS at Gandi via API.** Gandi's `POST /v5/domain/domains/<fqdn>/dnskeys` does NOT accept the standard DS quadruple (keytag/algorithm/digest_type/digest). The `terraform output -raw dnssec_ds_record` value is for *parent-zone verification* only, not direct submission. Gandi expects the DNSKEY itself and computes the DS internally. **The p41m0n rehearsal locked this in.** Use:
+      ```bash
+      ZONE_NS=$(./scripts/tf.sh <stack> output -json route53_nameservers | jq -r '.[0]')
+      KSK=$(dig +short DNSKEY <fqdn> @"$ZONE_NS" | awk '$1==257 {print $4 $5; exit}')
+      curl -sS -X POST \
+        -H "Authorization: Bearer $GANDI_TOKEN" \
+        -H "Content-Type: application/json" \
+        --data "$(jq -nc --arg pk "$KSK" '{type: "ksk", algorithm: 13, public_key: $pk}')" \
+        https://api.gandi.net/v5/domain/domains/<fqdn>/dnskeys
+      ```
+      Read-back from `GET .../dnskeys` confirms Gandi's computed digest matches `terraform output -raw dnssec_ds_record`. The DS record's `id` from the read-back is what you DELETE during reversal. (Squarespace as the millsymills registrar: submit DS via their UI; this API path is Gandi-specific.)
 12. **Decommission Squarespace.** Cancel the plan once you're happy with the new site + email for at least a billing cycle.
 
 ## Dress rehearsal on p41m0n.com
