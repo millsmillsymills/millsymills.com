@@ -33,7 +33,12 @@ jobs:
       - name: Assert icon assets referenced by apps.ts exist
         run: ./scripts/assert-icon-assets-exist.sh
 
+      # `astro check` loads astro.config.mjs, which exits 1 when CI=true
+      # without SITE_URL. GitHub sets CI=true on every step, so the
+      # typecheck step needs SITE_URL too — not just the build step.
       - name: Typecheck (astro check)
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
         run: npm run check
 
       - name: Build
