@@ -7,9 +7,28 @@ name: Deploy
 #
 # The monthly `schedule` trigger IS active — it rebuilds + redeploys
 # once per month so /.well-known/security.txt's `Expires:` field
-# (build_time + 12mo) never silently goes stale. The `production`
-# environment still requires reviewer approval, so a scheduled run
-# pings for one click per month rather than running unattended.
+# (build_time + 12mo) never silently goes stale.
+#
+# Trust model: this repo is on the GitHub free-private plan, which
+# DOES NOT support required-reviewer protection on Environments. The
+# API returns HTTP 422 ("Failed to create the environment protection
+# rule. Please ensure the billing plan supports the required reviewers
+# protection rule.") — confirmed during the p41m0n rehearsal. So
+# every scheduled and dispatched run deploys UNATTENDED. The trust
+# boundary is enforced entirely by:
+#   - OIDC sub = `repo:<owner/name>:environment:production`
+#   - OIDC job_workflow_ref pinned to THIS file on `refs/heads/main`
+#     (so a different workflow on main, even one declaring the same
+#     environment, cannot mint the deploy role's token)
+#   - IAM role scoped to s3:PutObject/DeleteObject/GetObject on the
+#     prod S3 bucket and cloudfront:CreateInvalidation on its
+#     distribution — nothing else.
+# A maintainer who can push to `main` bypasses any reviewer gate by
+# approving themselves anyway, so for a personal portfolio the
+# OIDC-pin + IAM-scope model is the load-bearing protection — not the
+# missing reviewer step. Upgrade to GitHub Pro ($4/mo) to add a
+# reviewer gate if the unattended-monthly-deploy property becomes
+# unacceptable. See `infra/github_oidc.tf` for the trust policy.
 on:
   workflow_dispatch:
   schedule:
@@ -39,10 +58,12 @@ jobs:
           (github.event.workflow_run.conclusion == 'success' &&
            github.event.workflow_run.head_branch == 'main') }}
 
-    # The `production` environment MUST have required reviewers
-    # configured in the repository settings. GitHub holds this job in
-    # a "Waiting" state until a reviewer explicitly approves.
-    # https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment#required-reviewers
+    # Targets the `production` GitHub Environment for variable
+    # scoping (`vars.SITE_DOMAIN` etc. resolve from this env). On the
+    # free-private plan there is no required-reviewer gate — see the
+    # trust-model block at the top of this file. The OIDC sub claim
+    # in the IAM trust policy is bound to `environment:production`,
+    # so the env name is the load-bearing claim, not just metadata.
     environment:
       name: production
       url: https://${{ vars.SITE_DOMAIN }}

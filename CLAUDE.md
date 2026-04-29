@@ -76,7 +76,8 @@ One-shot cutover checklist. Do these roughly in order; the email steps (Proton) 
    - **If the apply fails partway through the DNSSEC chain** (KMS key/Route53 KSK provisioning is the slowest, eventual-consistency-prone step in us-east-1), recover by completing the us-east-1 chain first with `./scripts/tf.sh <stack> apply -target=aws_kms_key.dnssec -target=aws_kms_alias.dnssec -target=aws_route53_key_signing_key.ksk -target=aws_route53_hosted_zone_dnssec.site`, then re-run the full apply.
    - **If your AWS auth gives short-lived STS tokens** (e.g., the `aws-login` SSO plugin issues ~15-min tokens by default), a single-shot `apply` will outlast the token TTL and fail mid-run with `ExpiredToken` on the final state save plus possibly leaving a stale state lock. Recovery is idempotent: re-export creds with `eval "$(aws configure export-credentials --format env-no-export | sed 's/^/export /')"`, force-unlock with `./scripts/tf.sh <stack> force-unlock -force <ID>` (lock ID is in the error output), and re-run apply. Each iteration converges (state has fewer resources to create). Better long-term: switch to `aws-vault exec` or a profile with longer-lived credentials so apply doesn't need the resume dance.
 6. **Smoke test via CloudFront domain.** `terraform output cloudfront_domain` gives you `d1234abcd.cloudfront.net`. Put a single test file at `s3://millsymills.com/index.html` (or build + `aws s3 sync`) and confirm `https://d1234abcd.cloudfront.net/` serves it. Validates CloudFront + OAC + S3 before DNS cutover.
-7. **Wire up GitHub Actions.** Configure the `production` environment with required reviewers, set the four repo variables (see "Deploy workflow" below), push to `main`, approve the run. Confirm `dist/` is live at the CloudFront domain.
+7. **Wire up GitHub Actions.** Set the env-scoped variables on the `production` environment (see "Deploy workflow" below), push to `main`, confirm `dist/` is live at the CloudFront domain.
+   - **Note on plan limits.** Free-private GitHub plans CAN'T enforce required-reviewer protection on Environments — the API rejects with HTTP 422 ("Please ensure the billing plan supports the required reviewers protection rule"). Confirmed during the p41m0n rehearsal. The `production` environment exists for variable scoping; the trust boundary is the OIDC `sub` claim (`environment:production`) + `job_workflow_ref` pin in `infra/github_oidc.tf`, which restricts deploys to the exact `deploy.yml` file on `main`. Upgrade to GitHub Pro ($4/mo) before this step if you need a reviewer gate; otherwise scheduled and dispatched runs will deploy unattended (acceptable model for a personal site — see the trust-model comment block at the top of `deploy.yml`).
 8. **Registrar cutover.** At the domain registrar, replace the nameserver records with the four NS records from `terraform output` (or from the Route53 hosted zone page). This is the point of no return. Downtime window depends on the OLD nameserver TTL; for squarespace.com → Route53, usually <1 hour.
 9. **Verify.** Once the NS change propagates:
    - `https://millsymills.com/` serves the new site.
@@ -113,11 +114,19 @@ DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip t
 
 ## Deploy workflow
 
-Deploys run via `.github/workflows/deploy.yml` on every push to `main`, but the workflow targets the `production` GitHub Environment, which **must be configured with required reviewers**. GitHub holds each run in a "Waiting" state until a human approves it — so nothing ships to AWS without an explicit click, even if a push lands on `main`.
+Deploys run via `.github/workflows/deploy.yml` on workflow_dispatch and on a monthly `schedule:` trigger. (The auto-fire-on-push trigger is currently commented out — see the workflow header.) Both target the `production` GitHub Environment for variable scoping.
+
+**Trust model.** Free-private GitHub plans don't support required-reviewer protection on Environments (the protection-rules API returns HTTP 422). The `production` environment exists for variable scoping only — runs deploy unattended. The trust boundary is enforced by:
+
+- OIDC `sub` claim pinned to `repo:millsmillsymills/millsymills.com:environment:production` in the IAM role's trust policy.
+- OIDC `job_workflow_ref` pinned to `deploy.yml@refs/heads/main` — a tampered workflow file (different name, different branch) cannot mint the deploy role's token.
+- The deploy role's IAM policy is scoped to S3 PutObject/DeleteObject/GetObject on the prod bucket plus CloudFront `CreateInvalidation` on its distribution. Nothing else.
+
+A maintainer who can push to `main` could bypass any reviewer gate by approving themselves anyway, so for a personal site the OIDC + IAM-scope model is the load-bearing protection. Upgrade to GitHub Pro if you ever want a real reviewer gate.
 
 The parallel `deploy-rehearsal.yml` workflow ships the same build to the `p41m0n` rehearsal stack via the `rehearsal` environment. Keep the two workflows in sync when changing CI — the rehearsal exists to catch deploy-pipeline bugs before they hit prod.
 
-`deploy.yml` also fires on a monthly `schedule` (1st of each month, 03:00 UTC). The point is to keep `/.well-known/security.txt`'s `Expires:` field — set to build-time + 12 months — from silently going stale. Each scheduled run still hits the `production` environment's required-reviewer gate, so it surfaces as a once-a-month "approve a no-op rebuild" notification rather than running unattended. If the cron ever gets noisy or expensive, drop the `schedule:` trigger from `deploy.yml`; security.txt's 12mo `Expires` window leaves plenty of slack to bring it back later.
+`deploy.yml`'s monthly `schedule` (1st of each month, 03:00 UTC) keeps `/.well-known/security.txt`'s `Expires:` field — set to build-time + 12 months — from silently going stale. The scheduled run executes unattended (see plan limits above). If you ever want to drop the schedule, security.txt's 12mo `Expires` window leaves plenty of slack to manually re-deploy yearly.
 
 The OIDC trust policy pins each stack's role to a specific workflow file via the `deploy_workflow` Terraform variable. Default is `deploy.yml`; the rehearsal stack overrides to `deploy-rehearsal.yml` in `infra/stacks/p41m0n.tfvars`. **If you add a new deploy workflow, add a matching `deploy_workflow = "<file>.yml"` line to the relevant stack's tfvars and `terraform apply` BEFORE pushing the workflow** — otherwise the new workflow's `AssumeRoleWithWebIdentity` call will fail. `ci-local.sh` checks the referenced workflow file exists; a typo there is caught locally.
 
@@ -128,10 +137,8 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
    ```bash
    terraform output -raw github_deploy_role_arn
    ```
-3. In GitHub repo settings → **Environments → production**:
-   - Add at least one **required reviewer** (yourself).
-   - Optionally scope the environment to `main` only.
-4. In GitHub repo settings → **Variables**, set these as *repository variables* (not secrets — they're not sensitive):
+3. In GitHub repo settings → **Environments → production**: create the environment if it doesn't exist. On the free-private plan there are no protection rules to set; the env is purely a variable-scoping container. (If you've upgraded to a plan that supports required reviewers, add at least one — yourself — and optionally restrict the deployment branch policy to `main`.)
+4. In GitHub repo settings → **Environments → production → Variables**, set these as *environment variables* (not repository-level — they're scoped per env so the rehearsal environment can carry different values):
    - `AWS_DEPLOY_ROLE_ARN` — the ARN from step 2.
    - `AWS_REGION` — `us-west-2` (matches `infra/variables.tf` default and the per-stack tfvars; ACM/DNSSEC pinning to us-east-1 happens inside Terraform via the provider alias regardless).
    - `SITE_DOMAIN` — `millsymills.com`.
