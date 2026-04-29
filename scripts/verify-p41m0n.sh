@@ -62,7 +62,41 @@ echo "$headers" | grep -qi '^strict-transport-security:' || fail "HSTS header mi
 echo "$headers" | grep -qi '^content-security-policy:' || fail "CSP header missing"
 echo "$headers" | grep -qi '^x-content-type-options: *nosniff' || fail "X-Content-Type-Options missing"
 echo "$headers" | grep -qi '^referrer-policy:' || fail "Referrer-Policy missing"
-ok "apex HTTPS + security headers"
+echo "$headers" | grep -qi '^cross-origin-opener-policy: *same-origin' || fail "COOP same-origin missing"
+echo "$headers" | grep -qi '^cross-origin-embedder-policy: *require-corp' || fail "COEP require-corp missing"
+echo "$headers" | grep -qi '^cross-origin-resource-policy: *same-origin' || fail "CORP same-origin missing"
+ok "apex HTTPS + security headers (incl. cross-origin isolation triple)"
+
+section "TLS 1.3-only floor"
+# minimum_protocol_version = TLSv1.3_2025 in CloudFront. Reject TLS 1.2 with
+# --tls-max 1.2 to confirm the floor; succeed with --tlsv1.3 to confirm 1.3.
+# Pre-2018 browsers (Chrome <70 / Firefox <63 / Safari <14) and old curl
+# versions speak only TLS 1.2 and will fail this check — that's the
+# documented tradeoff in the tls-pqc /security/ entry.
+if curl --tlsv1.2 --tls-max 1.2 -sI -o /dev/null "$APEX/" 2>/dev/null; then
+	fail "TLS 1.2 connection succeeded — CloudFront should reject anything below TLS 1.3"
+fi
+ok "TLS 1.2 rejected"
+if ! curl --tlsv1.3 --tls-max 1.3 -sI -o /dev/null "$APEX/"; then
+	fail "TLS 1.3 connection failed — CloudFront viewer policy may not be TLSv1.3_2025"
+fi
+ok "TLS 1.3 negotiated"
+
+# Hybrid post-quantum KEX is auto-enabled on every TLS 1.3 connection by
+# AWS for the TLSv1.3_2025 policy. Only viewers that already speak ML-KEM-768
+# negotiate it (openssl 3.5+ in 2025-2026, still rolling out). Skip silently
+# if openssl is too old — the TLS 1.3 floor check above is the load-bearing
+# assertion; PQC is a "if available, verify" follow-up.
+if openssl version 2>/dev/null | awk '{split($2,v,"."); exit (v[1]>3 || (v[1]==3 && v[2]>=5)) ? 0 : 1}'; then
+	pqc_temp_key="$(openssl s_client -connect "${DOMAIN}:443" -groups X25519MLKEM768 </dev/null 2>/dev/null | grep 'Server Temp Key' || true)"
+	if echo "$pqc_temp_key" | grep -q 'X25519MLKEM768'; then
+		ok "PQC hybrid KEX negotiating (${pqc_temp_key#*: })"
+	else
+		printf '\033[1;33m! PQC hybrid KEX not negotiated; expected `Server Temp Key: X25519MLKEM768`. Got: %s\033[0m\n' "${pqc_temp_key:-<empty>}" >&2
+	fi
+else
+	printf '\033[1;33m! openssl < 3.5 — skipping PQC verification. Upgrade openssl to confirm X25519MLKEM768 negotiation.\033[0m\n' >&2
+fi
 
 www_status="$(curl -s -o /dev/null -w '%{http_code}' "$WWW/")"
 [[ "$www_status" == "200" ]] || fail "GET ${WWW}/ returned ${www_status}, expected 200"
