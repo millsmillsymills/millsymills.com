@@ -88,9 +88,13 @@ if [ ! -s "$DATA_FILE" ]; then
 	lint::refuse_blind "$DATA_FILE missing or empty"
 fi
 
-if ! awk '
-	/id:[[:space:]]*[\x27"]coop-coep[\x27"]/ { in_block = 1 }
-	in_block && /status:[[:space:]]*[\x27"]shipped[\x27"]/ { found = 1 }
+# `\x27` for a literal single-quote is gawk-only; mawk and stricter POSIX
+# awks treat the backslash literally and the regex stops matching the
+# data file's single-quoted ids. Pass the quote character in via -v so
+# the regex stays portable across BSD awk (macOS) and gawk/mawk (Linux).
+if ! awk -v q="'" '
+	$0 ~ ("id:[[:space:]]*[" q "\"]coop-coep[" q "\"]") { in_block = 1 }
+	in_block && $0 ~ ("status:[[:space:]]*[" q "\"]shipped[" q "\"]") { found = 1 }
 	in_block && /^\t\},?$/ { in_block = 0 }
 	END { exit found ? 0 : 1 }
 ' "$DATA_FILE"; then
