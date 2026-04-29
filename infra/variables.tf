@@ -33,9 +33,14 @@ variable "deploy_workflow" {
 }
 
 variable "deploy_environment" {
-  description = "GitHub Actions Environment that the deploy workflow targets via its `environment:` block. When a job declares an environment, GitHub overrides the OIDC `sub` claim from the ref form (`repo:owner/name:ref:refs/heads/main`) to the environment form (`repo:owner/name:environment:<name>`) — so the IAM trust policy must match the environment form. Surfaced by the p41m0n rehearsal: a ref-form trust policy denies AssumeRoleWithWebIdentity even when the workflow file ref + branch are correct."
+  description = "GitHub Actions Environment name that the deploy workflow's `environment:` block targets. Must match exactly — when a job declares an environment, GitHub puts it in the OIDC `sub` claim (`repo:owner/name:environment:<name>`), and the IAM trust policy uses that value. See header of `infra/github_oidc.tf` for the full claim model."
   type        = string
   default     = "production"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+$", var.deploy_environment)) && length(var.deploy_environment) > 0
+    error_message = "deploy_environment must be a non-empty GitHub Environment name (alphanumeric plus . _ -). An empty or malformed value silently produces a trust policy that no real OIDC token can satisfy."
+  }
 }
 
 variable "protonmail_verification_token" {

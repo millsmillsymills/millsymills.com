@@ -4,13 +4,8 @@ github_repo   = "millsmillsymills/millsymills.com"
 deploy_branch = "main"
 # Rehearsal stack uses its own workflow; override the default (deploy.yml)
 # so the OIDC trust policy pins the right job_workflow_ref.
-deploy_workflow = "deploy-rehearsal.yml"
-# `deploy-rehearsal.yml` declares `environment: name: rehearsal`. When
-# a job sets an environment, GitHub overrides the OIDC sub claim to
-# `repo:<owner/name>:environment:<env>` instead of the ref form, so
-# the trust policy must match. Default for the prod stack is
-# `production`, matching `deploy.yml`'s environment block.
-deploy_environment = "rehearsal"
+deploy_workflow    = "deploy-rehearsal.yml"
+deploy_environment = "rehearsal" # matches `environment: name:` in deploy-rehearsal.yml
 
 # p41m0n rehearsal does not activate ProtonMail; email.tf publishes
 # null-MX + strict DMARC in this state. User does not use p41m0n mail.
