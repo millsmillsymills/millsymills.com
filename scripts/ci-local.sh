@@ -64,6 +64,11 @@ section "node: assert no rehearsal URL leakage in prod build"
 ok "no URL leakage (prod direction)"
 
 section "node: astro check"
+# Set CI=true so astro.config.mjs's CI guard is exercised locally — without
+# this, the local run silently bypasses the SITE_URL assertion that fires in
+# real GitHub Actions. SITE_URL is required by that same guard.
+export CI=true
+export SITE_URL="${SITE_URL:-https://millsymills.com}"
 # Prefer the `check` script if defined; otherwise fall back to npx.
 if node -e "process.exit(require('./package.json').scripts.check ? 0 : 1)" 2>/dev/null; then
 	npm run check
