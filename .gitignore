@@ -27,6 +27,11 @@ pnpm-debug.log*
 infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
+# `infra/errored.tfstate` is written when an apply aborts mid-flight and the
+# remote-state save itself fails (e.g. STS token expiry); it's a recovery
+# artifact, not a source of truth. Re-running apply with fresh creds reads
+# remote state and reconciles. Never commit it.
+infra/errored.tfstate
 # NB: non-recursive glob is intentional — infra/stacks/*.tfvars carry per-stack
 # config (millsymills, p41m0n) and ARE committed. If a future change makes this
 # recursive (e.g. **/*.tfvars), it would silently start ignoring those files.
