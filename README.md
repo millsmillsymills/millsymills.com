@@ -42,7 +42,7 @@ terraform apply
 See [CLAUDE.md](CLAUDE.md) for the full migration / deploy / email runbook, including:
 
 - Cutting over from an existing host (e.g. Squarespace) to the AWS stack.
-- Wiring up the GitHub Actions deploy (OIDC role, repo variables, required-reviewer environment).
+- Wiring up the GitHub Actions deploy (OIDC role, env-scoped variables, OIDC sub-claim trust pin).
 - Activating ProtonMail custom domain email (verification token → DKIM → mailboxes).
 
 ## License
