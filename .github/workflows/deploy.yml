@@ -20,9 +20,11 @@ name: Deploy
 #   - OIDC job_workflow_ref pinned to THIS file on `refs/heads/main`
 #     (so a different workflow on main, even one declaring the same
 #     environment, cannot mint the deploy role's token)
-#   - IAM role scoped to s3:PutObject/DeleteObject/GetObject on the
-#     prod S3 bucket and cloudfront:CreateInvalidation on its
-#     distribution — nothing else.
+#   - IAM role scoped to s3:PutObject/DeleteObject/GetObject (plus
+#     the read/list scaffolding `aws s3 sync` requires —
+#     s3:ListBucket and s3:GetBucketLocation) on the prod S3 bucket,
+#     and cloudfront:CreateInvalidation/GetInvalidation on its
+#     distribution. See `infra/github_oidc.tf` for the exact policy.
 # A maintainer who can push to `main` bypasses any reviewer gate by
 # approving themselves anyway, so for a personal portfolio the
 # OIDC-pin + IAM-scope model is the load-bearing protection — not the

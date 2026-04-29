@@ -120,7 +120,7 @@ Deploys run via `.github/workflows/deploy.yml` on workflow_dispatch and on a mon
 
 - OIDC `sub` claim pinned to `repo:millsmillsymills/millsymills.com:environment:production` in the IAM role's trust policy.
 - OIDC `job_workflow_ref` pinned to `deploy.yml@refs/heads/main` — a tampered workflow file (different name, different branch) cannot mint the deploy role's token.
-- The deploy role's IAM policy is scoped to S3 PutObject/DeleteObject/GetObject on the prod bucket plus CloudFront `CreateInvalidation` on its distribution. Nothing else.
+- The deploy role's IAM policy is scoped to S3 PutObject/DeleteObject/GetObject (plus the ListBucket/GetBucketLocation scaffolding `aws s3 sync` requires) on the prod bucket, and CloudFront `CreateInvalidation`/`GetInvalidation` on its distribution. See `infra/github_oidc.tf` for the exact policy.
 
 A maintainer who can push to `main` could bypass any reviewer gate by approving themselves anyway, so for a personal site the OIDC + IAM-scope model is the load-bearing protection. Upgrade to GitHub Pro if you ever want a real reviewer gate.
 
