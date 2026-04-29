@@ -1,8 +1,25 @@
 # GitHub Actions OIDC provider + deploy role.
 #
-# The role assumed by the deploy workflow is allowed only for pushes to
-# the `main` branch of the configured repo. Rotate `var.github_repo` or
-# `var.deploy_branch` if that changes.
+# The deploy role is gated on three OIDC token claims, all required:
+#   - aud: must equal `sts.amazonaws.com`
+#   - sub: must match the GitHub Environment form
+#          (`repo:<owner/name>:environment:<env>`) — see below
+#   - job_workflow_ref: must match the exact workflow file on the
+#          deploy branch (so a different or tampered workflow cannot
+#          mint the token)
+#
+# When a job declares `environment:`, GitHub overrides the OIDC sub
+# claim from the ref form (`repo:owner/name:ref:refs/heads/main`) to
+# the environment form (`repo:owner/name:environment:<env_name>`).
+# Both deploy workflows in this repo target an environment, so the
+# trust policy matches the environment form. The branch is still
+# pinned via `job_workflow_ref` (`@refs/heads/${deploy_branch}`).
+# Surfaced by the p41m0n rehearsal: a ref-form trust policy returned
+# `Not authorized to perform sts:AssumeRoleWithWebIdentity` even when
+# the workflow file and branch were correct.
+#
+# Rotate `var.github_repo`, `var.deploy_branch`, `var.deploy_workflow`,
+# or `var.deploy_environment` if any of those change.
 #
 # AWS no longer validates the OIDC thumbprint strictly against GitHub's
 # cert, so the value below (a long-standing GitHub token.actions root
@@ -31,10 +48,12 @@ data "aws_iam_policy_document" "github_deploy_trust" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # Environment form of the sub claim — see header. The branch is
+    # still pinned via `job_workflow_ref` below.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/${var.deploy_branch}"]
+      values   = ["repo:${var.github_repo}:environment:${var.deploy_environment}"]
     }
 
     # Pin which workflow file may mint this token. Without this, a maintainer
