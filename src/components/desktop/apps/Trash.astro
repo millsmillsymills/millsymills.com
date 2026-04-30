@@ -152,31 +152,5 @@
 </p>
 
 <script>
-	function init() {
-		document.querySelectorAll<HTMLElement>('[data-trash-target]').forEach((row) => {
-			// Find the viewer in the same Trash component instance — getElementById
-			// would collide because Desktop and MobileFallback both render Trash,
-			// putting two `.trash__viewer` elements on the page.
-			const list = row.closest<HTMLElement>('ul.trash__list');
-			const viewer = list?.nextElementSibling as HTMLElement | null;
-			if (!viewer || !viewer.matches('.trash__viewer')) return;
-			const toggle = () => {
-				viewer.hidden = !viewer.hidden;
-				if (!viewer.hidden) viewer.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-			};
-			row.addEventListener('click', toggle);
-			row.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault();
-					toggle();
-				}
-			});
-		});
-	}
-
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', init);
-	} else {
-		init();
-	}
+	import '../../../scripts/trash-viewer';
 </script>
