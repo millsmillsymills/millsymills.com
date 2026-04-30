@@ -108,6 +108,13 @@ function hasTape(index: number): boolean {
 		padding: 8px;
 	}
 
+	/* `display: flex` above otherwise overrides the UA `[hidden]` rule.
+	   The placeholder is masked behind a loaded image via stacking
+	   today, but respecting `hidden` is the right primitive. */
+	.memes__placeholder[hidden] {
+		display: none;
+	}
+
 	.memes__cap {
 		position: absolute;
 		bottom: 6px;
