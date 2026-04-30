@@ -68,6 +68,7 @@ const _APPS_DATA = [
 		iconUrl: '/images/icons/web10/windows-95-internet.png',
 		title: 'mills@millsymills:~',
 		ogDescription: 'a mock shell. `help`, `ls`, `nmap 192.168.1.0/24`, `flag status`. try it.',
+		desktopOnly: true,
 		x: 180,
 		y: 120,
 		width: 680,
