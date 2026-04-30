@@ -35,16 +35,30 @@ if [ ! -s "$DIST_FILE" ]; then
 	lint::refuse_blind "$DIST_FILE missing or empty"
 fi
 
-# Extract every literal `id: '<value>'` declaration from apps.ts. The
-# data file uses single-quoted string-literal id fields (verified shape;
-# no template literals or computed keys). Sort + uniq for diagnostics.
+# Extract every advertised `id: '<value>'` declaration from apps.ts —
+# i.e. records that DO NOT carry `hidden: true`. The data file uses
+# single-quoted string-literal id fields and one record per `\t{ … \t},`
+# block (verified shape; no template literals, computed keys, or single-
+# line records). Awk splits on the closing `\t},` so each record is a
+# single string we can both pattern-match for `hidden: true` and
+# extract the id from in lockstep.
 APP_IDS=()
 while IFS= read -r id; do
 	APP_IDS+=("$id")
 done < <(
-	grep -oE "id:[[:space:]]*'[a-z][a-z0-9-]*'" "$APPS_FILE" \
-		| sed -E "s/id:[[:space:]]*'([a-z0-9-]+)'/\\1/" \
-		| sort -u
+	awk '
+		/^\t\{$/ { record = ""; in_record = 1 }
+		in_record { record = record "\n" $0 }
+		/^\t\},/ {
+			if (in_record && record !~ /hidden: true/) {
+				if (match(record, /id: '\''[a-z][a-z0-9-]*'\''/)) {
+					id = substr(record, RSTART + 5, RLENGTH - 6)
+					print id
+				}
+			}
+			in_record = 0
+		}
+	' "$APPS_FILE" | sort -u
 )
 
 if [ "${#APP_IDS[@]}" -eq 0 ]; then

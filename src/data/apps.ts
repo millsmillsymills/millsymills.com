@@ -17,6 +17,17 @@ export interface AppDef {
 	readonly height: number;
 	/** If true, skip from the mobile shell (desktop-only apps). */
 	readonly desktopOnly?: boolean;
+	/**
+	 * If true, hide from every public-facing index — desktop launcher,
+	 * mobile launcher, start menu, command palette, llms.txt, sitemap.
+	 * The per-app route (`/<id>/`) keeps working for direct hits; this
+	 * flag controls *advertising*, not reachability. Use for unfinished
+	 * apps (mail before Proton activates, vscode before dotfiles are
+	 * reviewed) and for the CTF (flags — discoverable through the
+	 * terminal, not the icon grid). The CI llms.txt completeness check
+	 * (`scripts/assert-llms-txt-completeness.sh`) skips hidden ids.
+	 */
+	readonly hidden?: boolean;
 }
 
 // Two-layer pattern: the const tuple `_APPS_DATA` keeps the literal types
@@ -81,6 +92,10 @@ const _APPS_DATA = [
 		iconUrl: '/images/icons/vaporwave/arcade-game.png',
 		title: 'flags.exe',
 		ogDescription: '12 hidden CTF flags scattered across the site. find them all. Juice-Shop-style.',
+		// Hidden from launcher/menu/llms.txt — discovered via the terminal
+		// (`flag status`) or once the player captures their first flag, not
+		// advertised on the homepage.
+		hidden: true,
 		x: 220,
 		y: 140,
 		width: 520,
@@ -153,6 +168,9 @@ const _APPS_DATA = [
 		iconUrl: '/images/icons/web10/netscape-floppy.png',
 		title: 'mail.exe',
 		ogDescription: 'ways to get in touch with mills.',
+		// Hidden until ProtonMail activates — see #235 + Email runbook in
+		// CLAUDE.md. Flip to `false` once Proton is receiving mail.
+		hidden: true,
 		x: 300,
 		y: 160,
 		width: 460,
@@ -204,6 +222,10 @@ const _APPS_DATA = [
 		glyph: '🆅',
 		title: 'vscode.exe',
 		ogDescription: 'an evocative, pink-tinted vscode reskin. browse real dotfiles and snippets of the site\'s own source.',
+		// Hidden until the dotfile examples in src/data/dotfiles/ are
+		// reviewed for accuracy and privacy — see #237 / #236. Flip to
+		// `false` once that review lands.
+		hidden: true,
 		x: 140,
 		y: 80,
 		width: 900,
