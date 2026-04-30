@@ -6,47 +6,15 @@
  * mobile chrome -> back to home. Browser back button works via the
  * History API so the OS-level swipe-back gesture also returns home.
  *
- * Last-opened app is persisted in localStorage so reload returns to
- * where the visitor was.
+ * Top-level loads of `/` always show the home grid. A per-app permalink
+ * (server-rendered <body data-initial-open="...">) or an explicit
+ * `?open=<id>` query param can override that. Cross-session persistence
+ * is intentionally not used — landing visitors on an app they happened
+ * to open last week makes the homepage look like that app's "coming
+ * soon" body, not the launcher.
  */
 
-const STORAGE_KEY = 'mills.mobile.v1';
-
-interface State {
-	current: string | null; // app id, or null = home
-}
-
-function loadState(): State {
-	let raw: string | null;
-	try {
-		raw = localStorage.getItem(STORAGE_KEY);
-	} catch (err) {
-		console.warn('[mills.mobile] localStorage.getItem failed', err);
-		return { current: null };
-	}
-	if (!raw) return { current: null };
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		console.warn('[mills.mobile] state JSON parse failed; resetting', err);
-		return { current: null };
-	}
-	const current = (parsed as { current?: unknown } | null)?.current;
-	return { current: typeof current === 'string' ? current : null };
-}
-
-function saveState(state: State): void {
-	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-	} catch (err) {
-		console.warn('[mills.mobile] save failed; last-app won\'t persist', err);
-	}
-}
-
 class MobileShell {
-	private state: State = loadState();
 	private root: HTMLElement;
 	private home: HTMLElement;
 	private appView: HTMLElement;
@@ -59,7 +27,6 @@ class MobileShell {
 		this.appView = root.querySelector<HTMLElement>('.mshell__app-view')!;
 		this.chromeTitle = root.querySelector<HTMLElement>('.mshell__chrome-title')!;
 
-		// collect each <section data-mobile-app="id"> wrapping an app body
 		root.querySelectorAll<HTMLElement>('[data-mobile-app]').forEach((el) => {
 			const id = el.dataset.mobileApp;
 			if (id) this.apps.set(id, el);
@@ -69,21 +36,18 @@ class MobileShell {
 		this.bindBack();
 		this.bindClock();
 		window.addEventListener('popstate', (e) => {
-			const next = (e.state as State | null)?.current ?? null;
+			const next = (e.state as { current?: string | null } | null)?.current ?? null;
 			this.show(next, /* fromPop */ true);
 		});
 
-		// initial render: first preference is the server-rendered
-		// <body data-initial-open="..."> (per-app permalink route).
-		// Second: ?open=<id> query param. Fallback: last-session state.
-		let initial: string | null = this.state.current;
+		let initial: string | null = null;
 		const bodyInitial = document.body?.dataset.initialOpen;
 		if (bodyInitial) {
 			initial = bodyInitial;
 		} else {
 			try {
 				const requested = new URLSearchParams(window.location.search).get('open');
-				if (requested) initial = requested.split(',')[0]?.trim() || initial;
+				if (requested) initial = requested.split(',')[0]?.trim() ?? null;
 			} catch (err) {
 				console.warn('[mills.mobile] failed to read ?open= query param', err);
 			}
@@ -119,10 +83,6 @@ class MobileShell {
 	}
 
 	private show(appId: string | null, fromPop = false): void {
-		this.state.current = appId;
-		saveState(this.state);
-
-		// hide all apps
 		this.apps.forEach((el) => (el.hidden = true));
 
 		if (!appId) {
@@ -135,7 +95,6 @@ class MobileShell {
 
 		const app = this.apps.get(appId);
 		if (!app) {
-			// unknown id — fall back to home
 			this.show(null, fromPop);
 			return;
 		}
@@ -145,7 +104,6 @@ class MobileShell {
 		app.hidden = false;
 		document.body.classList.add('mshell-app-open');
 
-		// chrome title from the launcher button label, or fallback to app id
 		const launcher = this.home.querySelector<HTMLElement>(`[data-open-app="${appId}"]`);
 		const title = launcher?.dataset.title ?? appId;
 		this.chromeTitle.textContent = title;

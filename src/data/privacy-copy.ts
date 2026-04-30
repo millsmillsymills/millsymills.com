@@ -17,7 +17,6 @@ export interface BrowserStorageKey {
 export const browserStorageKeys: BrowserStorageKey[] = [
 	{ key: 'mills.desktop.v1', storage: 'local', purpose: 'open windows, positions, last-open app' },
 	{ key: 'mills.flags.v1', storage: 'local', purpose: 'captured CTF flags' },
-	{ key: 'mills.mobile.v1', storage: 'local', purpose: 'mobile-shell state' },
 	{ key: 'mills.vscode.v1', storage: 'local', purpose: 'vscode.exe open tabs + active tab' },
 	{ key: 'mills.boot.played', storage: 'session', purpose: '"played boot sequence already" flag' },
 	{ key: 'mills.clippy.dismissed', storage: 'local', purpose: 'clippy dismissed permanently ("don\'t come back")' },
