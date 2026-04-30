@@ -52,8 +52,13 @@ class CommandPalette {
 
 	private buildEntries(): Entry[] {
 		const unlocked = flagsUnlocked();
+		// Hidden apps (mail, vscode, flags) stay out of the palette by
+		// default — same advertising-surface rule as the launcher and
+		// start menu. Flags is the special case: once the player has
+		// captured a flag, reveal it as a reward, even though it's
+		// flagged `hidden` for first-impression hygiene.
 		return apps
-			.filter((a) => unlocked || a.id !== 'flags')
+			.filter((a) => (a.id === 'flags' ? unlocked : !a.hidden))
 			.map<Entry>((a) => ({
 				id: a.id,
 				label: a.title,

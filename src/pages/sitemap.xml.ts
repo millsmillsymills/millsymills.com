@@ -11,11 +11,13 @@ export const GET: APIRoute = ({ site }) => {
 
 	const urls = [
 		{ loc: `${origin}/`, priority: '1.0', changefreq: 'monthly' },
-		...apps.map((a) => ({
-			loc: `${origin}/${a.id}/`,
-			priority: '0.8',
-			changefreq: 'monthly',
-		})),
+		...apps
+			.filter((a) => !a.hidden)
+			.map((a) => ({
+				loc: `${origin}/${a.id}/`,
+				priority: '0.8',
+				changefreq: 'monthly',
+			})),
 	];
 
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
