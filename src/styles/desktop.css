@@ -777,18 +777,26 @@ a {
 	color: var(--ink-muted);
 }
 
+/* Flexbox + justify-content: center so an incomplete last row centers
+   instead of left-aligning under a 4-column grid. CSS Grid can't do this
+   directly because grid items always align to the start of their row. */
 .mshell__grid {
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
 	gap: 16px 8px;
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
 
+.mshell__grid > li {
+	flex: 0 0 80px;
+}
+
 @media (max-width: 360px) {
-	.mshell__grid {
-		grid-template-columns: repeat(3, 1fr);
+	.mshell__grid > li {
+		flex: 0 0 70px;
 	}
 }
 
