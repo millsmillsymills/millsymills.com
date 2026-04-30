@@ -20,6 +20,7 @@ export const GET: APIRoute = ({ site }) => {
 	const origin = site.href.replace(/\/$/, '');
 
 	const pages = apps
+		.filter((a) => !a.hidden)
 		.map((a) => `- [${a.label}](${origin}/${a.id}/): ${a.ogDescription}`)
 		.join('\n');
 

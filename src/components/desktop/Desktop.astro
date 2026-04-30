@@ -60,10 +60,15 @@ const contentFor = (id: string) => {
 <main class="desktop" id="desktop">
 	<span class="desktop__sparkle-layer" aria-hidden="true"></span>
 	<ul class="desktop__icons">
-		{apps.map((a) => <DesktopIcon target={a.id} label={a.label} glyph={a.glyph} iconUrl={a.iconUrl} />)}
+		{apps.filter((a) => !a.hidden).map((a) => <DesktopIcon target={a.id} label={a.label} glyph={a.glyph} iconUrl={a.iconUrl} />)}
 	</ul>
 
 	{
+		/* Render every window — including hidden apps — so direct-hit
+		   permalinks (`/flags/`, `/mail/`, `/vscode/`) still open the
+		   right window via the `data-initial-open` server-render path.
+		   Only the *advertising* surfaces (icons + start menu) honor
+		   `hidden`. */
 		apps.map((a) => {
 			const Content = contentFor(a.id);
 			return (
@@ -74,5 +79,5 @@ const contentFor = (id: string) => {
 		})
 	}
 
-	<Taskbar menu={apps.map((a) => ({ target: a.id, label: a.label }))} />
+	<Taskbar menu={apps.filter((a) => !a.hidden).map((a) => ({ target: a.id, label: a.label }))} />
 </main>
