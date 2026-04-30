@@ -30,6 +30,13 @@ import { pgp } from '../../../data/pgp';
 		padding: 6px;
 	}
 
+	/* User-agent `[hidden] { display: none }` is otherwise lost to the
+	   explicit `display: flex` above. Without this, the placeholder
+	   stays visible alongside a successfully-loaded headshot. */
+	.about__avatar--placeholder[hidden] {
+		display: none;
+	}
+
 	.about__meta {
 		display: flex;
 		flex-wrap: wrap;
