@@ -64,7 +64,7 @@ const contentFor = (id: string) => {
 
 		<ul class="mshell__grid">
 			{
-				apps.filter((a) => !a.desktopOnly).map((a) => (
+				apps.filter((a) => !a.desktopOnly && !a.hidden).map((a) => (
 					<li>
 						<button
 							type="button"
@@ -96,7 +96,7 @@ const contentFor = (id: string) => {
 		</header>
 		<div class="mshell__app-body">
 			{
-				apps.filter((a) => !a.desktopOnly).map((a) => {
+				apps.filter((a) => !a.desktopOnly && !a.hidden).map((a) => {
 					const Content = contentFor(a.id);
 					return (
 						<div data-mobile-app={a.id} hidden>
