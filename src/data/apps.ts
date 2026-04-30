@@ -231,6 +231,21 @@ const _APPS_DATA = [
 		width: 900,
 		height: 620,
 	},
+	{
+		id: 'display',
+		label: 'display',
+		glyph: '🖼️',
+		title: 'display.cpl',
+		ogDescription: 'a tiny windows-style display panel. pick a wallpaper from a curated vaporwave set; choice persists in localStorage.',
+		// Wallpaper only renders on the desktop layout (mshell never
+		// surfaces .desktop's bg-image), so this app is meaningless on
+		// mobile.
+		desktopOnly: true,
+		x: 240,
+		y: 100,
+		width: 640,
+		height: 520,
+	},
 ] as const satisfies readonly AppDef[];
 
 export const apps: readonly AppDef[] = _APPS_DATA;

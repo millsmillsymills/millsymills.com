@@ -1,0 +1,113 @@
+---
+import { wallpapers } from '../../../data/wallpapers';
+---
+
+<style>
+	.display {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+
+	.display__intro {
+		font-family: var(--font-screen);
+		font-size: 16px;
+		color: var(--ink-muted);
+		margin: 0;
+	}
+
+	.display__grid {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 14px;
+	}
+
+	.display__tile {
+		all: unset;
+		cursor: var(--c-pointer);
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 6px;
+		background: var(--bg-deep);
+		border: 2px solid var(--lilac-300);
+		border-radius: 6px;
+		transition: border-color 120ms ease, transform 120ms ease;
+	}
+
+	.display__tile:hover,
+	.display__tile:focus-visible {
+		border-color: var(--neon-cyan);
+		transform: translateY(-1px);
+	}
+
+	.display__tile--active {
+		border-color: var(--neon-pink);
+		box-shadow: 2px 2px 0 var(--neon-cyan);
+	}
+
+	.display__tile--active::after {
+		content: '✓ active';
+		font-family: var(--font-pixel);
+		font-size: 8px;
+		color: var(--neon-pink);
+		letter-spacing: 1px;
+		align-self: flex-end;
+	}
+
+	.display__thumb {
+		display: block;
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		border-radius: 3px;
+		image-rendering: -webkit-optimize-contrast;
+	}
+
+	.display__label {
+		font-family: var(--font-pixel);
+		font-size: 9px;
+		color: var(--neon-cyan);
+		letter-spacing: 1px;
+		text-align: center;
+		text-transform: lowercase;
+	}
+</style>
+
+<article class="display">
+	<p class="display__intro">
+		pick a wallpaper. choice survives reload.
+	</p>
+	<ul class="display__grid">
+		{
+			wallpapers.map((w) => (
+				<li>
+					<button
+						type="button"
+						class="display__tile"
+						data-wallpaper={w.id}
+						aria-pressed="false"
+						aria-label={`set wallpaper: ${w.label}`}
+					>
+						<img
+							class="display__thumb"
+							src={w.thumbnail}
+							alt=""
+							aria-hidden="true"
+							loading="lazy"
+							decoding="async"
+						/>
+						<span class="display__label">{w.label}</span>
+					</button>
+				</li>
+			))
+		}
+	</ul>
+</article>
+
+<script>
+	import '../../../scripts/display-picker';
+</script>

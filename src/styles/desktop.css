@@ -236,7 +236,12 @@ a {
 
 @media (min-width: 769px) {
 	.desktop {
-		background-image: url('/images/desktop-background.jpg');
+		/* `--desktop-bg` is set by src/scripts/wallpaper-init.ts before
+		   first paint (loaded from <head> in DesktopLayout.astro). The
+		   fallback is the default wallpaper so first-paint stays correct
+		   even if JS is delayed or disabled — the picker just becomes
+		   non-interactive in that fallback path. */
+		background-image: var(--desktop-bg, url('/images/desktop-background.jpg'));
 		background-size: cover;
 		background-position: center;
 	}
