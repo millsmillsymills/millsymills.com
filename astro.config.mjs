@@ -183,5 +183,21 @@ export default defineConfig({
 			'import.meta.env.PUBLIC_VSCODE_HIGHLIGHTS': JSON.stringify(vscodeHighlights),
 		},
 		plugins: [scrubVscodeSnippets()],
+		build: {
+			// Force every Astro `<script>` block into its own chunk so it's
+			// emitted as `<script type="module" src="/_astro/…js">` instead of
+			// inlined. Without this, small bundles (e.g. mobile-shell, help-
+			// overlay, image-fallback handlers) get inlined into HTML and the
+			// production CSP `script-src 'self'` blocks them — see #129/#231.
+			rollupOptions: {
+				output: {
+					manualChunks(id) {
+						if (id.includes('astro_type_script')) return id;
+						if (/src\/scripts\/[^/]+\.ts$/.test(id)) return id;
+						return undefined;
+					},
+				},
+			},
+		},
 	},
 });
