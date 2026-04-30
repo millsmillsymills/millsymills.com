@@ -89,6 +89,15 @@ const jsonLd = {
 
 		<script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
+		{/* Wallpaper bootstrap — must run before .desktop's first paint
+		    so background-image's `var(--desktop-bg)` resolves to the
+		    user's choice from the very first frame. Lives in <head>
+		    (auto-deferred module) for that reason; the picker UI
+		    handler loads later from inside Display.astro. */}
+		<script>
+			import '../scripts/wallpaper-init';
+		</script>
+
 		<title>{title}</title>
 	</head>
 	<body data-initial-open={initialOpen}>
