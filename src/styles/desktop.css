@@ -721,6 +721,68 @@ a {
 }
 
 /* ------------------------------------------------------------------ */
+/* desktop right-click context menu                                   */
+/* ------------------------------------------------------------------ */
+
+/* Mirrors the start-menu chrome so the two read as the same family. */
+.ctx-menu {
+	position: fixed;
+	min-width: 180px;
+	background: var(--bg-deep);
+	border: 2px solid var(--neon-cyan);
+	border-radius: 6px;
+	box-shadow: var(--window-shadow);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	color: var(--ink-primary);
+	z-index: 10000;
+	overflow: hidden;
+	padding: 6px 0;
+	margin: 0;
+	list-style: none;
+}
+
+.ctx-menu[hidden] {
+	display: none;
+}
+
+.ctx-menu__item {
+	all: unset;
+	display: block;
+	width: 100%;
+	padding: 8px 14px;
+	box-sizing: border-box;
+	cursor: var(--c-pointer);
+	color: var(--ink-primary);
+	font-family: var(--font-pixel);
+	font-size: 11px;
+	letter-spacing: 0.5px;
+}
+
+.ctx-menu__item:hover,
+.ctx-menu__item:focus-visible {
+	background: var(--bg-raised);
+	color: var(--neon-cyan);
+	outline: none;
+}
+
+.ctx-menu__item--danger {
+	color: var(--neon-pink-hi);
+}
+
+.ctx-menu__item--danger:hover,
+.ctx-menu__item--danger:focus-visible {
+	background: rgba(255, 51, 51, 0.18);
+	color: var(--neon-pink-hi);
+}
+
+.ctx-menu__sep {
+	height: 1px;
+	margin: 4px 10px;
+	background: var(--bg-edge);
+}
+
+/* ------------------------------------------------------------------ */
 /* mobile shell — phone-OS metaphor                                   */
 /* ------------------------------------------------------------------ */
 
