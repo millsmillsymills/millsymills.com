@@ -83,4 +83,26 @@ const contentFor = (id: string) => {
 	}
 
 	<Taskbar menu={apps.filter((a) => !a.hidden).map((a) => ({ target: a.id, label: a.label }))} />
+
+	{/* Right-click context menu. Hidden until desktop-context-menu.ts
+	    repositions and unhides it. Items dispatch via existing
+	    data-open-window / data-reset-trigger hooks so window-manager
+	    and reset already wire them. */}
+	<ul class="ctx-menu" role="menu" aria-label="desktop context menu" hidden>
+		<li>
+			<button type="button" class="ctx-menu__item" data-open-window="display" role="menuitem">
+				change wallpaper
+			</button>
+		</li>
+		<li class="ctx-menu__sep" aria-hidden="true"></li>
+		<li>
+			<button type="button" class="ctx-menu__item ctx-menu__item--danger" data-reset-trigger role="menuitem">
+				reset desktop
+			</button>
+		</li>
+	</ul>
 </main>
+
+<script>
+	import '../../scripts/desktop-context-menu';
+</script>
