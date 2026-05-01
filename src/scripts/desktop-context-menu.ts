@@ -61,13 +61,15 @@ function init(): void {
 	document.addEventListener('contextmenu', onContextMenu);
 
 	// Any click inside the menu — let the existing data-open-window /
-	// data-reset-trigger handlers run, then close. mousedown rather than
-	// click so we close before the open-window handler fires (so the
-	// menu doesn't briefly remain visible behind the new window).
-	menu.addEventListener('mousedown', () => {
-		// queueMicrotask so the click event gets dispatched first.
-		queueMicrotask(close);
-	});
+	// data-reset-trigger handlers run, then close. Listening on `click`
+	// (not `mousedown`) is load-bearing: setting hidden=true between
+	// mousedown and mouseup hides the button, so the browser never
+	// synthesizes a click event against it and the action handlers
+	// never fire. Bubble-phase close runs after the button's own click
+	// handler (window-manager binds direct click listeners per button)
+	// and after document-delegated handlers like reset.ts pick up the
+	// event, so closing here doesn't race the action.
+	menu.addEventListener('click', close);
 
 	document.addEventListener('mousedown', (e) => {
 		if (menu?.hidden) return;
