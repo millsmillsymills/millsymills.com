@@ -9,3 +9,11 @@ deploy_environment = "rehearsal" # matches `environment: name:` in deploy-rehear
 
 # p41m0n rehearsal does not activate ProtonMail; email.tf publishes
 # null-MX + strict DMARC in this state. User does not use p41m0n mail.
+
+# 2026-05-01 pre-flight unblock: CT-monitor SNS subscription was stuck
+# PendingConfirmation because security@p41m0n.com is undeliverable
+# (null MX). Routing to a confirmable mailbox so the subscription can
+# confirm and the TF baseline clears. Will be reconsidered once Proton
+# is fully active — see
+# docs/superpowers/specs/2026-05-01-p41m0n-proton-mail-migration-design.md.
+ct_monitor_alert_address = "andyandymillsmills@gmail.com"
