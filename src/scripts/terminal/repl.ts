@@ -96,6 +96,19 @@ export function bootTerminal({ root, onExit }: Options): void {
 		try {
 			await cmd.handler(localCtx);
 		} catch (err) {
+			// If the command threw mid-prompt (e.g. async error during a
+			// password challenge), tear down the prompt-state machine so the
+			// next command isn't typing into a stale password mask. Resolve
+			// the pending awaiter with null so the command's own await
+			// returns a sentinel rather than hanging forever.
+			if (pendingResolve) {
+				const r = pendingResolve;
+				pendingResolve = null;
+				pendingMask = false;
+				if (input) input.type = 'text';
+				refreshPrompt();
+				r(null);
+			}
 			writeLine(`error: ${(err as Error).message}`, 't-err');
 		}
 	}
