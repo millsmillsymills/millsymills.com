@@ -385,19 +385,27 @@ The privacy page's "zero third-party requests" claim is currently false — the 
 
 - [ ] **Step 1: Download the WOFF2 files**
 
-`Press Start 2P` and `VT323` are OFL-licensed. Get the WOFF2 files from Google Fonts:
+`Press Start 2P` and `VT323` are OFL-licensed. Resolve the current versioned WOFF2 URL via the Google Fonts CSS API instead of pinning a versioned `fonts.gstatic.com` path that rotates upstream:
 
 ```bash
-# Press Start 2P — single weight (regular)
-curl -L -o public/fonts/PressStart2P-Regular.woff2 \
-  "https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivNm4I81.woff2"
+# Press Start 2P — fetch the current versioned URL via the CSS API.
+# A real-browser User-Agent is required, otherwise Google serves legacy
+# .ttf/.eot variants instead of WOFF2.
+PRESS_START_URL=$(curl -sL -A 'Mozilla/5.0' \
+  'https://fonts.googleapis.com/css2?family=Press+Start+2P' \
+  | grep -oE 'https://[^)]+\.woff2' | head -1)
+test -n "$PRESS_START_URL"
+curl -L -o public/fonts/PressStart2P-Regular.woff2 "$PRESS_START_URL"
 
-# VT323 — single weight (regular)
-curl -L -o public/fonts/VT323-Regular.woff2 \
-  "https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJXUdVNF.woff2"
+# VT323 — same pattern
+VT323_URL=$(curl -sL -A 'Mozilla/5.0' \
+  'https://fonts.googleapis.com/css2?family=VT323' \
+  | grep -oE 'https://[^)]+\.woff2' | head -1)
+test -n "$VT323_URL"
+curl -L -o public/fonts/VT323-Regular.woff2 "$VT323_URL"
 ```
 
-If those URLs 404 (Google rotates asset URLs periodically), alternative: install `google-webfonts-helper` output or visit `https://fonts.google.com/specimen/Press+Start+2P` → "Download family" → extract `.woff2` from the zip, same for VT323. Put files at the exact paths above.
+If the CSS API ever changes shape, fallback: use [`google-webfonts-helper`](https://gwfh.mranftl.com/fonts) — pick the family + weight, download the WOFF2 directly. The `fonts.google.com` "Download family" zip currently ships only `.ttf` (no WOFF2), so don't rely on that as a fallback.
 
 - [ ] **Step 2: Verify files exist and are non-empty**
 
