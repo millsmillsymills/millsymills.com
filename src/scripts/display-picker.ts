@@ -11,6 +11,7 @@
 
 import { applyToDocument, getActiveId, resolveWallpaper, setActiveId, STORAGE_KEY } from './wallpaper';
 import { defaultWallpaper } from '../data/wallpapers';
+import { dispatchClippyTrigger } from './util/events';
 
 function syncActiveTile(root: HTMLElement, id: string): void {
 	root.querySelectorAll<HTMLButtonElement>('[data-wallpaper]').forEach((btn) => {
@@ -34,6 +35,7 @@ function bind(root: HTMLElement): void {
 			document
 				.querySelectorAll<HTMLElement>('.display')
 				.forEach((el) => syncActiveTile(el, wallpaper.id));
+			dispatchClippyTrigger('wallpaper', 'display');
 		});
 	});
 
