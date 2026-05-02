@@ -12,7 +12,13 @@ const { menu } = Astro.props;
 ---
 
 <nav class="taskbar" aria-label="taskbar">
-	<button type="button" class="taskbar__start" aria-haspopup="menu" aria-expanded="false">
+	<button
+		type="button"
+		class="taskbar__start"
+		data-focus-fallback
+		aria-haspopup="menu"
+		aria-expanded="false"
+	>
 		<span aria-hidden="true">★</span>
 		<span>start</span>
 	</button>
