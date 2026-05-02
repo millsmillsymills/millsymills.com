@@ -310,6 +310,16 @@ export const securityControls: readonly SecurityControl[] = [
 		why: 'Logs exist so outages are debuggable; nothing more. The lifecycle policy means there\'s no archive to subpoena, leak, or accidentally retain.',
 		code: ['infra/cloudfront_logging.tf', 'infra/s3.tf'],
 	},
+	{
+		id: 'logs-versioning',
+		title: 'Versioned access-log bucket (forensic integrity)',
+		category: 'monitoring',
+		status: 'shipped',
+		what: 'The access-log bucket has versioning on, plus a noncurrent-version expiration matching the 90-day current-version retention. A second lifecycle rule sweeps the orphan delete markers that versioning leaves behind.',
+		why: 'A compromised or overbroad IAM principal cannot silently destroy forensic evidence — overwrites preserve prior versions; deletes insert a delete marker rather than erasing bytes. Recoverable for the same 90-day window the current-version expiration already guarantees.',
+		tradeoffs: 'Object Lock would be stronger but is only settable at bucket creation time; deferred until the bucket is replaced for another reason. No principal in `infra/github_oidc.tf` holds `s3:DeleteObjectVersion` on the logs bucket today, so the standard-compromise path is closed.',
+		code: ['infra/s3.tf'],
+	},
 
 	// ─── roadmap ───────────────────────────────────────────────────────
 	{
