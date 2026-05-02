@@ -4,11 +4,6 @@ name: CI
 # GitHub Actions minute quota. Run ./scripts/ci-local.sh locally for
 # pre-merge verification. To re-enable, restore the `pull_request` and
 # `push` triggers below.
-#
-# When un-commenting: verify the `env: SITE_URL` blocks on both the
-# Typecheck and Build steps are still present. astro.config.mjs throws
-# if CI=true and SITE_URL is unset; silent drift here would break every
-# triggered run on the first PR after re-enabling. See #77.
 on:
   workflow_dispatch:
   # pull_request:
@@ -43,12 +38,24 @@ jobs:
       # typecheck step needs SITE_URL too — not just the build step.
       - name: Typecheck (astro check)
         env:
-          SITE_URL: ${{ vars.SITE_URL }}
+          # Hardcoded rather than ${{ vars.SITE_URL }} — ci.yml only
+          # typechecks + builds (artifacts are never deployed), the
+          # site domain is public, and a missing repo variable would
+          # silently fail astro.config.mjs's CI=true SITE_URL guard.
+          # Real deploys still resolve SITE_URL per-environment via
+          # deploy.yml / deploy-rehearsal.yml.
+          SITE_URL: https://millsymills.com
         run: npm run check
 
       - name: Build
         env:
-          SITE_URL: ${{ vars.SITE_URL }}
+          # Hardcoded rather than ${{ vars.SITE_URL }} — ci.yml only
+          # typechecks + builds (artifacts are never deployed), the
+          # site domain is public, and a missing repo variable would
+          # silently fail astro.config.mjs's CI=true SITE_URL guard.
+          # Real deploys still resolve SITE_URL per-environment via
+          # deploy.yml / deploy-rehearsal.yml.
+          SITE_URL: https://millsymills.com
         run: npm run build
 
   terraform:
