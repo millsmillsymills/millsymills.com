@@ -232,7 +232,7 @@ function init(): void {
 		}
 	});
 
-	w.mills = { ...(w.mills ?? {}), __clippyInit: true };
+	Object.assign((w.mills ??= {}), { __clippyInit: true });
 }
 
 if (typeof window !== 'undefined') {
