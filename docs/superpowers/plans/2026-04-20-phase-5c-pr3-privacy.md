@@ -390,30 +390,29 @@ The privacy page's "zero third-party requests" claim is currently false — the 
 ```bash
 set -euo pipefail
 
-# Press Start 2P — fetch the current versioned URL via the CSS API.
-# A `Mozilla/5.0` UA prefix is the minimum Google honors for WOFF2
-# delivery; a bare `curl/X.Y.Z` UA gets legacy .ttf/.eot variants.
-# Regex excludes `"`, `'`, `)`, and space so it survives whether
-# Google emits `url(https://...)`, `url("https://...")`, or
-# `url('https://...')`. `|| true` prevents `set -e -o pipefail` from
-# killing the script on a zero-match grep — `test -n` is the
-# authoritative failure check. `curl -f` fails on HTTP error so a 4xx
-# can't write an HTML error body to the .woff2 path; `test -s` then
-# rejects 0-byte responses that snuck past the HTTP layer.
-PRESS_START_URL=$(curl -sL -A 'Mozilla/5.0' \
-  'https://fonts.googleapis.com/css2?family=Press+Start+2P' \
-  | grep -oE "https://[^\")' ]+\\.woff2" | head -1 || true)
-test -n "$PRESS_START_URL"
-curl -fL -o public/fonts/PressStart2P-Regular.woff2 "$PRESS_START_URL"
-test -s public/fonts/PressStart2P-Regular.woff2
+# Resolve the current versioned WOFF2 URL via Google's CSS API and
+# download it. Implementation notes for the curious maintainer:
+#
+# - `Mozilla/5.0` is the minimum UA prefix Google honors for WOFF2
+#   delivery; a bare `curl/X.Y.Z` UA gets legacy .ttf/.eot variants.
+# - Regex excludes `"`, `'`, `)`, and space so it survives whether
+#   Google emits `url(https://...)`, `url("https://...")`, or
+#   `url('https://...')`.
+# - `|| true` prevents `set -e -o pipefail` from killing the script on
+#   a zero-match grep — `test -n` below is the authoritative check.
+# - `curl -f` fails on HTTP error so a 4xx can't write an HTML error
+#   body to the .woff2 path; `test -s` then rejects 0-byte responses.
+fetch_woff2() {
+  local family=$1 out=$2 url
+  url=$(curl -sL -A 'Mozilla/5.0' "https://fonts.googleapis.com/css2?family=$family" \
+    | grep -oE "https://[^\")' ]+\\.woff2" | head -1 || true)
+  test -n "$url"
+  curl -fL -o "$out" "$url"
+  test -s "$out"
+}
 
-# VT323 — same pattern
-VT323_URL=$(curl -sL -A 'Mozilla/5.0' \
-  'https://fonts.googleapis.com/css2?family=VT323' \
-  | grep -oE "https://[^\")' ]+\\.woff2" | head -1 || true)
-test -n "$VT323_URL"
-curl -fL -o public/fonts/VT323-Regular.woff2 "$VT323_URL"
-test -s public/fonts/VT323-Regular.woff2
+fetch_woff2 'Press+Start+2P' public/fonts/PressStart2P-Regular.woff2
+fetch_woff2 'VT323' public/fonts/VT323-Regular.woff2
 ```
 
 If the CSS API ever changes shape, fallback: use [`google-webfonts-helper`](https://gwfh.mranftl.com/fonts) — pick the family + weight, download the WOFF2 directly. The `fonts.google.com` "Download family" zip currently ships only `.ttf` (no WOFF2), so don't rely on that as a fallback.
