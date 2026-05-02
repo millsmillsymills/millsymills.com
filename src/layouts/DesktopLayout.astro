@@ -126,7 +126,9 @@ const jsonLd = {
 			konami();
 			initMailPow();
 			// Expose a tiny API so devtools-savvy visitors can play with flags
-			// outside the terminal. Read-only by intent.
+			// outside the terminal. Read-only by intent. Key names here
+			// (submit/status/capture) are advertised in `consoleBanner` —
+			// rename in lockstep, no compile-time link.
 			//
 			// Merge into window.mills rather than overwrite — reset.ts and
 			// clippy.ts already register `__resetInit` / `__clippyInit`
