@@ -415,7 +415,7 @@ fetch_woff2 'Press+Start+2P' public/fonts/PressStart2P-Regular.woff2
 fetch_woff2 'VT323' public/fonts/VT323-Regular.woff2
 ```
 
-If the CSS API ever changes shape, fallback: use [`google-webfonts-helper`](https://gwfh.mranftl.com/fonts) — pick the family + weight, download the WOFF2 directly. The `fonts.google.com` "Download family" zip currently ships only `.ttf` (no WOFF2), so don't rely on that as a fallback.
+If the CSS API ever changes shape, fallback: use [`google-webfonts-helper`](https://gwfh.mranftl.com/fonts) — pick the family + weight, download the WOFF2 directly. The `fonts.google.com` "Download family" zip is not a reliable fallback because it has historically shipped only `.ttf`; verify it includes WOFF2 before trusting it.
 
 - [ ] **Step 2: Verify files exist and are non-empty**
 
