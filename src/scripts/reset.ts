@@ -148,9 +148,17 @@ function closeModal(): void {
 		if (triggerFocusable) {
 			triggerEl.focus();
 		} else {
-			const fallback = document.querySelector<HTMLElement>('.taskbar__start');
+			// `[data-focus-fallback]` is the cross-component contract for
+			// "focus this when nothing better is available" — the BEM class
+			// `.taskbar__start` stays internal to the Taskbar stylesheet.
+			const fallback = document.querySelector<HTMLElement>('[data-focus-fallback]');
 			if (fallback) {
 				fallback.focus();
+				if (document.activeElement !== fallback) {
+					console.debug(
+						'[reset] fallback .focus() did not land; focus collapsed to <body>',
+					);
+				}
 			} else {
 				console.debug('[reset] trigger gone and no fallback; focus restored to <body>');
 			}
