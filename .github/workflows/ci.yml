@@ -17,7 +17,7 @@ permissions:
 jobs:
   astro:
     name: Astro build + typecheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
@@ -38,17 +38,29 @@ jobs:
       # typecheck step needs SITE_URL too — not just the build step.
       - name: Typecheck (astro check)
         env:
-          SITE_URL: ${{ vars.SITE_URL }}
+          # Hardcoded rather than ${{ vars.SITE_URL }} — ci.yml only
+          # typechecks + builds (artifacts are never deployed), the
+          # site domain is public, and a missing repo variable would
+          # silently fail astro.config.mjs's CI=true SITE_URL guard.
+          # Real deploys still resolve SITE_URL per-environment via
+          # deploy.yml / deploy-rehearsal.yml.
+          SITE_URL: https://millsymills.com
         run: npm run check
 
       - name: Build
         env:
-          SITE_URL: ${{ vars.SITE_URL }}
+          # Hardcoded rather than ${{ vars.SITE_URL }} — ci.yml only
+          # typechecks + builds (artifacts are never deployed), the
+          # site domain is public, and a missing repo variable would
+          # silently fail astro.config.mjs's CI=true SITE_URL guard.
+          # Real deploys still resolve SITE_URL per-environment via
+          # deploy.yml / deploy-rehearsal.yml.
+          SITE_URL: https://millsymills.com
         run: npm run build
 
   terraform:
     name: Terraform fmt + validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: infra

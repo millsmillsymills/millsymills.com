@@ -367,6 +367,14 @@ function ensureToastHost(): HTMLDivElement {
 /**
  * Console banner + flag #2 ("console").
  * The flag literal is here on purpose — the puzzle is "look at console", not "find a string".
+ *
+ * The `window.mills.*` advertisement block below is a contract with two
+ * registration sites: `flag.{submit,status}` are wired in
+ * `src/layouts/DesktopLayout.astro` and `reset` in `src/scripts/reset.ts`.
+ * If you rename a key there, update this banner too — there's no compile-
+ * time link. `.flag.capture()` is intentionally NOT advertised; it's a
+ * trigger primitive for konami / clippy / etc. and surfacing it would
+ * let visitors short-circuit the puzzles.
  */
 export function consoleBanner(): void {
 	const big = `
@@ -378,6 +386,11 @@ export function consoleBanner(): void {
         │  if you're reading this, try:       │
         │  >  flag submit flag{console_log_warriors_unite}
         │  in the terminal app on this site.  │
+        │  ──                                 │
+        │  also on window.mills (devtools):   │
+        │  .flag.submit("flag{...}")          │
+        │  .flag.status()                     │
+        │  .reset()  // wipe state, no undo   │
         └─────────────────────────────────────┘
 %c
 `;

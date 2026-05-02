@@ -385,19 +385,37 @@ The privacy page's "zero third-party requests" claim is currently false — the 
 
 - [ ] **Step 1: Download the WOFF2 files**
 
-`Press Start 2P` and `VT323` are OFL-licensed. Get the WOFF2 files from Google Fonts:
+`Press Start 2P` and `VT323` are OFL-licensed. Resolve the current versioned WOFF2 URL via the Google Fonts CSS API instead of pinning a versioned `fonts.gstatic.com` path that rotates upstream:
 
 ```bash
-# Press Start 2P — single weight (regular)
-curl -L -o public/fonts/PressStart2P-Regular.woff2 \
-  "https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivNm4I81.woff2"
+set -euo pipefail
 
-# VT323 — single weight (regular)
-curl -L -o public/fonts/VT323-Regular.woff2 \
-  "https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJXUdVNF.woff2"
+# Resolve the current versioned WOFF2 URL via Google's CSS API and
+# download it. Implementation notes for the curious maintainer:
+#
+# - `Mozilla/5.0` is the minimum UA prefix Google honors for WOFF2
+#   delivery; a bare `curl/X.Y.Z` UA gets legacy .ttf/.eot variants.
+# - Regex excludes `"`, `'`, `)`, and space so it survives whether
+#   Google emits `url(https://...)`, `url("https://...")`, or
+#   `url('https://...')`.
+# - `|| true` prevents `set -e -o pipefail` from killing the script on
+#   a zero-match grep — `test -n` below is the authoritative check.
+# - `curl -f` fails on HTTP error so a 4xx can't write an HTML error
+#   body to the .woff2 path; `test -s` then rejects 0-byte responses.
+fetch_woff2() {
+  local family=$1 out=$2 url
+  url=$(curl -sL -A 'Mozilla/5.0' "https://fonts.googleapis.com/css2?family=$family" \
+    | grep -oE "https://[^\")' ]+\\.woff2" | head -1 || true)
+  test -n "$url"
+  curl -fL -o "$out" "$url"
+  test -s "$out"
+}
+
+fetch_woff2 'Press+Start+2P' public/fonts/PressStart2P-Regular.woff2
+fetch_woff2 'VT323' public/fonts/VT323-Regular.woff2
 ```
 
-If those URLs 404 (Google rotates asset URLs periodically), alternative: install `google-webfonts-helper` output or visit `https://fonts.google.com/specimen/Press+Start+2P` → "Download family" → extract `.woff2` from the zip, same for VT323. Put files at the exact paths above.
+If the CSS API ever changes shape, fallback: use [`google-webfonts-helper`](https://gwfh.mranftl.com/fonts) — pick the family + weight, download the WOFF2 directly. The `fonts.google.com` "Download family" zip is not a reliable fallback because it has historically shipped only `.ttf`; verify it includes WOFF2 before trusting it.
 
 - [ ] **Step 2: Verify files exist and are non-empty**
 

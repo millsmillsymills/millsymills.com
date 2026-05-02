@@ -18,7 +18,7 @@ concurrency:
 jobs:
   deploy:
     name: Build + sync to S3 + invalidate CloudFront (rehearsal)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # Targets the `rehearsal` GitHub Environment for variable scoping.
     # On the free-private plan there is no required-reviewer gate
