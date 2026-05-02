@@ -5,6 +5,8 @@
 // is a TypeScript error at the call site rather than a silent no-op at
 // runtime.
 
+import type { AppId } from '../../data/apps';
+import type { QuipTrigger } from '../../data/clippy-quips';
 import type { Challenge } from '../flags';
 
 /**
@@ -18,12 +20,20 @@ export interface MillsEventMap {
 	'mills:flags-unlocked': CustomEvent<Challenge>;
 	'mills:now-playing': CustomEvent<NowPlaying>;
 	'mills:close-window': CustomEvent<{ id: string }>;
+	'mills:clippy-trigger': CustomEvent<ClippyTriggerDetail>;
 }
 
 export interface NowPlaying {
 	playing: boolean;
 	title: string;
 	artist: string;
+}
+
+export interface ClippyTriggerDetail {
+	trigger: QuipTrigger;
+	// Optional explicit app context. Producers leave this unset to let
+	// Clippy's controller resolve via the topmost-window heuristic.
+	appId?: AppId;
 }
 
 declare global {
@@ -56,4 +66,10 @@ export function dispatchNowPlaying(detail: NowPlaying): void {
 
 export function dispatchCloseWindow(id: string): void {
 	document.dispatchEvent(new CustomEvent('mills:close-window', { detail: { id } }));
+}
+
+export function dispatchClippyTrigger(trigger: QuipTrigger, appId?: AppId): void {
+	window.dispatchEvent(
+		new CustomEvent('mills:clippy-trigger', { detail: { trigger, appId } }),
+	);
 }
