@@ -64,6 +64,9 @@ jobs:
       - name: Assert og:image per-app gate
         run: node scripts/assert-og-image-per-app.mjs
 
+      - name: Assert SRI on every cross-origin asset
+        run: node scripts/assert-sri-on-cross-origin-assets.mjs
+
   terraform:
     name: Terraform fmt + validate
     runs-on: ubuntu-24.04
