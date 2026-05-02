@@ -1,16 +1,20 @@
 import type { APIRoute } from 'astro';
+import { Resvg } from '@resvg/resvg-js';
 import { apps } from '../../data/apps';
 
 export function getStaticPaths() {
 	return apps.map((a) => ({ params: { app: a.id } }));
 }
 
+// SVG og:image is silently rejected by Twitter/X, Facebook, LinkedIn,
+// Slack, Discord, iMessage — they require raster (PNG/JPEG/WebP) for
+// previews. Render the same SVG composition to PNG at build time so
+// every prerendered route lands a working preview wherever it's shared.
 export const GET: APIRoute = ({ params }) => {
 	const id = params.app;
 	const app = apps.find((a) => a.id === id);
 	if (!app) return new Response('not found', { status: 404 });
 
-	// Escape < > & in content that lands inside SVG text nodes.
 	const esc = (s: string) =>
 		s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -18,7 +22,7 @@ export const GET: APIRoute = ({ params }) => {
 	const label = esc(app.label);
 	const description = esc(app.ogDescription);
 
-	// Wrap the description onto multiple lines (rough word-based wrap at ~52 chars).
+	// Word-based wrap at ~52 chars; clip to 3 lines with an ellipsis.
 	const words = description.split(/\s+/);
 	const lines: string[] = [];
 	let line = '';
@@ -34,7 +38,11 @@ export const GET: APIRoute = ({ params }) => {
 	const clipped = lines.slice(0, 3);
 	if (lines.length > 3) clipped[2] = clipped[2].replace(/[.,;]?\s*$/, '…');
 
-	const body = `<?xml version="1.0" encoding="UTF-8"?>
+	// Press Start 2P is what the site itself ships, but resvg can't consume
+	// our self-hosted WOFF2 — set `defaultFontFamily: 'monospace'` so the
+	// rasterized text stays deterministic across local + GitHub Actions
+	// builds regardless of which system fonts are installed.
+	const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" shape-rendering="geometricPrecision">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -48,19 +56,17 @@ export const GET: APIRoute = ({ params }) => {
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect width="1200" height="630" fill="url(#tile)"/>
 
-  <!-- sparkles -->
   <g fill="rgba(255,255,255,0.7)" font-family="monospace" font-size="36">
     <text x="80" y="120" transform="rotate(-8 80 120)">✦ ✧ ⋆</text>
     <text x="900" y="560" transform="rotate(7 900 560)">⋆ ✧ ✦</text>
   </g>
 
-  <!-- window chrome -->
   <g transform="translate(90 150)">
     <rect width="1020" height="340" rx="14" fill="#fff9f3" stroke="#321a44" stroke-width="4"/>
     <rect width="1020" height="48" rx="14" fill="#e62b8c"/>
     <rect y="34" width="1020" height="14" fill="#e62b8c"/>
     <rect x="0" y="46" width="1020" height="4" fill="#321a44"/>
-    <g font-family="'Press Start 2P', monospace" font-size="14" fill="#fff9f3" letter-spacing="1">
+    <g font-family="monospace" font-size="14" fill="#fff9f3" letter-spacing="1">
       <text x="24" y="32">${title}</text>
     </g>
     <g transform="translate(940 10)">
@@ -70,7 +76,7 @@ export const GET: APIRoute = ({ params }) => {
     </g>
 
     <g transform="translate(40 110)" fill="#1a0e23">
-      <text font-family="'Press Start 2P', monospace" font-size="44" fill="#b6196d" letter-spacing="2">
+      <text font-family="monospace" font-size="44" fill="#b6196d" letter-spacing="2">
         ${label}
       </text>
       <g font-family="monospace" font-size="26" fill="#4a3257">
@@ -81,17 +87,26 @@ export const GET: APIRoute = ({ params }) => {
     </g>
   </g>
 
-  <!-- footer -->
-  <g font-family="'Press Start 2P', monospace" font-size="16" fill="#fff9f3" letter-spacing="2">
+  <g font-family="monospace" font-size="16" fill="#fff9f3" letter-spacing="2">
     <text x="90" y="580">mills · millsymills.com</text>
   </g>
 </svg>
 `;
 
-	return new Response(body, {
+	const png = new Resvg(svg, {
+		fitTo: { mode: 'width', value: 1200 },
+		font: {
+			loadSystemFonts: true,
+			defaultFontFamily: 'monospace',
+		},
+	})
+		.render()
+		.asPng();
+
+	return new Response(new Uint8Array(png), {
 		status: 200,
 		headers: {
-			'Content-Type': 'image/svg+xml; charset=utf-8',
+			'Content-Type': 'image/png',
 			'Cache-Control': 'public, max-age=31536000, immutable',
 		},
 	});
