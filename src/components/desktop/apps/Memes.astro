@@ -138,10 +138,7 @@ function hasTape(index: number): boolean {
 
 <h3 class="memes__header">memes, a zine</h3>
 
-<p class="memes__intro">
-	a small but earnest collection. drop more into <code>public/images/memes/</code> and add
-	entries in <code>src/data/memes.ts</code>.
-</p>
+<p class="memes__intro">a small but earnest collection.</p>
 
 <ul class="memes__grid">
 	{
@@ -152,7 +149,7 @@ function hasTape(index: number): boolean {
 					<div class="memes__img-frame">
 						<img class="memes__img" src={m.src} alt={m.alt} loading="lazy" decoding="async" />
 						<div class="memes__placeholder" hidden>
-							{m.id}.jpg pending — drop into <br />public/images/memes/
+							{m.id}.jpg — image missing
 						</div>
 					</div>
 					<div class="memes__cap">{m.caption ?? m.id}</div>
