@@ -55,6 +55,10 @@ section "node: assert fonts present + no Google Fonts leakage"
 ./scripts/assert-fonts-csp.sh
 ok "fonts ship + CSP font-src 'self' is honest"
 
+section "node: assert og:image per-app gate"
+node scripts/assert-og-image-per-app.mjs
+ok "og:image presence in dist/ tracks apps.ts hidden flag"
+
 section "node: assert llms.txt enumerates every app + well-known path"
 ./scripts/assert-llms-txt-completeness.sh
 ok "dist/llms.txt covers apps.ts + well-known paths + PGP fingerprint"

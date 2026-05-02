@@ -61,6 +61,9 @@ jobs:
           SITE_URL: https://millsymills.com
         run: npm run build
 
+      - name: Assert og:image per-app gate
+        run: node scripts/assert-og-image-per-app.mjs
+
   terraform:
     name: Terraform fmt + validate
     runs-on: ubuntu-24.04
