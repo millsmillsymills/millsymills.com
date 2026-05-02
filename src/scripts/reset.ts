@@ -64,6 +64,12 @@ let activeOpts: ResetOptions = {};
 let onKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 let onClickOutsideHandler: ((e: MouseEvent) => void) | null = null;
 let triggerEl: HTMLElement | null = null;
+// Snapshotted at openModal so a user who re-opens the start menu while
+// the modal is up doesn't unhide the trigger out from under us — focus
+// would otherwise land back inside the now-open menu they navigated
+// away from. Pairs with the same closest('[hidden]') check at close
+// time so we still detect a trigger whose ancestor became hidden.
+let triggerWasFocusable = false;
 
 function onYesClick(): void {
 	const opts = activeOpts;
@@ -80,6 +86,8 @@ function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElemen
 	activeOverlay = overlay;
 	activeOpts = opts;
 	triggerEl = trigger;
+	triggerWasFocusable =
+		trigger !== null && document.contains(trigger) && trigger.closest('[hidden]') === null;
 	overlay.hidden = false;
 
 	const yes = overlay.querySelector<HTMLButtonElement>('[data-reset-yes]');
@@ -128,15 +136,16 @@ function closeModal(): void {
 	activeOpts = {};
 	if (triggerEl) {
 		// `document.contains` is true even when the trigger sits inside a
-		// `[hidden]` ancestor (e.g. the desktop right-click menu's <ul>,
-		// which is re-hidden as soon as the modal opens). `.focus()` on
-		// such a node silently no-ops and focus collapses to <body>, so
-		// keyboard / screen-reader users lose their place. Treat any
-		// hidden-subtree trigger as gone and fall back to the start-menu
-		// button, which is always visible and focusable.
-		const stillVisible =
-			document.contains(triggerEl) && triggerEl.closest('[hidden]') === null;
-		if (stillVisible) {
+		// `[hidden]` ancestor (the right-click menu's <ul>, the start
+		// menu's <div>) — `.focus()` then silently no-ops and focus
+		// collapses to <body>. Catches the `hidden` HTML attribute only,
+		// not CSS-based hiding (`display:none`, `visibility:hidden`,
+		// `inert`); those don't trigger the regression today.
+		const triggerFocusable =
+			triggerWasFocusable
+			&& document.contains(triggerEl)
+			&& triggerEl.closest('[hidden]') === null;
+		if (triggerFocusable) {
 			triggerEl.focus();
 		} else {
 			const fallback = document.querySelector<HTMLElement>('.taskbar__start');
@@ -148,6 +157,7 @@ function closeModal(): void {
 		}
 	}
 	triggerEl = null;
+	triggerWasFocusable = false;
 }
 
 export function resetAll(opts: ResetOptions = {}): void {
