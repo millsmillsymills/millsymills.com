@@ -120,7 +120,7 @@ export const securityControls: readonly SecurityControl[] = [
 		title: 'SRI lint on cross-origin assets',
 		category: 'web',
 		status: 'shipped',
-		what: 'CI lint refuses to ship `dist/` if any `<script src>` or stylesheet/preload `<link href>` points at a non-allowlisted host without `integrity` + `crossorigin`.',
+		what: 'CI lint refuses to ship `dist/` if any `<script src>`, stylesheet/preload `<link href>`, importmap entry, or CSS `@import` points at a non-allowlisted host without `integrity` + `crossorigin` (or, for importmap and `@import` which have no SRI surface, at all).',
 		why: 'Site is fully self-hosted today — no third-party JS/CSS. The lint is forward-pressure: a future dependency that adds a CDN reference trips the build instead of silently undermining the "no third-party JS or CSS" posture.',
 		tradeoffs: 'Same-origin assets are exempt — Astro\'s hashed bundles are already integrity-protected by URL versioning + the OAC pipeline. Astro 6 does not emit SRI hashes natively; if a cross-origin asset ever lands here, the integrity attribute has to be added by hand or by a postbuild pass.',
 		code: ['scripts/assert-sri-on-cross-origin-assets.mjs'],
