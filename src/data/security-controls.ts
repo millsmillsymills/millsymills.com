@@ -115,6 +115,16 @@ export const securityControls: readonly SecurityControl[] = [
 			href: 'https://securityheaders.com/?q=millsymills.com&followRedirects=on',
 		},
 	},
+	{
+		id: 'sri-gate',
+		title: 'SRI lint on cross-origin assets',
+		category: 'web',
+		status: 'shipped',
+		what: 'CI lint refuses to ship `dist/` if any `<script src>`, stylesheet/preload `<link href>`, importmap entry, or CSS `@import` points at a non-allowlisted host without `integrity` + `crossorigin` (or, for importmap and `@import` which have no SRI surface, at all).',
+		why: 'Site is fully self-hosted today — no third-party JS/CSS. The lint is forward-pressure: a future dependency that adds a CDN reference trips the build instead of silently undermining the "no third-party JS or CSS" posture.',
+		tradeoffs: 'Same-origin assets are exempt — Astro\'s hashed bundles are already integrity-protected by URL versioning + the OAC pipeline. Astro 6 does not emit SRI hashes natively; if a cross-origin asset ever lands here, the integrity attribute has to be added by hand or by a postbuild pass.',
+		code: ['scripts/assert-sri-on-cross-origin-assets.mjs'],
+	},
 
 	// ─── dns + domain ──────────────────────────────────────────────────
 	{
@@ -214,6 +224,16 @@ export const securityControls: readonly SecurityControl[] = [
 		tradeoffs: 'Action is pinned to `@v0`, not a SHA — consistent with the rest of the workflow but worth a future supply-chain hardening sweep.',
 		code: ['.github/workflows/deploy.yml'],
 		prs: [199],
+	},
+	{
+		id: 's3-tls-only',
+		title: 'S3 origin + log buckets refuse non-TLS access',
+		category: 'supply-chain',
+		status: 'shipped',
+		what: 'Both `aws_s3_bucket_policy.site` and `aws_s3_bucket_policy.logs` carry an explicit `Deny` on `aws:SecureTransport = false`, alongside the existing CloudFront-OAC and log-delivery allows.',
+		why: 'CloudFront OAC, S3 server access logging, and CloudFront log delivery already use TLS, so the realistic failure mode this guards against is a future IAM principal — compromised or overbroad — reaching the buckets over plain HTTP. Industry-baseline finding flagged by most AWS scanners.',
+		tradeoffs: 'Same posture applies to the rehearsal stack — both `tf.sh millsymills` and `tf.sh p41m0n` plans must show the bucket-policy update before merging changes here.',
+		code: ['infra/s3.tf'],
 	},
 
 	// ─── monitoring ────────────────────────────────────────────────────
