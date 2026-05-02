@@ -124,6 +124,20 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
   }
 }
 
+# Versioning protects access logs from deletion or overwrite by a
+# compromised IAM principal — the realistic forensic-tampering risk
+# for this bucket. Object Lock would be stronger but requires bucket
+# replacement (only settable at creation time), which would force a
+# disruptive re-create on the existing millsymills stack. Versioning
+# is the low-risk first step per #282; revisit Object Lock if/when
+# the bucket is replaced for another reason.
+resource "aws_s3_bucket_versioning" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   bucket = aws_s3_bucket.logs.id
 
@@ -135,6 +149,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
 
     expiration {
       days = 90
+    }
+
+    # Match the current-version retention so a deleted log can still
+    # be recovered for the same 90-day window, then is reaped.
+    noncurrent_version_expiration {
+      noncurrent_days = 90
     }
 
     abort_incomplete_multipart_upload {
