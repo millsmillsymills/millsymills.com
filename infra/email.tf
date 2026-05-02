@@ -60,8 +60,20 @@ resource "aws_route53_record" "apex_txt" {
 # DKIM: three CNAMEs for key rotation. Proton hands you the specific
 # targets (e.g. protonmail.domainkey.XYZ.domains.proton.ch.) after
 # domain verification succeeds. Leave the map empty to skip.
+#
+# Gated on proton_enabled so an apply without the verification token
+# (e.g., env var missing in a fresh shell) tears DKIM down alongside
+# the MX/SPF flip instead of leaving orphaned DKIM CNAMEs while MX
+# falls back to null — split-state would misrepresent the domain's
+# mail posture.
+#
+# `nonsensitive()` because for_each forbids sensitive values, and
+# whether the token is empty (the boolean derived from it) is already
+# observable in the public DNS surface — MX, SPF, DKIM records all
+# flip with it. The token's *value* is what's sensitive, not the
+# fact that one exists.
 resource "aws_route53_record" "dkim" {
-  for_each = var.protonmail_dkim_selectors
+  for_each = nonsensitive(local.proton_enabled) ? var.protonmail_dkim_selectors : {}
 
   zone_id = data.aws_route53_zone.site.zone_id
   name    = "${each.key}._domainkey.${var.domain}"
