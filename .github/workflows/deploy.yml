@@ -87,6 +87,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Inline test run because automatic CI is disabled (see ci.yml header).
+      # Without this, a manual workflow_dispatch could ship code with failing
+      # vitest assertions. Drop when the CI workflow_run gate is re-enabled.
+      - name: Test (vitest)
+        run: npm test
+
       # Inline typecheck because automatic CI is disabled (see ci.yml header).
       # Without this, a manual workflow_dispatch could ship code that fails
       # `astro check`. Drop this step when the CI workflow_run gate is
