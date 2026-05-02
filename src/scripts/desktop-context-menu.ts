@@ -66,9 +66,7 @@ function init(): void {
 	// Idempotency guard. If init() runs twice (HMR, dual bundle, multiple
 	// inline <script> tags) without this, every document/window listener
 	// below would stack with fresh function refs that addEventListener can't
-	// dedupe. Module-local rather than window.mills.* because DesktopLayout's
-	// inline <script> reassigns window.mills wholesale at parse time and
-	// would clobber a shared flag.
+	// dedupe.
 	if (initialized) return;
 
 	menu = document.querySelector<HTMLElement>('.ctx-menu');
