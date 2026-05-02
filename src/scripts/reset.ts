@@ -211,6 +211,8 @@ function init(): void {
 		openModal(overlay, {}, trigger);
 	});
 
+	// `reset` is advertised in src/scripts/flags.ts:consoleBanner — rename
+	// in lockstep, no compile-time link.
 	Object.assign((w.mills ??= {}), { reset: resetAll, __resetInit: true });
 }
 
