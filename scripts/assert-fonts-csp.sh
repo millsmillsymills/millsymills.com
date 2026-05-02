@@ -48,13 +48,46 @@ fi
 printf 'fonts referenced in src/: %d\n' "${#REFERENCED[@]}"
 for f in "${REFERENCED[@]}"; do printf '  /fonts/%s\n' "$f"; done
 
-# 1. Source files exist + are non-empty.
+# 1. Source files exist + are non-empty + carry the right magic bytes
+#    for their extension. A 0-byte file is caught by `-s`; an HTML
+#    error page (e.g. a 4xx body that snuck past curl during an ad-hoc
+#    `curl -L`) is caught by the magic-byte sniff. Belt-and-suspenders
+#    against the failure mode where someone re-fetches a font and
+#    silently commits an `<html>...` error response under the woff2
+#    extension.
 miss=0
 for f in "${REFERENCED[@]}"; do
-	if [ ! -s "$PUBLIC_FONTS/$f" ]; then
-		lint::fail "missing source font: $PUBLIC_FONTS/$f"
+	path="$PUBLIC_FONTS/$f"
+	if [ ! -s "$path" ]; then
+		lint::fail "missing source font: $path"
 		miss=1
+		continue
 	fi
+	# `xxd -p -l 4` prints the first 4 bytes as 8 lowercase hex chars.
+	magic_hex=$(xxd -p -l 4 "$path")
+	case "$f" in
+		*.woff2)
+			# WOFF2 magic = ASCII 'wOF2' = 0x77 0x4F 0x46 0x32 (RFC 8081 §3)
+			if [ "$magic_hex" != "774f4632" ]; then
+				lint::fail "$path is not a WOFF2 file (magic: $magic_hex; expected 774f4632 / 'wOF2')"
+				miss=1
+			fi
+			;;
+		*.woff)
+			# WOFF magic = ASCII 'wOFF' = 0x77 0x4F 0x46 0x46 (RFC 8081)
+			if [ "$magic_hex" != "774f4646" ]; then
+				lint::fail "$path is not a WOFF file (magic: $magic_hex; expected 774f4646 / 'wOFF')"
+				miss=1
+			fi
+			;;
+		*.ttf)
+			# TrueType signature = 0x00 0x01 0x00 0x00 (Apple TTF spec)
+			if [ "$magic_hex" != "00010000" ]; then
+				lint::fail "$path is not a TTF file (magic: $magic_hex; expected 00010000)"
+				miss=1
+			fi
+			;;
+	esac
 done
 [ "$miss" -eq 0 ] || exit 1
 
