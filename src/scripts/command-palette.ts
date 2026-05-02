@@ -222,7 +222,6 @@ class CommandPalette {
 	}
 }
 
-
 function init(): void {
 	const root = document.querySelector<HTMLElement>('.cmdp');
 	if (!root) return;
