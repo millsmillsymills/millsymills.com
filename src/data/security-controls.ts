@@ -225,6 +225,16 @@ export const securityControls: readonly SecurityControl[] = [
 		code: ['.github/workflows/deploy.yml'],
 		prs: [199],
 	},
+	{
+		id: 's3-tls-only',
+		title: 'S3 origin + log buckets refuse non-TLS access',
+		category: 'supply-chain',
+		status: 'shipped',
+		what: 'Both `aws_s3_bucket_policy.site` and `aws_s3_bucket_policy.logs` carry an explicit `Deny` on `aws:SecureTransport = false`, alongside the existing CloudFront-OAC and log-delivery allows.',
+		why: 'CloudFront OAC, S3 server access logging, and CloudFront log delivery already use TLS, so the realistic failure mode this guards against is a future IAM principal — compromised or overbroad — reaching the buckets over plain HTTP. Industry-baseline finding flagged by most AWS scanners.',
+		tradeoffs: 'Same posture applies to the rehearsal stack — both `tf.sh millsymills` and `tf.sh p41m0n` plans must show the bucket-policy update before merging changes here.',
+		code: ['infra/s3.tf'],
+	},
 
 	// ─── monitoring ────────────────────────────────────────────────────
 	{
