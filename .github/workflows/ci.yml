@@ -58,6 +58,9 @@ jobs:
           SITE_URL: https://millsymills.com
         run: npm run build
 
+      - name: Assert SRI on every cross-origin asset
+        run: node scripts/assert-sri-on-cross-origin-assets.mjs
+
   terraform:
     name: Terraform fmt + validate
     runs-on: ubuntu-24.04
