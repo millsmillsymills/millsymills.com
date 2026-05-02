@@ -1,17 +1,25 @@
-/*
- * Ambient declaration for the `window.mills` namespace.
- *
- * Multiple init paths (DesktopLayout boot script, reset.ts, clippy.ts)
- * write into this object as a co-operative meeting place — each owns
- * its own keys (`flag`, `reset`, `__resetInit`, `__clippyInit`, etc.)
- * and uses `Object.assign(w.mills ??= {}, ...)` to merge without
- * clobbering siblings. Declaring the shape once here prevents three
- * `as unknown as { mills?: ... }` casts from drifting independently.
- */
+// Co-operative namespace: each writer owns its own keys and merges via
+// `Object.assign(window.mills ??= {}, ...)`. Encoding the known keys
+// makes typos compile errors at every read and write site. Adding a new
+// key requires extending this interface — small friction in exchange
+// for typo safety.
+import type { ChallengeId, FlagState, SubmitResult } from '../scripts/flags';
+import type { ResetOptions } from '../scripts/reset';
+
+interface MillsNamespace {
+	flag?: {
+		submit: (raw: string) => Promise<SubmitResult>;
+		status: () => FlagState;
+		capture: (id: ChallengeId) => boolean;
+	};
+	reset?: (opts?: ResetOptions) => void;
+	__resetInit?: true;
+	__clippyInit?: true;
+}
 
 declare global {
 	interface Window {
-		mills?: Record<string, unknown>;
+		mills?: MillsNamespace;
 	}
 }
 
