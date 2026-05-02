@@ -127,13 +127,24 @@ function closeModal(): void {
 	activeOverlay = null;
 	activeOpts = {};
 	if (triggerEl) {
-		if (document.contains(triggerEl)) {
+		// `document.contains` is true even when the trigger sits inside a
+		// `[hidden]` ancestor (e.g. the desktop right-click menu's <ul>,
+		// which is re-hidden as soon as the modal opens). `.focus()` on
+		// such a node silently no-ops and focus collapses to <body>, so
+		// keyboard / screen-reader users lose their place. Treat any
+		// hidden-subtree trigger as gone and fall back to the start-menu
+		// button, which is always visible and focusable.
+		const stillVisible =
+			document.contains(triggerEl) && triggerEl.closest('[hidden]') === null;
+		if (stillVisible) {
 			triggerEl.focus();
 		} else {
-			// Trigger was removed from the DOM while the modal was open
-			// (window closed, route change). Focus falls back to <body>;
-			// log so we notice during dev.
-			console.debug('[reset] trigger gone; focus restored to <body>');
+			const fallback = document.querySelector<HTMLElement>('.taskbar__start');
+			if (fallback) {
+				fallback.focus();
+			} else {
+				console.debug('[reset] trigger gone and no fallback; focus restored to <body>');
+			}
 		}
 	}
 	triggerEl = null;
