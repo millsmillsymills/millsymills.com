@@ -132,8 +132,7 @@ const jsonLd = {
 			// clippy.ts already register `__resetInit` / `__clippyInit`
 			// idempotency flags on the same namespace, and a wholesale
 			// reassignment here would clobber them depending on init order.
-			const w = window as unknown as { mills?: Record<string, unknown> };
-			Object.assign((w.mills ??= {}), {
+			Object.assign((window.mills ??= {}), {
 				flag: { submit: submitFlag, status: getCaptured, capture: captureById },
 			});
 		</script>

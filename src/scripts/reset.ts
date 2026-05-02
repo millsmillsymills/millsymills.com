@@ -189,10 +189,7 @@ function init(): void {
 	// inline <script> tags) without this, every trigger click would dispatch
 	// through two delegated handlers — openModal's `if (activeOverlay)` masks
 	// the symptom but the underlying double-bind is still wrong.
-	const w = window as unknown as {
-		mills?: Record<string, unknown> & { __resetInit?: true };
-	};
-	if (w.mills?.__resetInit) return;
+	if (window.mills?.__resetInit) return;
 
 	// Event delegation handles dynamically-mounted triggers (e.g. windows that
 	// hydrate after DOMContentLoaded) without requiring re-binding on every
@@ -211,7 +208,7 @@ function init(): void {
 		openModal(overlay, {}, trigger);
 	});
 
-	Object.assign((w.mills ??= {}), { reset: resetAll, __resetInit: true });
+	Object.assign((window.mills ??= {}), { reset: resetAll, __resetInit: true });
 }
 
 if (typeof window !== 'undefined') {

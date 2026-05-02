@@ -147,10 +147,7 @@ function dismiss(scope: 'session' | 'forever'): void {
 
 function init(): void {
 	// Idempotency guard — match the pattern from reset.ts (#67).
-	const w = window as unknown as {
-		mills?: Record<string, unknown> & { __clippyInit?: true };
-	};
-	if (w.mills?.__clippyInit) return;
+	if (window.mills?.__clippyInit) return;
 
 	// Render guards.
 	if (window.matchMedia('(hover: none)').matches) return;
@@ -256,7 +253,7 @@ function init(): void {
 		}
 	});
 
-	Object.assign((w.mills ??= {}), { __clippyInit: true });
+	Object.assign((window.mills ??= {}), { __clippyInit: true });
 }
 
 if (typeof window !== 'undefined') {
