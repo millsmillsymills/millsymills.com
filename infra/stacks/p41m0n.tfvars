@@ -7,12 +7,13 @@ deploy_branch = "main"
 deploy_workflow    = "deploy-rehearsal.yml"
 deploy_environment = "rehearsal" # matches `environment: name:` in deploy-rehearsal.yml
 
-# 2026-05-01 pre-flight unblock: CT-monitor SNS subscription was stuck
-# PendingConfirmation because security@p41m0n.com is undeliverable
-# (null MX). Routing to a confirmable mailbox so the subscription can
-# confirm and the TF baseline clears. Will be reconsidered once Proton
-# is fully active — see
-# docs/superpowers/specs/2026-05-01-p41m0n-proton-mail-migration-design.md.
+# Routes CT-monitor SNS alerts off-domain. The endpoint sits outside
+# the Proton catchall on purpose — if the mail-flow path is ever the
+# subject of the alert (DNS hijack, MX takeover, mis-issued cert
+# affecting Proton's MX hosts), an alert routed through that same
+# path could be silently swallowed. Originally needed because the
+# subscription was stuck PendingConfirmation against a null-MX endpoint
+# (2026-05-01 pre-flight); kept off-domain for the redundancy property.
 ct_monitor_alert_address = "andyandymillsmills@gmail.com"
 
 # ProtonMail activated 2026-05-01 per

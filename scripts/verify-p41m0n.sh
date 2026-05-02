@@ -185,14 +185,32 @@ if [[ "$DOMAIN" != "millsymills.com" ]]; then
 	ok "no millsymills URL leakage in served content"
 fi
 
-section "email (null-MX + strict DMARC)"
-mx="$(dig +short MX "$DOMAIN")"
-[[ "$mx" == "0 ." ]] || fail "expected null MX (\"0 .\"), got: ${mx}"
-ok "null MX published"
-
+section "email (auto-detect: null-MX or Proton)"
+# Branch on observed MX so the same script works pre-Proton (null-MX
+# floor) and post-Proton (catchall live). Either steady state is valid;
+# anything in between is a misconfiguration the script should catch.
+mx="$(dig +short MX "$DOMAIN" | sort)"
 spf="$(dig +short TXT "$DOMAIN" | grep 'v=spf1' || true)"
-echo "$spf" | grep -q -- '-all' || fail "SPF is not sender-free (-all): ${spf}"
-ok "SPF -all"
+
+if [[ "$mx" == "0 ." ]]; then
+	ok "null MX published"
+	echo "$spf" | grep -q -- '-all' || fail "SPF is not sender-free (-all): ${spf}"
+	echo "$spf" | grep -q 'protonmail' && fail "null-MX state but SPF includes Proton — split state: ${spf}"
+	ok "SPF -all (sender-free)"
+elif echo "$mx" | grep -qE '(^|[[:space:]])(10|20)[[:space:]]+(mail|mailsec)\.protonmail\.ch\.?$'; then
+	ok "Proton MX published (${mx//$'\n'/ | })"
+	echo "$spf" | grep -q 'include:_spf.protonmail.ch' || fail "Proton MX live but SPF missing Proton include: ${spf}"
+	echo "$spf" | grep -q -- '-all' || fail "SPF must end in -all: ${spf}"
+	ok "SPF includes Proton + -all"
+	for selector in protonmail protonmail2 protonmail3; do
+		dkim="$(dig +short CNAME "${selector}._domainkey.${DOMAIN}")"
+		[[ -n "$dkim" ]] || fail "DKIM CNAME ${selector}._domainkey.${DOMAIN} missing"
+		echo "$dkim" | grep -q '\.domains\.proton\.ch\.$' || fail "DKIM ${selector} target not Proton: ${dkim}"
+	done
+	ok "DKIM CNAMEs (3) point at Proton"
+else
+	fail "MX in unexpected state — neither null-MX nor Proton: ${mx}"
+fi
 
 dmarc="$(dig +short TXT "_dmarc.${DOMAIN}" | tr -d '"' | tr ';' '\n' || true)"
 echo "$dmarc" | grep -qE 'p=reject' || fail "DMARC is not p=reject"

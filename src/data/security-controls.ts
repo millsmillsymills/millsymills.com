@@ -162,6 +162,16 @@ export const securityControls: readonly SecurityControl[] = [
 		code: ['infra/email.tf'],
 	},
 	{
+		id: 'dkim',
+		title: 'DKIM (Proton, three rotating selectors)',
+		category: 'email',
+		status: 'shipped',
+		what: 'When Proton is active, three CNAMEs at `<selector>._domainkey.<domain>` (selectors `protonmail`, `protonmail2`, `protonmail3`) point at Proton-hosted DKIM keys. CNAMEs are gated on `proton_enabled` so an apply without the verification token tears them down alongside the MX/SPF flip — never orphaned.',
+		why: 'Aligned DKIM is half of the DMARC strict-reject contract: receivers verify the message signature against a key Proton publishes, and the `d=` domain alignment prevents replay against unrelated senders. Three selectors give Proton room to rotate keys without breaking signing.',
+		tradeoffs: 'CNAME targets carry the Proton tenant identifier in the public DNS — anyone correlating DKIM CNAMEs across domains can see they share a Proton account. Acceptable for a single-operator portfolio.',
+		code: ['infra/email.tf', 'infra/stacks/p41m0n.tfvars'],
+	},
+	{
 		id: 'dmarc',
 		title: 'DMARC at p=reject (strict)',
 		category: 'email',
