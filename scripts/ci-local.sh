@@ -43,6 +43,10 @@ section "node: assert COOP / COEP / CORP headers wired"
 ./scripts/assert-coop-coep-corp.sh
 ok "cross-origin isolation headers shipping with promised values"
 
+section "node: vitest"
+npm run test
+ok "npm run test"
+
 section "node: build"
 npm run build
 ok "npm run build"

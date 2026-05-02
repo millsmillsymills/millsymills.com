@@ -19,8 +19,12 @@ export interface Context {
 	fs: Record<string, Entry>;
 	/**
 	 * Ask user for a single line of input (optionally masked, eg. password).
-	 * Resolves to the entered string on Enter, or `null` on Ctrl-C so callers
-	 * can distinguish a deliberate cancel from an empty entry.
+	 * Resolves to the entered string on Enter, or `null` on Ctrl-C OR if the
+	 * command throws mid-prompt (the REPL tears down the prompt state and
+	 * resolves the awaiter with null so the handler's own `await` returns
+	 * cleanly). Callers MUST guard `if (result === null) return;` before
+	 * using the value — coercing null into a string would silently produce
+	 * a wrong digest check or other undefined behavior.
 	 */
 	prompt: (label: string, mask?: boolean) => Promise<string | null>;
 	/** clear the scrollback */
