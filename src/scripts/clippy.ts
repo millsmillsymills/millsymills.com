@@ -3,17 +3,8 @@
 // for the full design.
 
 import { isAppId, type AppId } from '../data/apps';
-import { pickQuip } from '../data/clippy-quips';
+import { pickQuip, type QuipPose as Pose } from '../data/clippy-quips';
 import { captureById } from './flags';
-
-type Pose =
-	| 'idle'
-	| 'wakeup'
-	| 'leave'
-	| 'think'
-	| 'sleep'
-	| 'cool'
-	| 'tired';
 
 const POSE_DURATIONS_MS: Record<Pose, number> = {
 	idle: 2400,
@@ -31,6 +22,7 @@ const IDLE_SLEEP_MS = 300_000;
 const QUIP_VISIBLE_MS = 4000;
 const CLICK_STREAK_WINDOW_MS = 10_000;
 const CLICK_STREAK_THRESHOLD = 7;
+const ERROR_QUIET_MS = 8000;
 const STORAGE_KEY = 'mills.clippy.dismissed';
 
 let aside: HTMLElement | null = null;
@@ -105,7 +97,8 @@ function resetIdleTimers(): void {
 	}
 	idleThinkTimer = window.setTimeout(() => {
 		setPose('think');
-		speak(pickQuip(getCurrentAppId(), 'idle'));
+		const entry = pickQuip(getCurrentAppId(), 'idle');
+		if (entry) speak(entry.quip);
 	}, IDLE_THINK_MS);
 	idleTiredTimer = window.setTimeout(() => setPose('tired'), IDLE_TIRED_MS);
 	idleSleepTimer = window.setTimeout(() => setPose('sleep'), IDLE_SLEEP_MS);
@@ -177,9 +170,39 @@ function init(): void {
 		aside.hidden = false;
 		setPose('wakeup');
 		window.setTimeout(() => {
-			speak(pickQuip(undefined, 'wakeup'));
+			const entry = pickQuip(undefined, 'wakeup');
+			if (!entry) return;
+			if (entry.pose) setPose(entry.pose);
+			speak(entry.quip);
 		}, POSE_DURATIONS_MS.wakeup);
 		resetIdleTimers();
+	});
+
+	// Generic trigger event — producers (window-manager, display-picker,
+	// reset, future easter eggs) fire `mills:clippy-trigger` so this
+	// controller doesn't import every module that wants Clippy to react.
+	window.addEventListener('mills:clippy-trigger', (e) => {
+		const { trigger, appId } = e.detail;
+		resetIdleTimers();
+		const entry = pickQuip(appId ?? getCurrentAppId(), trigger);
+		if (!entry) return;
+		if (entry.pose) setPose(entry.pose);
+		speak(entry.quip);
+	});
+
+	// Uncaught script errors → tired pose + commiseration. Plain `error`
+	// listener so we catch both runtime errors and resource-load failures.
+	// Throttled — a broken image plus a dead script can fire dozens of
+	// errors in a tight burst; one quip per ERROR_QUIET_MS is plenty.
+	let lastErrorAt = 0;
+	window.addEventListener('error', () => {
+		const now = Date.now();
+		if (now - lastErrorAt < ERROR_QUIET_MS) return;
+		lastErrorAt = now;
+		const entry = pickQuip(getCurrentAppId(), 'error');
+		if (!entry) return;
+		if (entry.pose) setPose(entry.pose);
+		speak(entry.quip);
 	});
 
 	// Activity resets the idle ladder.
@@ -192,7 +215,8 @@ function init(): void {
 	window.addEventListener('mills:flag-captured', () => {
 		resetIdleTimers();
 		setPose('cool');
-		speak(pickQuip(getCurrentAppId(), 'flag'));
+		const entry = pickQuip(getCurrentAppId(), 'flag');
+		if (entry) speak(entry.quip);
 	});
 
 	// Sprite click — track for the clippy CTF flag, suppress popover during a
