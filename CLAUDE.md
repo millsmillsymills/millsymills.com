@@ -161,3 +161,17 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
 
 - PRs merge via **squash** (`gh pr merge <N> --squash`). Commit messages on `main` follow `<type>(<scope>): <summary> (#<pr>)` as a single squashed line.
 - Before filing a PR from a long-lived feature branch: `git merge origin/main` into the branch first so any upstream changes that landed against your work get reviewed + fixed in the same PR, not as a follow-up.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub at `millsmillsymills/millsymills.com`; use the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical triage labels — `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` — created lazily on first use. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root, created lazily by `/grill-with-docs`. See `docs/agents/domain.md`.

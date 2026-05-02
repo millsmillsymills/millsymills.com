@@ -48,3 +48,9 @@ infra/*.tfvars
 
 # Compound Engineering local config — machine-local, never committed
 .compound-engineering/*.local.yaml
+
+# CE review run artifacts (per-run agent output) — local-only, never committed
+.context/
+
+# Playwright MCP capture (console logs + page snapshots from interactive runs)
+.playwright-mcp/
