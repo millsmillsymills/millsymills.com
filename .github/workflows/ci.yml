@@ -17,7 +17,7 @@ permissions:
 jobs:
   astro:
     name: Astro build + typecheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
@@ -48,7 +48,7 @@ jobs:
 
   terraform:
     name: Terraform fmt + validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: infra

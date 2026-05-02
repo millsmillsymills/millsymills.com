@@ -3,7 +3,9 @@ import { Resvg } from '@resvg/resvg-js';
 import { apps } from '../../data/apps';
 
 export function getStaticPaths() {
-	return apps.map((a) => ({ params: { app: a.id } }));
+	// Match sitemap.xml.ts + llms.txt.ts: hidden apps are off-discovery, so
+	// no shared OG image needed for them either.
+	return apps.filter((a) => !a.hidden).map((a) => ({ params: { app: a.id } }));
 }
 
 // SVG og:image is silently rejected by Twitter/X, Facebook, LinkedIn,
@@ -18,12 +20,11 @@ export const GET: APIRoute = ({ params }) => {
 	const esc = (s: string) =>
 		s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-	const title = esc(app.title);
-	const label = esc(app.label);
-	const description = esc(app.ogDescription);
-
-	// Word-based wrap at ~52 chars; clip to 3 lines with an ellipsis.
-	const words = description.split(/\s+/);
+	// Wrap on the raw display string — escape per-line at interpolation
+	// time. Pre-escaping would inflate `&` into `&amp;` (5 chars vs 1) and
+	// skew the 52-char wrap math, breaking lines earlier than the rendered
+	// width warrants.
+	const words = app.ogDescription.split(/\s+/);
 	const lines: string[] = [];
 	let line = '';
 	for (const w of words) {
@@ -38,10 +39,16 @@ export const GET: APIRoute = ({ params }) => {
 	const clipped = lines.slice(0, 3);
 	if (lines.length > 3) clipped[2] = clipped[2].replace(/[.,;]?\s*$/, '…');
 
-	// Press Start 2P is what the site itself ships, but resvg can't consume
-	// our self-hosted WOFF2 — set `defaultFontFamily: 'monospace'` so the
-	// rasterized text stays deterministic across local + GitHub Actions
-	// builds regardless of which system fonts are installed.
+	const title = esc(app.title);
+	const label = esc(app.label);
+
+	// Press Start 2P is what the site itself ships, but resvg consumes
+	// only TTF/OTF — our WOFF2 is unloadable. Re-introducing the named
+	// font here would either fall through to whatever monospace fontconfig
+	// resolves on the build host (non-deterministic across macOS dev +
+	// ubuntu CI) or, with `loadSystemFonts: false`, render no text at
+	// all. To use Press Start 2P on the OG card, ship a TTF subset under
+	// `public/fonts/` and load it via resvg's `font.fontFiles` option.
 	const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" shape-rendering="geometricPrecision">
   <defs>
@@ -81,7 +88,7 @@ export const GET: APIRoute = ({ params }) => {
       </text>
       <g font-family="monospace" font-size="26" fill="#4a3257">
         ${clipped
-					.map((l, i) => `<text x="0" y="${90 + i * 36}">${l}</text>`)
+					.map((l, i) => `<text x="0" y="${90 + i * 36}">${esc(l)}</text>`)
 					.join('\n        ')}
       </g>
     </g>
