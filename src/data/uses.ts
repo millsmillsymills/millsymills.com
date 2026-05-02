@@ -37,6 +37,64 @@ export const chimera = {
 
 export const gear: readonly GearGroup[] = [
 	{
+		title: 'this site',
+		items: [
+			{
+				name: 'Astro 6',
+				detail: 'static output, islands when needed',
+				url: 'https://astro.build',
+				why: 'best DX for static-first sites with sprinkles of vanilla-TS islands.',
+			},
+			{
+				name: 'TypeScript + vanilla TS modules',
+				detail: 'no React/Vue runtime',
+				why: 'window manager, terminal, flags, mobile shell are all hand-rolled — wanted control + zero framework bloat.',
+			},
+			{
+				name: 'AWS S3 + CloudFront (OAC)',
+				detail: 'private bucket, REST endpoint, OAC signing',
+				why: 'simple, durable, cheap, plays nicely with Terraform + OIDC.',
+			},
+			{
+				name: 'CloudFront Function (cf-js-2.0)',
+				detail: 'directory URI rewriter',
+				why: 'OAC + REST endpoint does not auto-resolve /path/ → /path/index.html, so a tiny viewer-request function does it.',
+			},
+			{
+				name: 'Route53 + ACM',
+				detail: 'IPv4 + IPv6 alias records, us-east-1 cert for CloudFront',
+				why: 'DNS + certs in the same provider as everything else.',
+			},
+			{
+				name: 'Terraform 1.10+',
+				detail: 'state in S3 with use_lockfile (no DynamoDB)',
+				url: 'https://www.terraform.io/',
+				why: 'single tool for all infra. S3-native locking removed the last vestigial DDB table.',
+			},
+			{
+				name: 'GitHub Actions OIDC',
+				detail: 'no long-lived AWS credentials in the repo',
+				why: 'short-lived role assumption, scoped to refs/heads/main.',
+			},
+			{
+				name: 'ProtonMail custom domain',
+				detail: 'SPF + 3-selector DKIM + DMARC p=reject (strict alignment)',
+				why: 'mail provider that earns the privacy-engineer cred. paranoid DMARC from day one.',
+			},
+			{
+				name: 'CTF flag system',
+				detail: 'SHA-256 client-side verification, localStorage',
+				why: 'Juice-Shop-style. canonical strings stay out of the bundle for most challenges.',
+			},
+			{
+				name: 'MIT license',
+				detail: 'fork it, ship your own',
+				url: 'https://github.com/millsmillsymills/millsymills.com/blob/main/LICENSE',
+				why: 'the whole point of releasing it.',
+			},
+		],
+	},
+	{
 		title: 'battlestation',
 		items: [
 			{
