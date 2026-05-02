@@ -13,12 +13,13 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^6.1.9"
+    "astro": "6.1.9"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.8",
-    "@types/node": "^22.19.17",
-    "shiki": "^4.0.2",
-    "typescript": "^5.9.3"
+    "@astrojs/check": "0.9.8",
+    "@resvg/resvg-js": "2.6.2",
+    "@types/node": "22.19.17",
+    "shiki": "4.0.2",
+    "typescript": "5.9.3"
   }
 }
