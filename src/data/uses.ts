@@ -74,7 +74,7 @@ export const gear: readonly GearGroup[] = [
 			{
 				name: 'GitHub Actions OIDC',
 				detail: 'no long-lived AWS credentials in the repo',
-				why: 'short-lived role assumption, scoped to refs/heads/main.',
+				why: 'short-lived role assumption — IAM trust policy pins the sub claim to the production environment AND the workflow_ref to main. tampered workflow file from another branch can\'t mint the deploy token.',
 			},
 			{
 				name: 'ProtonMail custom domain',
@@ -83,8 +83,8 @@ export const gear: readonly GearGroup[] = [
 			},
 			{
 				name: 'CTF flag system',
-				detail: 'SHA-256 client-side verification, localStorage',
-				why: 'Juice-Shop-style. canonical strings stay out of the bundle for most challenges.',
+				detail: 'SHA-256 digest table + side-channel listeners, localStorage',
+				why: 'Juice-Shop-style. submitted flags hit the digest table; konami / clippy / etc. capture by id from event listeners. canonical strings stay out of the bundle for most challenges.',
 			},
 			{
 				name: 'MIT license',
