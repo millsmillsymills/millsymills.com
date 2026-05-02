@@ -64,6 +64,12 @@ let activeOpts: ResetOptions = {};
 let onKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 let onClickOutsideHandler: ((e: MouseEvent) => void) | null = null;
 let triggerEl: HTMLElement | null = null;
+// Snapshotted at openModal so a user who re-opens the start menu while
+// the modal is up doesn't unhide the trigger out from under us — focus
+// would otherwise land back inside the now-open menu they navigated
+// away from. Pairs with the same closest('[hidden]') check at close
+// time so we still detect a trigger whose ancestor became hidden.
+let triggerWasFocusable = false;
 
 function onYesClick(): void {
 	const opts = activeOpts;
@@ -80,6 +86,8 @@ function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElemen
 	activeOverlay = overlay;
 	activeOpts = opts;
 	triggerEl = trigger;
+	triggerWasFocusable =
+		trigger !== null && document.contains(trigger) && trigger.closest('[hidden]') === null;
 	overlay.hidden = false;
 
 	const yes = overlay.querySelector<HTMLButtonElement>('[data-reset-yes]');
@@ -127,16 +135,37 @@ function closeModal(): void {
 	activeOverlay = null;
 	activeOpts = {};
 	if (triggerEl) {
-		if (document.contains(triggerEl)) {
+		// `document.contains` is true even when the trigger sits inside a
+		// `[hidden]` ancestor (the right-click menu's <ul>, the start
+		// menu's <div>) — `.focus()` then silently no-ops and focus
+		// collapses to <body>. Catches the `hidden` HTML attribute only,
+		// not CSS-based hiding (`display:none`, `visibility:hidden`,
+		// `inert`); those don't trigger the regression today.
+		const triggerFocusable =
+			triggerWasFocusable
+			&& document.contains(triggerEl)
+			&& triggerEl.closest('[hidden]') === null;
+		if (triggerFocusable) {
 			triggerEl.focus();
 		} else {
-			// Trigger was removed from the DOM while the modal was open
-			// (window closed, route change). Focus falls back to <body>;
-			// log so we notice during dev.
-			console.debug('[reset] trigger gone; focus restored to <body>');
+			// `[data-focus-fallback]` is the cross-component contract for
+			// "focus this when nothing better is available" — the BEM class
+			// `.taskbar__start` stays internal to the Taskbar stylesheet.
+			const fallback = document.querySelector<HTMLElement>('[data-focus-fallback]');
+			if (fallback) {
+				fallback.focus();
+				if (document.activeElement !== fallback) {
+					console.debug(
+						'[reset] fallback .focus() did not land; focus collapsed to <body>',
+					);
+				}
+			} else {
+				console.debug('[reset] trigger gone and no fallback; focus restored to <body>');
+			}
 		}
 	}
 	triggerEl = null;
+	triggerWasFocusable = false;
 }
 
 export function resetAll(opts: ResetOptions = {}): void {
