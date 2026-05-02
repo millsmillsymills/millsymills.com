@@ -15,7 +15,11 @@ import type { Challenge } from '../flags';
  * fire on `window` or `document` per their existing convention.
  */
 export interface MillsEventMap {
-	'mills:boot-done': CustomEvent<void>;
+	// `CustomEvent<undefined>` rather than `CustomEvent<void>` — `void`
+	// isn't a real value type, so `evt.detail` would land as `undefined`
+	// regardless. The `undefined` spelling is the more idiomatic match
+	// for what listeners actually observe.
+	'mills:boot-done': CustomEvent<undefined>;
 	'mills:flag-captured': CustomEvent<Challenge>;
 	'mills:flags-unlocked': CustomEvent<Challenge>;
 	'mills:now-playing': CustomEvent<NowPlaying>;
