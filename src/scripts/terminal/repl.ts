@@ -96,20 +96,23 @@ export function bootTerminal({ root, onExit }: Options): void {
 		try {
 			await cmd.handler(localCtx);
 		} catch (err) {
-			// If the command threw mid-prompt (e.g. async error during a
-			// password challenge), tear down the prompt-state machine so the
-			// next command isn't typing into a stale password mask. Resolve
-			// the pending awaiter with null so the command's own await
-			// returns a sentinel rather than hanging forever.
-			if (pendingResolve) {
-				const r = pendingResolve;
-				pendingResolve = null;
-				pendingMask = false;
-				if (input) input.type = 'text';
-				refreshPrompt();
-				r(null);
+			// Cleanup must not swallow the error message — a throw inside
+			// refreshPrompt would otherwise unwind the stack before writeLine
+			// fires, leaving the user with a broken REPL and no diagnostic.
+			try {
+				if (pendingResolve) {
+					const r = pendingResolve;
+					pendingResolve = null;
+					pendingMask = false;
+					if (input) input.type = 'text';
+					refreshPrompt();
+					r(null);
+				}
+			} catch (cleanupErr) {
+				console.error('[mills.terminal] prompt-state cleanup failed', cleanupErr);
 			}
-			writeLine(`error: ${(err as Error).message}`, 't-err');
+			const message = err instanceof Error ? err.message : String(err);
+			writeLine(`error: ${message}`, 't-err');
 		}
 	}
 
