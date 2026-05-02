@@ -241,7 +241,7 @@ a {
 		   fallback is the default wallpaper so first-paint stays correct
 		   even if JS is delayed or disabled — the picker just becomes
 		   non-interactive in that fallback path. */
-		background-image: var(--desktop-bg, url('/images/desktop-background.jpg'));
+		background-image: var(--desktop-bg, url('/images/wallpapers/wallhaven-d6zqvg.jpg'));
 		background-size: cover;
 		background-position: center;
 	}

@@ -18,10 +18,10 @@ export interface Wallpaper {
 
 export const wallpapers: readonly Wallpaper[] = [
 	{
-		id: 'default',
-		label: 'mills classic',
-		src: '/images/desktop-background.jpg',
-		thumbnail: '/images/wallpapers/thumb/default.jpg',
+		id: 'error-cloud',
+		label: 'error cloud',
+		src: '/images/wallpapers/wallhaven-d6zqvg.jpg',
+		thumbnail: '/images/wallpapers/thumb/wallhaven-d6zqvg.jpg',
 		default: true,
 	},
 	{
@@ -29,12 +29,6 @@ export const wallpapers: readonly Wallpaper[] = [
 		label: 'arizona iced tea',
 		src: '/images/wallpapers/wallhaven-3krpgd.jpg',
 		thumbnail: '/images/wallpapers/thumb/wallhaven-3krpgd.jpg',
-	},
-	{
-		id: 'error-cloud',
-		label: 'error cloud',
-		src: '/images/wallpapers/wallhaven-d6zqvg.jpg',
-		thumbnail: '/images/wallpapers/thumb/wallhaven-d6zqvg.jpg',
 	},
 	{
 		id: 'horizon',
