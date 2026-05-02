@@ -378,6 +378,11 @@ export function consoleBanner(): void {
         │  if you're reading this, try:       │
         │  >  flag submit flag{console_log_warriors_unite}
         │  in the terminal app on this site.  │
+        │  ──                                 │
+        │  also on window.mills (devtools):   │
+        │  .flag.submit("flag{...}")          │
+        │  .flag.status()                     │
+        │  .reset()  // wipe state, no undo   │
         └─────────────────────────────────────┘
 %c
 `;
