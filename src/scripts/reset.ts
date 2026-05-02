@@ -18,6 +18,8 @@
  * native confirms or auto-purges.
  */
 
+import { dispatchClippyTrigger } from './util/events';
+
 const STORAGE_PREFIX = 'mills.';
 
 export interface ResetOptions {
@@ -89,6 +91,7 @@ function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElemen
 	triggerWasFocusable =
 		trigger !== null && document.contains(trigger) && trigger.closest('[hidden]') === null;
 	overlay.hidden = false;
+	dispatchClippyTrigger('reset');
 
 	const yes = overlay.querySelector<HTMLButtonElement>('[data-reset-yes]');
 	const no = overlay.querySelector<HTMLButtonElement>('[data-reset-no]');

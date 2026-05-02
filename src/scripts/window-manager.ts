@@ -12,6 +12,9 @@
  * Intentionally framework-free.
  */
 
+import { isAppId } from '../data/apps';
+import { dispatchClippyTrigger } from './util/events';
+
 const STORAGE_KEY = 'mills.desktop.v1';
 const Z_BASE = 100;
 
@@ -269,9 +272,13 @@ class WindowManager {
 		// from the URL, and finally any initial-open baked into the server-
 		// rendered <body data-initial-open="..."> (per-app permalink routes).
 		// Later sources land on top of earlier ones.
+		//
+		// `silent: true` for every restore path — Clippy already speaks
+		// once at boot via the wakeup trigger; firing the `open` trigger
+		// for each restored window would stack 1-N quips on first paint.
 		const open = [...this.state.open];
 		this.state.open = [];
-		open.forEach((id) => this.open(id, { skipPosition: false }));
+		open.forEach((id) => this.open(id, { skipPosition: false, silent: true }));
 
 		try {
 			const params = new URLSearchParams(window.location.search);
@@ -281,22 +288,26 @@ class WindowManager {
 					.split(',')
 					.map((s) => s.trim())
 					.filter(Boolean)
-					.forEach((id) => this.open(id));
+					.forEach((id) => this.open(id, { silent: true }));
 			}
 		} catch (err) {
 			console.warn('[mills.desktop] failed to read ?open= query param', err);
 		}
 
 		const bodyInitial = document.body?.dataset.initialOpen;
-		if (bodyInitial) this.open(bodyInitial);
+		if (bodyInitial) this.open(bodyInitial, { silent: true });
 	}
 
 	// ----------------------------------------------------------------
 	// behaviors
 
-	private open(id: string, opts: { skipPosition?: boolean } = {}) {
+	private open(id: string, opts: { skipPosition?: boolean; silent?: boolean } = {}) {
 		const el = this.windows.get(id);
 		if (!el) return;
+
+		// Snapshot before mutating so the clippy 'open' trigger only fires
+		// for a true open, not a focus-raise on an already-open window.
+		const wasOpen = this.state.open.includes(id);
 
 		el.hidden = false;
 		if (!opts.skipPosition) this.restorePosition(id, el);
@@ -308,15 +319,27 @@ class WindowManager {
 		this.applyZ();
 		this.renderTaskbar();
 		this.persist();
+
+		if (!opts.silent && !wasOpen) {
+			dispatchClippyTrigger('open', isAppId(id) ? id : undefined);
+		}
 	}
 
 	private close(id: string) {
 		const el = this.windows.get(id);
 		if (!el) return;
+		// Gate the clippy 'close' trigger on the prior open state — an
+		// external mills:close-window dispatched twice should not fire two
+		// quips for one user-visible close.
+		const wasOpen = this.state.open.includes(id);
 		el.hidden = true;
 		this.state.open = this.state.open.filter((x) => x !== id);
 		this.renderTaskbar();
 		this.persist();
+
+		if (wasOpen) {
+			dispatchClippyTrigger('close', isAppId(id) ? id : undefined);
+		}
 	}
 
 	private focus(id: string) {
