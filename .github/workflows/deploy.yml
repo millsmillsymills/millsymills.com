@@ -51,7 +51,7 @@ concurrency:
 jobs:
   deploy:
     name: Build + sync to S3 + invalidate CloudFront
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # Gate: manual dispatch, monthly schedule, OR CI succeeded on main.
     if: >-
