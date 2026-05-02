@@ -145,6 +145,20 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
   }
 }
 
+# Versioning protects access logs from deletion or overwrite by a
+# compromised IAM principal — the realistic forensic-tampering risk
+# for this bucket. Object Lock would be stronger but requires bucket
+# replacement (only settable at creation time), which would force a
+# disruptive re-create on the existing millsymills stack. Versioning
+# is the low-risk first step per #282; revisit Object Lock if/when
+# the bucket is replaced for another reason.
+resource "aws_s3_bucket_versioning" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   bucket = aws_s3_bucket.logs.id
 
@@ -154,12 +168,38 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
 
     filter {}
 
+    # On a versioned bucket, `expiration { days = 90 }` does NOT delete
+    # bytes — it inserts a delete marker (the prior current version is
+    # demoted to noncurrent). Net forensic-recovery window is up to 180
+    # days: 90 days as current, then up to 90 more as a recoverable
+    # noncurrent version after the lifecycle-driven delete.
     expiration {
       days = 90
     }
 
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
+    }
+  }
+
+  # Sweep the zero-byte delete markers left behind once both the
+  # current (90d) and noncurrent (additional 90d) versions are gone.
+  # Without this rule they accumulate indefinitely as "expired object
+  # delete markers" — small, but visible in inventory and noisy.
+  # AWS forbids combining `expired_object_delete_marker` with
+  # `expiration.days` in a single rule, so this lives separately.
+  rule {
+    id     = "sweep-orphan-delete-markers"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      expired_object_delete_marker = true
     }
   }
 }
