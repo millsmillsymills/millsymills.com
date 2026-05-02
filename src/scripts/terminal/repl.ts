@@ -27,6 +27,11 @@ export function bootTerminal({ root, onExit }: Options): void {
 	let histIdx = -1;
 	let pendingResolve: ((v: string | null) => void) | null = null;
 	let pendingMask = false;
+	// Serialise execute() against itself. Two Enter presses in rapid
+	// succession would otherwise let a second `execute()` start while
+	// the first is still awaiting a `prompt()`, and both would race on
+	// the single `pendingResolve`/`pendingMask` closure.
+	let isExecuting = false;
 
 	function writeLine(text: string, cls = ''): void {
 		const el = document.createElement('div');
@@ -79,6 +84,16 @@ export function bootTerminal({ root, onExit }: Options): void {
 	async function execute(line: string): Promise<void> {
 		const trimmed = line.trim();
 		if (!trimmed) return;
+		if (isExecuting) return;
+		isExecuting = true;
+		try {
+			await runCommand(trimmed);
+		} finally {
+			isExecuting = false;
+		}
+	}
+
+	async function runCommand(trimmed: string): Promise<void> {
 		// U+00A0 (non-breaking space) is included alongside \s because
 		// mobile keyboards sometimes insert NBSP after autocorrect, and
 		// JavaScript regex \s coverage of NBSP is engine-dependent.
@@ -96,7 +111,23 @@ export function bootTerminal({ root, onExit }: Options): void {
 		try {
 			await cmd.handler(localCtx);
 		} catch (err) {
-			writeLine(`error: ${(err as Error).message}`, 't-err');
+			// Cleanup must not swallow the error message — a throw inside
+			// refreshPrompt would otherwise unwind the stack before writeLine
+			// fires, leaving the user with a broken REPL and no diagnostic.
+			try {
+				if (pendingResolve) {
+					const r = pendingResolve;
+					pendingResolve = null;
+					pendingMask = false;
+					if (input) input.type = 'text';
+					refreshPrompt();
+					r(null);
+				}
+			} catch (cleanupErr) {
+				console.error('[mills.terminal] prompt-state cleanup failed', cleanupErr);
+			}
+			const message = err instanceof Error ? err.message : String(err);
+			writeLine(`error: ${message}`, 't-err');
 		}
 	}
 

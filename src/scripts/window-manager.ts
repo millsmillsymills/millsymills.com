@@ -201,7 +201,7 @@ class WindowManager {
 				},
 			);
 
-			el.querySelector<HTMLButtonElement>('.window-control--min')?.addEventListener(
+			el.querySelector<HTMLButtonElement>('.window-control--hide')?.addEventListener(
 				'click',
 				(e) => {
 					e.stopPropagation();
