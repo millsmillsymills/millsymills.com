@@ -15,11 +15,12 @@ import type { Challenge } from '../flags';
  * fire on `window` or `document` per their existing convention.
  */
 export interface MillsEventMap {
-	// `CustomEvent<undefined>` rather than `CustomEvent<void>` — `void`
-	// isn't a real value type, so `evt.detail` would land as `undefined`
-	// regardless. The `undefined` spelling is the more idiomatic match
-	// for what listeners actually observe.
-	'mills:boot-done': CustomEvent<undefined>;
+	// `null` rather than `void`/`undefined` — at runtime, `new CustomEvent(name)`
+	// without an init dict produces `detail === null` (per CustomEventInit
+	// in WebIDL), so this is the type that matches what listeners actually
+	// observe. The dispatcher passes `{ detail: null }` explicitly to keep
+	// type and runtime in lockstep.
+	'mills:boot-done': CustomEvent<null>;
 	'mills:flag-captured': CustomEvent<Challenge>;
 	'mills:flags-unlocked': CustomEvent<Challenge>;
 	'mills:now-playing': CustomEvent<NowPlaying>;
@@ -48,7 +49,7 @@ declare global {
 // ---- dispatch helpers (call site is the producer's choice of target) ----
 
 export function dispatchBootDone(): void {
-	window.dispatchEvent(new CustomEvent('mills:boot-done'));
+	window.dispatchEvent(new CustomEvent('mills:boot-done', { detail: null }));
 }
 
 export function dispatchFlagCaptured(challenge: Challenge): void {
