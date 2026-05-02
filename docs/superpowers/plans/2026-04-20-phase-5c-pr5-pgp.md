@@ -103,7 +103,7 @@ OUT_DIR="public/.well-known/openpgpkey"
 # near the UID in the format '<32-char-zbase32>@millsymills.com'. Grab the
 # first one that matches.
 HASH=$(gpg --with-wkd-hash --list-keys "$UID_EMAIL" \
-  | grep -oE '\b[a-z0-9]{32}@' \
+  | grep -oE '\b[ybndrfg8ejkmcpqxot1uwisza345h769]{32}@' \
   | head -1 \
   | sed 's/@$//')
 
