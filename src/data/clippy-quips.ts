@@ -32,9 +32,15 @@ export type QuipPose =
 	| 'cool'
 	| 'tired';
 
+// `leave` is reserved for the dismiss flow — its last frame is empty so
+// Clippy can walk off-screen, and the controller hides the aside afterwards.
+// Using it on an in-context quip makes Clippy disappear for the leave
+// duration and pop back when the auto-return-to-idle timer fires (#297).
+export type QuipEntryPose = Exclude<QuipPose, 'leave'>;
+
 export interface QuipEntry {
 	readonly quip: string;
-	readonly pose?: QuipPose;
+	readonly pose?: QuipEntryPose;
 }
 
 export interface QuipBank {
@@ -102,9 +108,9 @@ export const quips: QuipBank = {
 		],
 
 		close: [
-			{ quip: 'goodbye, sweet window.', pose: 'leave' },
+			{ quip: 'goodbye, sweet window.' },
 			{ quip: 'memory freed. memories not.' },
-			{ quip: 'rip in pieces.', pose: 'leave' },
+			{ quip: 'rip in pieces.' },
 			{ quip: 'sealed.' },
 		],
 
@@ -134,8 +140,8 @@ export const quips: QuipBank = {
 		trash: {
 			idle: [
 				{ quip: "don't put me in there" },
-				{ quip: 'i was promised deep storage. not a grave.', pose: 'leave' },
-				{ quip: 'the shovel is in the closet.', pose: 'leave' },
+				{ quip: 'i was promised deep storage. not a grave.' },
+				{ quip: 'the shovel is in the closet.' },
 				{ quip: 'every file in here was loved once.' },
 			],
 		},
