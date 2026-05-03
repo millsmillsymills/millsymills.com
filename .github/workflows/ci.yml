@@ -61,6 +61,17 @@ jobs:
           SITE_URL: https://millsymills.com
         run: npm run build
 
+      - name: Install Playwright browsers (chromium)
+        # Skip `--with-deps` because GitHub-hosted ubuntu-24.04 already
+        # ships every shared library Chromium needs (~5s vs ~45s for apt).
+        run: npx playwright install chromium
+
+      - name: Test (playwright e2e)
+        # Deep-link suite drives the prebuilt dist/ via `astro preview`,
+        # so it runs after Build. Playwright's webServer block boots
+        # preview on 127.0.0.1:4321 for the duration of the run.
+        run: npm run test:e2e
+
       - name: Assert og:image per-app gate
         run: node scripts/assert-og-image-per-app.mjs
 

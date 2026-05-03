@@ -51,6 +51,17 @@ section "node: build"
 npm run build
 ok "npm run build"
 
+section "node: playwright e2e"
+# Install the chromium binary if the local cache is empty (idempotent — a
+# warm cache makes this a no-op). `--with-deps` is skipped locally because
+# it sudo-installs system packages; CI uses --with-deps.
+if [ ! -d "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/Library/Caches/ms-playwright}" ] \
+	&& [ ! -d "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}" ]; then
+	npx playwright install chromium
+fi
+npm run test:e2e
+ok "playwright e2e"
+
 section "node: assert fonts present + no Google Fonts leakage"
 ./scripts/assert-fonts-csp.sh
 ok "fonts ship + CSP font-src 'self' is honest"
