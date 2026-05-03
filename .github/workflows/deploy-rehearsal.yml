@@ -3,32 +3,34 @@ name: Deploy (rehearsal — p41m0n.com)
 # This workflow deploys the Astro site to the p41m0n.com rehearsal stack.
 # Manual dispatch only — never chain off push/CI. The rehearsal stack is
 # a throwaway dress rehearsal, not a production target.
+#
+# Mirrors deploy.yml's SLSA L3 + sigstore signing flow so the rehearsal
+# stack produces the same artifact set under /.well-known/slsa/. Keep
+# the two workflows in sync — the rehearsal exists to catch deploy-
+# pipeline bugs before they hit prod.
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write # required for AWS OIDC
+  id-token: write # required for AWS OIDC + sigstore keyless signing
 
 concurrency:
   group: deploy-rehearsal
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build + sync to S3 + invalidate CloudFront (rehearsal)
+  build:
+    name: Build + SBOM + tarball (rehearsal)
     runs-on: ubuntu-24.04
 
-    # Targets the `rehearsal` GitHub Environment for variable scoping.
-    # On the free-private plan there is no required-reviewer gate
-    # available — see the trust-model block in `deploy.yml`'s header
-    # for the full model. Workflow_dispatch is the only trigger here,
-    # so each rehearsal run already requires a deliberate human
-    # action at trigger time.
-    environment:
-      name: rehearsal
-      url: https://${{ vars.SITE_DOMAIN }}
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
 
     steps:
       - uses: actions/checkout@v6
@@ -76,6 +78,91 @@ jobs:
       # a future dep referencing https://p41m0n.com would surface here.
       - name: Assert no URL leakage
         run: ./scripts/assert-no-url-leakage.sh
+
+      - name: Tar dist/
+        run: tar -czf dist.tar.gz dist/
+
+      - name: Hash tarball for SLSA provenance
+        id: hash
+        run: |
+          set -euo pipefail
+          hashes=$(sha256sum dist.tar.gz | base64 -w0)
+          echo "hashes=${hashes}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-tarball
+          path: dist.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  provenance:
+    needs: build
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.build.outputs.hashes }}
+      provenance-name: dist.tar.gz.intoto.jsonl
+      upload-assets: false
+
+  deploy:
+    name: Sign + sync to S3 + invalidate CloudFront (rehearsal)
+    needs: [build, provenance]
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      id-token: write
+
+    # Targets the `rehearsal` GitHub Environment for variable scoping.
+    # On the free-private plan there is no required-reviewer gate
+    # available — see the trust-model block in `deploy.yml`'s header
+    # for the full model. Workflow_dispatch is the only trigger here,
+    # so each rehearsal run already requires a deliberate human
+    # action at trigger time.
+    environment:
+      name: rehearsal
+      url: https://${{ vars.SITE_DOMAIN }}
+
+    steps:
+      - name: Download tarball artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-tarball
+          path: .
+
+      - name: Download provenance attestation
+        uses: actions/download-artifact@v4
+        with:
+          name: dist.tar.gz.intoto.jsonl
+          path: .
+
+      - name: Extract dist tarball
+        run: tar -xzf dist.tar.gz
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Cosign sign-blob (keyless)
+        env:
+          COSIGN_YES: 'true'
+        run: |
+          set -euo pipefail
+          cosign sign-blob \
+            --output-signature dist.tar.gz.sig \
+            --output-certificate dist.tar.gz.pem \
+            dist.tar.gz
+
+      - name: Stage SLSA artifacts under /.well-known/slsa/
+        run: |
+          set -euo pipefail
+          mkdir -p dist/.well-known/slsa
+          cp dist.tar.gz dist.tar.gz.sig dist.tar.gz.pem dist.tar.gz.intoto.jsonl \
+            dist/.well-known/slsa/
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
