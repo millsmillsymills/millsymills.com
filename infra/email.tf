@@ -109,3 +109,26 @@ resource "aws_route53_record" "tlsrpt" {
     "v=TLSRPTv1; rua=mailto:${local.tlsrpt_rua}",
   ]
 }
+
+# BIMI: Brand Indicators for Message Identification (RFC 9676 + AuthIndicators
+# WG draft). Surfaces the brand logo next to mail that already passed
+# DMARC alignment in supporting clients (Fastmail, Proton, some Apple Mail).
+# DMARC is at p=reject above, which clears the strong-policy precondition.
+#
+# Safe to publish before Proton exists: with the null MX, no mail flows,
+# so the record is a no-op until activation. Once Proton is live, BIMI
+# takes effect on the first DMARC-pass message.
+#
+# Tradeoff: no Verified Mark Certificate (VMC) — Gmail/Yahoo will not render
+# the logo without one (~$1.5K/yr issuance cost). Proton/Fastmail render
+# without a VMC, so the record still earns its keep on supporting clients.
+# Documented on /security via securityControls.bimi.tradeoffs.
+resource "aws_route53_record" "bimi" {
+  zone_id = data.aws_route53_zone.site.zone_id
+  name    = "default._bimi.${var.domain}"
+  type    = "TXT"
+  ttl     = 3600
+  records = [
+    "v=BIMI1; l=https://${var.domain}/bimi/logo.svg",
+  ]
+}
