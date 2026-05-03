@@ -188,6 +188,12 @@ jobs:
       base64-subjects: ${{ needs.build.outputs.hashes }}
       provenance-name: dist.tar.gz.intoto.jsonl
       upload-assets: false
+      # This repo is private. Without this override, the SLSA generator
+      # halts in `privacy-check` to avoid exposing the private repo name
+      # via the public Rekor transparency log. We deliberately want the
+      # repo identity in Rekor — the whole point is verifiable provenance
+      # tied to this repo + commit + workflow.
+      private-repository: true
 
   deploy:
     name: Sign + sync to S3 + invalidate CloudFront
