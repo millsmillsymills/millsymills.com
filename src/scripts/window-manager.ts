@@ -191,6 +191,9 @@ class WindowManager {
 			const titlebar = el.querySelector<HTMLElement>('.window__titlebar');
 			titlebar?.addEventListener('pointerdown', (e) => this.startDrag(e, id, el));
 
+			const grip = el.querySelector<HTMLElement>('.window__resize-grip');
+			grip?.addEventListener('pointerdown', (e) => this.startResize(e, id, el));
+
 			el.addEventListener('pointerdown', () => this.focus(id));
 
 			el.querySelector<HTMLButtonElement>('.window-control--close')?.addEventListener(
@@ -442,6 +445,55 @@ class WindowManager {
 		// events flowing to the titlebar, but if the browser releases capture
 		// early the user-visible symptom is a window stuck to the cursor with
 		// no pointerup ever firing. document-bound listeners survive that.
+		document.addEventListener('pointermove', onMove);
+		document.addEventListener('pointerup', onUp);
+		document.addEventListener('pointercancel', onUp);
+	}
+
+	private startResize(e: PointerEvent, id: string, el: HTMLElement) {
+		// Maximized windows have their geometry pinned by !important — resizing
+		// them would race the CSS. Restore first; the grip is also display:none
+		// in that state, so this is a defense-in-depth check.
+		if (el.classList.contains('window--maximized')) return;
+
+		// Bring focus + stop click-through so the resize gesture doesn't also
+		// register as a focus-only pointerdown on parent elements.
+		this.focus(id);
+		e.stopPropagation();
+		e.preventDefault();
+
+		const rect = el.getBoundingClientRect();
+		const startW = rect.width;
+		const startH = rect.height;
+		const startX = e.clientX;
+		const startY = e.clientY;
+		const grip = e.currentTarget as HTMLElement;
+		grip.setPointerCapture(e.pointerId);
+
+		const onMove = (ev: PointerEvent) => {
+			if (ev.pointerId !== e.pointerId) return;
+			// Width/height clamps mirror the CSS min/max so the JS-driven
+			// inline style and the CSS guards stay in agreement. Upper bound
+			// is viewport-size minus the same margin the .window--maximized
+			// rule reserves, so a fully-resized window doesn't hide the
+			// taskbar or push past the viewport edge.
+			const w = clamp(startW + (ev.clientX - startX), 280, window.innerWidth - rect.left - 16);
+			const h = clamp(startH + (ev.clientY - startY), 180, window.innerHeight - rect.top - 80);
+			el.style.width = `${w}px`;
+			el.style.height = `${h}px`;
+		};
+
+		const onUp = (ev: PointerEvent) => {
+			if (ev.pointerId !== e.pointerId) return;
+			if (grip.hasPointerCapture(e.pointerId)) {
+				grip.releasePointerCapture(e.pointerId);
+			}
+			document.removeEventListener('pointermove', onMove);
+			document.removeEventListener('pointerup', onUp);
+			document.removeEventListener('pointercancel', onUp);
+			this.savePosition(id, el);
+		};
+
 		document.addEventListener('pointermove', onMove);
 		document.addEventListener('pointerup', onUp);
 		document.addEventListener('pointercancel', onUp);

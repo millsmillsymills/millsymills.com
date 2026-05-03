@@ -486,6 +486,37 @@ a {
 	background: var(--bg-deep);
 }
 
+/* Bottom-right resize grip. Vaporwave-friendly diagonal stripes drawn
+ * with a repeating-linear-gradient so it stays crisp at any DPI. The
+ * window-manager binds pointerdown here to drive resize. Hidden while
+ * the window is maximized — resize on a maximized window would race
+ * the !important geometry from .window--maximized. */
+.window__resize-grip {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	width: 14px;
+	height: 14px;
+	cursor: nwse-resize;
+	background: repeating-linear-gradient(
+		135deg,
+		transparent 0 2px,
+		var(--neon-cyan) 2px 3px,
+		transparent 3px 5px,
+		var(--neon-pink) 5px 6px
+	);
+	opacity: 0.7;
+	z-index: 1;
+}
+
+.window__resize-grip:hover {
+	opacity: 1;
+}
+
+.window--maximized .window__resize-grip {
+	display: none;
+}
+
 .window__body h1,
 .window__body h2,
 .window__body h3 {
