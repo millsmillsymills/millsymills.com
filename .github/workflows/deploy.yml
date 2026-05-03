@@ -74,6 +74,15 @@ jobs:
           (github.event.workflow_run.conclusion == 'success' &&
            github.event.workflow_run.head_branch == 'main') }}
 
+    # Pull `vars.SITE_URL` (and friends) from the production environment.
+    # Required because typecheck + build read env-scoped vars; without this
+    # binding, `vars.SITE_URL` resolves to '' and astro.config.mjs rejects
+    # the build. The deploy job below targets the same environment for
+    # OIDC + IAM scoping.
+    environment:
+      name: production
+      url: https://${{ vars.SITE_DOMAIN }}
+
     permissions:
       contents: read
       id-token: write
