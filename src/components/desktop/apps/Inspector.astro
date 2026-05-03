@@ -1,0 +1,396 @@
+---
+// Live security-headers inspector. Hydrates client-side: fetches HEAD '/'
+// against the same origin, grades the response headers against the
+// controls documented in /security, and renders a verdict per header.
+//
+// The grading thresholds intentionally mirror the values configured in
+// `infra/cloudfront.tf`'s `aws_cloudfront_response_headers_policy.site`
+// — drift between the two is meaningful (either the site weakened a
+// control or this checker is stale).
+---
+
+<article class="inspector">
+	<h1>headers inspector</h1>
+	<p class="inspector__lede">
+		fetches the site's own response headers from your browser and grades
+		them against the controls listed in <a href="/security/">security.txt</a>.
+		every check happens client-side; no third party sees your request.
+	</p>
+
+	<section class="inspector__status" aria-live="polite">
+		<dl>
+			<dt>target</dt>
+			<dd><code data-inspector="target">/</code></dd>
+			<dt>status</dt>
+			<dd><span data-inspector="status">…</span></dd>
+			<dt>fetched</dt>
+			<dd><span data-inspector="ts">…</span></dd>
+		</dl>
+		<button type="button" class="inspector__refresh" data-inspector-refresh>
+			re-run
+		</button>
+	</section>
+
+	<table class="inspector__grades">
+		<caption class="visually-hidden">security headers grading</caption>
+		<thead>
+			<tr><th scope="col">header</th><th scope="col">grade</th><th scope="col">value</th></tr>
+		</thead>
+		<tbody data-inspector-rows>
+			<tr><td colspan="3" class="inspector__loading">running checks…</td></tr>
+		</tbody>
+	</table>
+
+	<p class="inspector__note">
+		grades reflect the active CloudFront response-headers policy. drift
+		between this readout and <a href="/security/">security.txt</a> is a
+		bug — file an issue.
+	</p>
+</article>
+
+<style>
+	.inspector {
+		padding: 18px 22px 22px;
+		font-family: var(--font-screen);
+		color: var(--ink-primary);
+		font-size: 16px;
+		line-height: 1.4;
+	}
+
+	.inspector h1 {
+		margin: 0 0 8px;
+		font-family: var(--font-pixel);
+		font-size: 16px;
+		color: var(--neon-pink);
+		text-transform: lowercase;
+		letter-spacing: 1px;
+	}
+
+	.inspector__lede {
+		margin: 0 0 14px;
+		color: var(--ink-muted);
+		font-size: 15px;
+	}
+
+	.inspector a {
+		color: var(--neon-cyan);
+	}
+
+	.inspector__status {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 12px;
+		margin-bottom: 14px;
+		padding: 10px 12px;
+		background: var(--bg-deep);
+		border: 2px solid var(--neon-cyan);
+		border-radius: var(--chrome-radius-button);
+	}
+
+	.inspector__status dl {
+		margin: 0;
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 2px 10px;
+		font-size: 14px;
+	}
+
+	.inspector__status dt {
+		color: var(--ink-dim);
+		text-transform: lowercase;
+	}
+
+	.inspector__status dd {
+		margin: 0;
+		font-family: var(--font-mono);
+		color: var(--ink-primary);
+	}
+
+	.inspector__refresh {
+		all: unset;
+		cursor: var(--c-pointer);
+		padding: 6px 10px;
+		background: var(--neon-pink);
+		color: var(--bg-void);
+		border: 2px solid var(--neon-cyan);
+		border-radius: var(--chrome-radius-button);
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		letter-spacing: 1px;
+	}
+
+	.inspector__refresh:hover,
+	.inspector__refresh:focus-visible {
+		background: var(--neon-pink-hi);
+	}
+
+	.inspector__grades {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 14px;
+	}
+
+	.inspector__grades th,
+	.inspector__grades td {
+		padding: 8px 10px;
+		text-align: left;
+		border-bottom: 1px solid var(--bg-edge);
+		vertical-align: top;
+	}
+
+	.inspector__grades th {
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		color: var(--neon-cyan);
+		text-transform: lowercase;
+		letter-spacing: 1px;
+		border-bottom-color: var(--neon-cyan);
+	}
+
+	.inspector__grades td:nth-child(1) {
+		font-family: var(--font-mono);
+		color: var(--ink-muted);
+		white-space: nowrap;
+	}
+
+	.inspector__grades td:nth-child(3) {
+		font-family: var(--font-mono);
+		color: var(--ink-primary);
+		word-break: break-word;
+	}
+
+	.inspector__grade {
+		display: inline-block;
+		min-width: 28px;
+		padding: 2px 6px;
+		border-radius: var(--chrome-radius-button);
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		text-align: center;
+		letter-spacing: 1px;
+	}
+
+	.inspector__grade--A { background: #00c08a; color: var(--bg-void); }
+	.inspector__grade--B { background: var(--neon-cyan); color: var(--bg-void); }
+	.inspector__grade--C { background: #f0c419; color: var(--bg-void); }
+	.inspector__grade--F { background: var(--danger); color: var(--ink-primary); }
+	.inspector__grade--err { background: var(--bg-edge); color: var(--ink-muted); }
+
+	.inspector__loading {
+		text-align: center;
+		font-style: italic;
+		color: var(--ink-dim);
+	}
+
+	.inspector__note {
+		margin: 14px 0 0;
+		font-size: 13px;
+		color: var(--ink-dim);
+	}
+
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+</style>
+
+<script>
+	type Grade = 'A' | 'B' | 'C' | 'F' | 'err';
+	interface Check {
+		header: string;
+		grade: Grade;
+		value: string;
+	}
+
+	const TARGET = '/';
+
+	function gradeHsts(v: string | null): Check {
+		const header = 'Strict-Transport-Security';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const ageMatch = v.match(/max-age=(\d+)/i);
+		const age = ageMatch ? Number(ageMatch[1]) : 0;
+		const hasSub = /includeSubDomains/i.test(v);
+		const hasPreload = /preload/i.test(v);
+		// 1 year + includeSubDomains + preload is the bar to be on the
+		// HSTS preload list. Anything weaker is graded down.
+		if (age >= 31536000 && hasSub && hasPreload) return { header, grade: 'A', value: v };
+		if (age >= 31536000 && hasSub) return { header, grade: 'B', value: v };
+		if (age >= 31536000) return { header, grade: 'C', value: v };
+		return { header, grade: 'F', value: v };
+	}
+
+	function gradeCsp(v: string | null): Check {
+		const header = 'Content-Security-Policy';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const hasUnsafeInline = /'unsafe-inline'/.test(v) && /script-src/.test(v);
+		const hasObjectNone = /object-src\s+'none'/.test(v);
+		const hasBaseSelf = /base-uri\s+'self'/.test(v);
+		const hasFrameAnc = /frame-ancestors/.test(v);
+		const hasUpgrade = /upgrade-insecure-requests/.test(v);
+		const score = [hasObjectNone, hasBaseSelf, hasFrameAnc, hasUpgrade].filter(Boolean).length;
+		if (hasUnsafeInline) return { header, grade: 'C', value: v };
+		if (score === 4) return { header, grade: 'A', value: v };
+		if (score >= 2) return { header, grade: 'B', value: v };
+		return { header, grade: 'C', value: v };
+	}
+
+	function gradeFrameOptions(v: string | null, csp: string | null): Check {
+		const header = 'X-Frame-Options';
+		// Any frame-ancestors directive in CSP supersedes XFO; either is fine.
+		if (csp && /frame-ancestors/.test(csp)) return { header, grade: 'A', value: v ?? '(via CSP frame-ancestors)' };
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const u = v.toUpperCase();
+		if (u === 'DENY' || u === 'SAMEORIGIN') return { header, grade: 'A', value: v };
+		return { header, grade: 'C', value: v };
+	}
+
+	function gradeContentTypeOptions(v: string | null): Check {
+		const header = 'X-Content-Type-Options';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		if (v.toLowerCase().includes('nosniff')) return { header, grade: 'A', value: v };
+		return { header, grade: 'C', value: v };
+	}
+
+	function gradeReferrerPolicy(v: string | null): Check {
+		const header = 'Referrer-Policy';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const strict = ['no-referrer', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin'];
+		const lc = v.toLowerCase().split(',')[0]?.trim() ?? '';
+		if (strict.includes(lc)) return { header, grade: 'A', value: v };
+		return { header, grade: 'C', value: v };
+	}
+
+	function gradePermissionsPolicy(v: string | null): Check {
+		const header = 'Permissions-Policy';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const directives = v.split(',').map((s) => s.trim()).filter(Boolean);
+		if (directives.length >= 5) return { header, grade: 'A', value: v };
+		return { header, grade: 'B', value: v };
+	}
+
+	function gradeCoop(v: string | null): Check {
+		const header = 'Cross-Origin-Opener-Policy';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const lc = v.toLowerCase();
+		if (lc.startsWith('same-origin') && !lc.includes('allow-popups')) return { header, grade: 'A', value: v };
+		if (lc.startsWith('same-origin')) return { header, grade: 'B', value: v };
+		return { header, grade: 'C', value: v };
+	}
+
+	function gradeCoep(v: string | null): Check {
+		const header = 'Cross-Origin-Embedder-Policy';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const lc = v.toLowerCase();
+		if (lc.includes('require-corp')) return { header, grade: 'A', value: v };
+		if (lc.includes('credentialless')) return { header, grade: 'B', value: v };
+		return { header, grade: 'C', value: v };
+	}
+
+	function gradeCorp(v: string | null): Check {
+		const header = 'Cross-Origin-Resource-Policy';
+		if (!v) return { header, grade: 'F', value: '(missing)' };
+		const lc = v.toLowerCase();
+		if (lc === 'same-origin') return { header, grade: 'A', value: v };
+		if (lc === 'same-site') return { header, grade: 'B', value: v };
+		return { header, grade: 'C', value: v };
+	}
+
+	function makeRow(check: Check): HTMLTableRowElement {
+		const tr = document.createElement('tr');
+		const tdHeader = document.createElement('td');
+		tdHeader.textContent = check.header;
+		const tdGrade = document.createElement('td');
+		const span = document.createElement('span');
+		span.className = `inspector__grade inspector__grade--${check.grade}`;
+		span.textContent = check.grade;
+		tdGrade.appendChild(span);
+		const tdValue = document.createElement('td');
+		tdValue.textContent = check.value;
+		tr.append(tdHeader, tdGrade, tdValue);
+		return tr;
+	}
+
+	function render(rows: Check[], status: string, ts: string): void {
+		const tbody = document.querySelector<HTMLElement>('[data-inspector-rows]');
+		const statusEl = document.querySelector<HTMLElement>('[data-inspector="status"]');
+		const tsEl = document.querySelector<HTMLElement>('[data-inspector="ts"]');
+		if (statusEl) statusEl.textContent = status;
+		if (tsEl) tsEl.textContent = ts;
+		if (!tbody) return;
+		tbody.replaceChildren(...rows.map(makeRow));
+	}
+
+	function setLoading(): void {
+		const tbody = document.querySelector<HTMLElement>('[data-inspector-rows]');
+		if (!tbody) return;
+		const tr = document.createElement('tr');
+		const td = document.createElement('td');
+		td.colSpan = 3;
+		td.className = 'inspector__loading';
+		td.textContent = 'running checks…';
+		tr.append(td);
+		tbody.replaceChildren(tr);
+	}
+
+	async function run(): Promise<void> {
+		setLoading();
+		try {
+			const res = await fetch(TARGET, { method: 'HEAD', cache: 'no-store' });
+			const csp = res.headers.get('content-security-policy');
+			const checks: Check[] = [
+				gradeHsts(res.headers.get('strict-transport-security')),
+				gradeCsp(csp),
+				gradeFrameOptions(res.headers.get('x-frame-options'), csp),
+				gradeContentTypeOptions(res.headers.get('x-content-type-options')),
+				gradeReferrerPolicy(res.headers.get('referrer-policy')),
+				gradePermissionsPolicy(res.headers.get('permissions-policy')),
+				gradeCoop(res.headers.get('cross-origin-opener-policy')),
+				gradeCoep(res.headers.get('cross-origin-embedder-policy')),
+				gradeCorp(res.headers.get('cross-origin-resource-policy')),
+			];
+			render(checks, `${res.status} ${res.statusText}`.trim(), new Date().toISOString());
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			render(
+				[{ header: 'fetch', grade: 'err', value: msg }],
+				'error',
+				new Date().toISOString(),
+			);
+		}
+	}
+
+	function init(): void {
+		const win = document.querySelector<HTMLElement>('[data-window-id="inspector"]');
+		if (!win) return;
+		// Run once when this app's window first becomes visible. The
+		// MutationObserver fires when window-manager flips the `hidden`
+		// attribute on open, which is the canonical "this window just
+		// opened" signal in this codebase.
+		let ran = false;
+		const maybeRun = (): void => {
+			if (ran || win.hidden) return;
+			ran = true;
+			void run();
+		};
+		const observer = new MutationObserver(maybeRun);
+		observer.observe(win, { attributes: true, attributeFilter: ['hidden'] });
+		maybeRun();
+		document
+			.querySelector<HTMLButtonElement>('[data-inspector-refresh]')
+			?.addEventListener('click', () => void run());
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+</script>
