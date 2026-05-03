@@ -125,6 +125,21 @@ export const securityControls: readonly SecurityControl[] = [
 		tradeoffs: 'Same-origin assets are exempt — Astro\'s hashed bundles are already integrity-protected by URL versioning + the OAC pipeline. Astro 6 does not emit SRI hashes natively; if a cross-origin asset ever lands here, the integrity attribute has to be added by hand or by a postbuild pass.',
 		code: ['scripts/assert-sri-on-cross-origin-assets.mjs'],
 	},
+	{
+		id: 'inspector',
+		title: 'live security-headers + TLS inspector',
+		category: 'web',
+		status: 'shipped',
+		what: 'The `/inspector/` desktop app fetches the site\'s own response headers in-browser and grades them against the active CloudFront response-headers policy. A small Lambda behind CloudFront also exposes the negotiated TLS protocol, cipher, and SNI for the user→CloudFront connection at `/api/tls/inspect`.',
+		why: 'The /security page documents what *should* be deployed; the inspector lets a visitor verify what *is* deployed in real time. Drift between the two becomes immediately observable instead of silently aging.',
+		tradeoffs: 'The TLS-inspector Lambda reads `CloudFront-Viewer-TLS` from the origin-request headers, so it reflects the user→CloudFront leg only — it cannot see anything about the CloudFront→origin leg. That\'s the leg the visitor cares about, but worth being explicit about. astro preview lacks CloudFront headers so all rows grade F locally; on prod every row should grade A.',
+		code: [
+			'src/components/desktop/apps/Inspector.astro',
+			'infra/inspector_tls.tf',
+			'infra/inspector_tls.mjs',
+		],
+		prs: [302],
+	},
 
 	// ─── dns + domain ──────────────────────────────────────────────────
 	{
