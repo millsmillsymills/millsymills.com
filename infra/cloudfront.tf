@@ -78,6 +78,20 @@ resource "aws_cloudfront_distribution" "site" {
     origin_access_control_id = aws_cloudfront_origin_access_control.site.id
   }
 
+  # Lambda Function URL origin for the /inspector/ TLS readout. See
+  # `infra/inspector_tls.tf` for the function + URL.
+  origin {
+    domain_name = local.inspector_tls_origin_host
+    origin_id   = "lambda-${local.inspector_tls_name}"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
@@ -93,6 +107,24 @@ resource "aws_cloudfront_distribution" "site" {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.index_rewrite.arn
     }
+  }
+
+  # /api/tls/* → inspector_tls Lambda. Uses the AWS-managed origin-request
+  # policy "Managed-AllViewerAndCloudFrontHeaders-2022-06" so the
+  # CloudFront-Viewer-TLS header survives the origin hop. CachingDisabled
+  # cache policy because the response is per-connection live data.
+  ordered_cache_behavior {
+    path_pattern           = "/api/tls/*"
+    target_origin_id       = "lambda-${local.inspector_tls_name}"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    viewer_protocol_policy = "https-only"
+    compress               = true
+
+    # AWS-managed CachingDisabled
+    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    # AWS-managed Managed-AllViewerAndCloudFrontHeaders-2022-06
+    origin_request_policy_id = "33f36d7e-f396-46d9-90e0-52428a34d9dc"
   }
 
   custom_error_response {
