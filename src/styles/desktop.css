@@ -1668,3 +1668,58 @@ body:not([data-flags-unlocked='true']) [data-flags-gated] {
 	color: var(--ink-primary);
 	outline: none;
 }
+
+.shutdown-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 99999;
+	background: #000;
+	pointer-events: none;
+	opacity: 0;
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+}
+
+.shutdown-overlay--on {
+	pointer-events: auto;
+	opacity: 1;
+	transition: opacity 220ms ease-out;
+}
+
+.shutdown-overlay__bg {
+	width: 100%;
+	height: 100%;
+	max-width: 100vw;
+	max-height: 100vh;
+	object-fit: contain;
+	opacity: 0;
+}
+
+.shutdown-overlay--on .shutdown-overlay__bg {
+	animation: shutdown-text 2400ms ease-in forwards;
+}
+
+.shutdown-overlay--on::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(
+		0deg,
+		rgba(0, 229, 255, 0.06) 0 1px,
+		transparent 1px 3px
+	);
+	pointer-events: none;
+}
+
+@keyframes shutdown-text {
+	0%, 25% { opacity: 0; }
+	45% { opacity: 0.5; }
+	60%, 100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.shutdown-overlay {
+		display: none !important;
+	}
+}
