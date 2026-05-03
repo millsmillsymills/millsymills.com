@@ -5,6 +5,7 @@ import MobileFallback from '../components/desktop/MobileFallback.astro';
 import CommandPalette from '../components/desktop/CommandPalette.astro';
 import HelpOverlay from '../components/desktop/HelpOverlay.astro';
 import ResetConfirm from '../components/desktop/ResetConfirm.astro';
+import ShutdownOverlay from '../components/desktop/ShutdownOverlay.astro';
 import { profile } from '../data/profile';
 
 const canonical = Astro.site?.href ?? 'https://millsymills.com/';
@@ -21,4 +22,5 @@ const canonical = Astro.site?.href ?? 'https://millsymills.com/';
 	<CommandPalette />
 	<HelpOverlay />
 	<ResetConfirm />
+	<ShutdownOverlay />
 </DesktopLayout>
