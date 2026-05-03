@@ -11,6 +11,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "astro": "astro"
   },
   "dependencies": {
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.8",
+    "@playwright/test": "1.59.1",
     "@resvg/resvg-js": "2.6.2",
     "@types/node": "22.19.17",
     "happy-dom": "20.9.0",

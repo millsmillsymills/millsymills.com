@@ -54,3 +54,7 @@ infra/*.tfvars
 
 # Playwright MCP capture (console logs + page snapshots from interactive runs)
 .playwright-mcp/
+
+# Playwright test artifacts (per-run traces, screenshots, html report)
+test-results/
+playwright-report/
