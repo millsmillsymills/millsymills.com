@@ -96,6 +96,20 @@ resource "aws_cloudfront_response_headers_policy" "site" {
       value    = "same-origin"
       override = true
     }
+
+    # Permissions-Policy. Strict-deny baseline for every powerful feature the
+    # site does not use. The site is a static personal page with zero JS use
+    # of geolocation, camera/mic, USB/serial/HID, payments, fullscreen, etc.
+    # — verified by greppping `navigator.*` in src/. Each feature is denied
+    # for both top-level and embedded contexts via `=()`. New features that
+    # ever ship (e.g. WebAuthn demo #140, theater-mode fullscreen) must
+    # update this policy in the same PR; otherwise the API call no-ops
+    # silently. Inspector grades A at >=5 directives — we ship 29.
+    items {
+      header   = "Permissions-Policy"
+      value    = "accelerometer=(), autoplay=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), storage-access=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()"
+      override = true
+    }
   }
 }
 

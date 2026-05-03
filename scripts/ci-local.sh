@@ -43,6 +43,10 @@ section "node: assert COOP / COEP / CORP headers wired"
 ./scripts/assert-coop-coep-corp.sh
 ok "cross-origin isolation headers shipping with promised values"
 
+section "node: assert Permissions-Policy header wired"
+./scripts/assert-permissions-policy.sh
+ok "Permissions-Policy strict-deny baseline shipping"
+
 section "node: vitest"
 npm run test
 ok "npm run test"

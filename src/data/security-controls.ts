@@ -102,6 +102,20 @@ export const securityControls: readonly SecurityControl[] = [
 		},
 	},
 	{
+		id: 'permissions-policy',
+		title: 'Permissions-Policy (powerful features denied by default)',
+		category: 'web',
+		status: 'shipped',
+		what: 'CloudFront response-headers policy ships a strict-deny `Permissions-Policy` that blocks 29 powerful features — camera, microphone, geolocation, USB / Serial / HID / MIDI, clipboard read/write, payment, fullscreen, screen-wake-lock, WebAuthn `publickey-credentials-*`, FLoC/Topics, otp-credentials, and the rest of the W3C catalog — for both top-level and embedded contexts.',
+		why: 'The site has zero JavaScript use of any powerful API (verified by greppping `navigator.*` in `src/`), so the strict-deny baseline ships without breaking anything visitors actually use. Closing every feature the site does not need turns silent permission requests into hard `Permission denied` failures, narrows the impact radius of a future XSS, and makes the inspector\'s self-grading honest — previously the site failed its own `Permissions-Policy` check.',
+		tradeoffs: 'Future features that legitimately need a powerful API (e.g. the WebAuthn passkey demo #140, a theater-mode fullscreen) must extend this policy in the same PR; otherwise the API call no-ops silently. The policy does not rate-limit — it\'s a strict allow-list, not a runtime gate.',
+		code: ['infra/cloudfront.tf', 'scripts/assert-permissions-policy.sh'],
+		verify: {
+			label: 'securityheaders.com report',
+			href: 'https://securityheaders.com/?q=millsymills.com&followRedirects=on',
+		},
+	},
+	{
 		id: 'coop-coep',
 		title: 'Cross-origin isolation (COOP / COEP / CORP)',
 		category: 'web',
