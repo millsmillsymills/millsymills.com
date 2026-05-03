@@ -25,6 +25,15 @@ jobs:
     name: Build + SBOM + tarball (rehearsal)
     runs-on: ubuntu-24.04
 
+    # Pull `vars.SITE_URL` (and friends) from the rehearsal environment.
+    # Required because typecheck + build read env-scoped vars; without this
+    # binding, `vars.SITE_URL` resolves to '' and astro.config.mjs rejects
+    # the build. The deploy job below targets the same environment for
+    # OIDC + IAM scoping.
+    environment:
+      name: rehearsal
+      url: https://${{ vars.SITE_DOMAIN }}
+
     permissions:
       contents: read
       id-token: write
