@@ -21,12 +21,37 @@
 import { dispatchClippyTrigger } from './util/events';
 
 const STORAGE_PREFIX = 'mills.';
+const SHUTDOWN_HOLD_MS = 2400;
 
 export interface ResetOptions {
 	/** if true, skip the confirm modal. used by callers that already confirmed. */
 	skipConfirm?: boolean;
 	/** override the default `/` reload target. */
 	href?: string;
+}
+
+function prefersReducedMotion(): boolean {
+	return (
+		typeof window !== 'undefined'
+		&& typeof window.matchMedia === 'function'
+		&& window.matchMedia('(prefers-reduced-motion: reduce)').matches
+	);
+}
+
+// Reveal the full-screen "simulation ended" overlay if the page rendered one
+// AND the user hasn't asked for reduced motion. Returns whether the caller
+// should wait for the hold before reloading. Caller must already have purged
+// state — overlay-then-reload is purely cosmetic; the destructive work is done.
+function showShutdownOverlay(): boolean {
+	const overlay = document.querySelector<HTMLElement>('[data-shutdown-overlay]');
+	if (!overlay || prefersReducedMotion()) return false;
+	overlay.hidden = false;
+	// Two rAFs so the un-hide commits to layout before the class-add starts the
+	// CSS transition; without it the overlay snaps in with no fade.
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => overlay.classList.add('shutdown-overlay--on'));
+	});
+	return true;
 }
 
 function purge(): void {
@@ -55,7 +80,16 @@ function performReset(opts: ResetOptions): void {
 		console.error('[reset] purge failed — state not cleared', err);
 		return;
 	}
-	window.location.href = opts.href ?? '/';
+	const target = opts.href ?? '/';
+	// Purge has already committed; the overlay+hold is a cosmetic farewell.
+	// If the user closes the tab mid-animation, state is already gone.
+	if (showShutdownOverlay()) {
+		window.setTimeout(() => {
+			window.location.href = target;
+		}, SHUTDOWN_HOLD_MS);
+		return;
+	}
+	window.location.href = target;
 }
 
 // Modal state lives at module scope so closeModal() can tear down everything

@@ -5,6 +5,7 @@ import MobileFallback from '../components/desktop/MobileFallback.astro';
 import CommandPalette from '../components/desktop/CommandPalette.astro';
 import HelpOverlay from '../components/desktop/HelpOverlay.astro';
 import ResetConfirm from '../components/desktop/ResetConfirm.astro';
+import ShutdownOverlay from '../components/desktop/ShutdownOverlay.astro';
 import { apps, findApp } from '../data/apps';
 import { profile } from '../data/profile';
 
@@ -36,4 +37,5 @@ const ogImage = app.hidden ? undefined : `${siteHref}og/${app.id}.png`;
 	<CommandPalette />
 	<HelpOverlay />
 	<ResetConfirm />
+	<ShutdownOverlay />
 </DesktopLayout>
