@@ -41,6 +41,21 @@
 		</tbody>
 	</table>
 
+	<section class="inspector__tls" aria-label="TLS connection">
+		<h2>TLS connection</h2>
+		<p class="inspector__tls-note">
+			fetched from <code>/api/tls/inspect</code> — a Lambda behind
+			CloudFront that reads the <code>cloudfront-viewer-tls</code>
+			header and reports the protocol, cipher, and SNI negotiated
+			between your browser and CloudFront.
+		</p>
+		<dl class="inspector__tls-fields" data-inspector-tls>
+			<dt>protocol</dt><dd data-inspector-tls-field="protocol">…</dd>
+			<dt>cipher</dt><dd data-inspector-tls-field="cipher">…</dd>
+			<dt>sni</dt><dd data-inspector-tls-field="sni">…</dd>
+		</dl>
+	</section>
+
 	<p class="inspector__note">
 		grades reflect the active CloudFront response-headers policy. drift
 		between this readout and <a href="/security/">security.txt</a> is a
@@ -183,6 +198,61 @@
 		color: var(--ink-dim);
 	}
 
+	.inspector__tls {
+		margin: 18px 0 0;
+		padding: 10px 12px;
+		background: var(--bg-deep);
+		border: 2px solid var(--neon-cyan);
+		border-radius: var(--chrome-radius-button);
+	}
+
+	.inspector__tls h2 {
+		margin: 0 0 6px;
+		font-family: var(--font-pixel);
+		font-size: 11px;
+		color: var(--neon-cyan);
+		letter-spacing: 1px;
+		text-transform: lowercase;
+	}
+
+	.inspector__tls-note {
+		margin: 0 0 10px;
+		font-size: 13px;
+		color: var(--ink-dim);
+	}
+
+	.inspector__tls-note code {
+		background: var(--bg-edge);
+		padding: 1px 4px;
+		border-radius: 2px;
+		color: var(--ink-muted);
+	}
+
+	.inspector__tls-fields {
+		margin: 0;
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 4px 12px;
+		font-family: var(--font-mono);
+		font-size: 14px;
+	}
+
+	.inspector__tls-fields dt {
+		color: var(--ink-dim);
+		text-transform: lowercase;
+	}
+
+	.inspector__tls-fields dd {
+		margin: 0;
+		color: var(--ink-primary);
+		word-break: break-word;
+	}
+
+	.inspector__tls--err dd {
+		color: var(--ink-dim);
+		font-style: italic;
+	}
+
 	.inspector__note {
 		margin: 14px 0 0;
 		font-size: 13px;
@@ -211,6 +281,13 @@
 	}
 
 	const TARGET = '/';
+	const TLS_TARGET = '/api/tls/inspect';
+
+	interface TlsResult {
+		protocol: string;
+		cipher: string;
+		sni: string;
+	}
 
 	function gradeHsts(v: string | null): Check {
 		const header = 'Strict-Transport-Security';
@@ -340,6 +417,54 @@
 		tbody.replaceChildren(tr);
 	}
 
+	function setTlsField(name: 'protocol' | 'cipher' | 'sni', value: string): void {
+		const el = document.querySelector<HTMLElement>(`[data-inspector-tls-field="${name}"]`);
+		if (el) el.textContent = value;
+	}
+
+	function setTlsErr(msg: string): void {
+		const wrap = document.querySelector<HTMLElement>('[data-inspector-tls]');
+		wrap?.parentElement?.classList.add('inspector__tls--err');
+		setTlsField('protocol', msg);
+		setTlsField('cipher', '—');
+		setTlsField('sni', '—');
+	}
+
+	function setTlsOk(r: TlsResult): void {
+		const wrap = document.querySelector<HTMLElement>('[data-inspector-tls]');
+		wrap?.parentElement?.classList.remove('inspector__tls--err');
+		setTlsField('protocol', r.protocol || '(empty)');
+		setTlsField('cipher', r.cipher || '(empty)');
+		setTlsField('sni', r.sni || '(empty)');
+	}
+
+	async function runTls(): Promise<void> {
+		setTlsField('protocol', '…');
+		setTlsField('cipher', '…');
+		setTlsField('sni', '…');
+		try {
+			const res = await fetch(TLS_TARGET, { cache: 'no-store' });
+			if (!res.ok) {
+				setTlsErr(`(${res.status} — Lambda not deployed?)`);
+				return;
+			}
+			const ct = res.headers.get('content-type') ?? '';
+			if (!ct.includes('application/json')) {
+				setTlsErr('(non-JSON response)');
+				return;
+			}
+			const data = (await res.json()) as Partial<TlsResult>;
+			setTlsOk({
+				protocol: typeof data.protocol === 'string' ? data.protocol : '',
+				cipher: typeof data.cipher === 'string' ? data.cipher : '',
+				sni: typeof data.sni === 'string' ? data.sni : '',
+			});
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			setTlsErr(`(fetch failed: ${msg})`);
+		}
+	}
+
 	async function run(): Promise<void> {
 		setLoading();
 		try {
@@ -365,6 +490,10 @@
 				new Date().toISOString(),
 			);
 		}
+		// Run the TLS check independently so a failed header fetch
+		// (e.g. astro preview without CloudFront) doesn't suppress it,
+		// and vice versa.
+		await runTls();
 	}
 
 	function init(): void {
