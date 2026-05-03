@@ -6,6 +6,40 @@ resource "aws_cloudfront_function" "index_rewrite" {
   code    = file("${path.module}/cloudfront_function_index.js")
 }
 
+# Origin request policy for the inspector_tls Lambda Function URL.
+#
+# Lambda Function URLs reject any request whose Host header does not
+# match `<id>.lambda-url.<region>.on.aws` with 403. CloudFront's
+# AWS-managed `Managed-AllViewerAndCloudFrontHeaders-2022-06` forwards
+# the viewer's Host (e.g. `millsymills.com`) verbatim, so the Lambda
+# answers every CloudFront request with 403, which CloudFront's
+# custom_error_response then masks as the static /404.html page.
+#
+# Use `whitelist` mode so CloudFront rewrites Host to the origin's
+# hostname (the default when Host isn't explicitly forwarded) and only
+# forwards the two headers the Lambda actually reads:
+# `CloudFront-Viewer-TLS` (the negotiated TLS state we want to surface)
+# and `Origin` (used for the CORS allow-origin echo).
+resource "aws_cloudfront_origin_request_policy" "inspector_tls" {
+  name    = "${replace(var.domain, ".", "-")}-inspector-tls-origin-req"
+  comment = "Forward CloudFront-Viewer-TLS + Origin to the inspector_tls Lambda; let CloudFront rewrite Host"
+
+  headers_config {
+    header_behavior = "whitelist"
+    headers {
+      items = ["CloudFront-Viewer-TLS", "Origin"]
+    }
+  }
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+
+  query_strings_config {
+    query_string_behavior = "none"
+  }
+}
+
 resource "aws_cloudfront_response_headers_policy" "site" {
   name    = "${replace(var.domain, ".", "-")}-security-headers"
   comment = "Security headers for ${var.domain}"
@@ -109,10 +143,13 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
-  # /api/tls/* → inspector_tls Lambda. Uses the AWS-managed origin-request
-  # policy "Managed-AllViewerAndCloudFrontHeaders-2022-06" so the
-  # CloudFront-Viewer-TLS header survives the origin hop. CachingDisabled
-  # cache policy because the response is per-connection live data.
+  # /api/tls/* → inspector_tls Lambda. CachingDisabled cache policy because
+  # the response is per-connection live data. Uses our custom origin-request
+  # policy `inspector_tls` (defined below) — we can't use the AWS-managed
+  # AllViewerAndCloudFrontHeaders here because Lambda Function URLs enforce
+  # Host header match against their own URL, and that managed policy forwards
+  # the viewer's Host (e.g. millsymills.com) → Lambda 403 → CloudFront's
+  # custom_error_response substitutes /404.html.
   ordered_cache_behavior {
     path_pattern           = "/api/tls/*"
     target_origin_id       = "lambda-${local.inspector_tls_name}"
@@ -122,9 +159,8 @@ resource "aws_cloudfront_distribution" "site" {
     compress               = true
 
     # AWS-managed CachingDisabled
-    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    # AWS-managed Managed-AllViewerAndCloudFrontHeaders-2022-06
-    origin_request_policy_id = "33f36d7e-f396-46d9-90e0-52428a34d9dc"
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.inspector_tls.id
   }
 
   custom_error_response {
