@@ -205,6 +205,17 @@ const _APPS_DATA = [
 		height: 580,
 	},
 	{
+		id: 'inspector',
+		label: 'inspector',
+		glyph: '🔍',
+		title: 'inspector.exe',
+		ogDescription: 'live security-headers inspector. fetches the site\'s own response headers and grades them against the controls listed in security.txt.',
+		x: 240,
+		y: 140,
+		width: 720,
+		height: 560,
+	},
+	{
 		id: 'trash',
 		label: 'trash',
 		glyph: '🗑️',
