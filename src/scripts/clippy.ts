@@ -20,6 +20,9 @@ const IDLE_THINK_MS = 30_000;
 const IDLE_TIRED_MS = 120_000;
 const IDLE_SLEEP_MS = 300_000;
 const QUIP_VISIBLE_MS = 4000;
+// Minimum gap between any two spoken quips, regardless of trigger. Tune here.
+// Dismissing a quip does NOT reset this gap — see speak() for why.
+const QUIP_COOLDOWN_MS = 8000;
 const CLICK_STREAK_WINDOW_MS = 10_000;
 const CLICK_STREAK_THRESHOLD = 7;
 const ERROR_QUIET_MS = 8000;
@@ -38,6 +41,7 @@ let idleThinkTimer: number | null = null;
 let idleTiredTimer: number | null = null;
 let idleSleepTimer: number | null = null;
 let clickTimes: number[] = [];
+let lastQuipAt = 0;
 
 function clearTimer(id: number | null): void {
 	if (id !== null) window.clearTimeout(id);
@@ -75,6 +79,12 @@ function setPose(next: Pose): void {
 
 function speak(text: string): void {
 	if (!bubble || !bubbleText || !text) return;
+	// Global cooldown: drop the quip if we spoke too recently. Anchored on the
+	// last *spoken* time, not on bubble visibility — so a user-initiated dismiss
+	// can't shorten the gap by clearing the bubble early.
+	const now = Date.now();
+	if (now - lastQuipAt < QUIP_COOLDOWN_MS) return;
+	lastQuipAt = now;
 	bubbleText.textContent = text;
 	bubble.hidden = false;
 	clearTimer(bubbleHideTimer);
