@@ -654,7 +654,11 @@ a {
 	position: fixed;
 	left: 4px;
 	bottom: 48px;
-	width: 220px;
+	/* Sized to fit the 20-char `mills@millsymills:~$` header in
+	 * src/components/desktop/Taskbar.astro at 11px Press Start 2P with
+	 * 0.5px letter-spacing. Narrower clips the prompt under
+	 * `overflow: hidden`. */
+	width: 260px;
 	background: var(--bg-deep);
 	border: 2px solid var(--neon-cyan);
 	border-radius: 8px;
@@ -674,7 +678,10 @@ a {
 	padding: 10px 14px;
 	background: var(--bg-void);
 	color: var(--neon-pink);
-	text-shadow: 1px 1px 0 var(--neon-cyan);
+	/* Vertical-only drop-shadow. A horizontal component (e.g. `1px 1px 0`)
+	 * would land the cyan halo on top of the next pink glyph at this
+	 * font-size + letter-spacing combo and shred legibility. */
+	text-shadow: 0 1px 0 var(--neon-cyan);
 	letter-spacing: 0.5px;
 }
 

@@ -730,7 +730,7 @@ Replace those two blocks with:
 	position: fixed;
 	left: 4px;
 	bottom: 48px;
-	width: 220px;
+	width: 260px; /* sized to fit `mills@millsymills:~$` — see #305 / #308 */
 	background: var(--bg-deep);
 	border: 2px solid var(--neon-cyan);
 	border-radius: 8px;
@@ -750,7 +750,7 @@ Replace those two blocks with:
 	padding: 10px 14px;
 	background: var(--bg-void);
 	color: var(--neon-pink);
-	text-shadow: 1px 1px 0 var(--neon-cyan);
+	text-shadow: 0 1px 0 var(--neon-cyan); /* vertical-only — see #305 / #308 */
 	letter-spacing: 0.5px;
 }
 

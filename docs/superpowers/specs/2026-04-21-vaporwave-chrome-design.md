@@ -193,7 +193,7 @@ Applied to: window titlebar text, start menu items, taskbar clock, taskbar items
 
 **`.start-menu`**
 - Panel uses the `.window` chrome pattern (dark + cyan border + pink shadow).
-- `.start-menu__header` — `background: var(--bg-void)`, text in `var(--neon-pink)` with `text-shadow: 1px 1px 0 var(--neon-cyan)`. Content `mills@millsymills:~$` unchanged.
+- `.start-menu__header` — `background: var(--bg-void)`, text in `var(--neon-pink)` with `text-shadow: 0 1px 0 var(--neon-cyan)` (vertical-only; a horizontal offset collides with neighbour pink glyphs at the 11px Press Start 2P chrome size — see #305 / #308). Content `mills@millsymills:~$` unchanged.
 - `.start-menu__item` — `color: var(--ink-primary)`, hover `background: var(--bg-raised)` + `color: var(--neon-cyan)`.
 - `.start-menu__item--danger` (reset) — `color: var(--neon-pink-hi)`, hover `background: rgba(255, 51, 51, 0.18)`.
 
