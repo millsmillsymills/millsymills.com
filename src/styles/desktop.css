@@ -498,6 +498,11 @@ a {
 	width: 14px;
 	height: 14px;
 	cursor: nwse-resize;
+	/* Block the browser's default touch-scroll/pan claim so the first
+	 * pointermove during a resize gesture isn't converted into a scroll
+	 * (which fires pointercancel and tears down the gesture mid-stroke
+	 * on iOS/Android). Mouse/desktop is unaffected. */
+	touch-action: none;
 	background: repeating-linear-gradient(
 		135deg,
 		transparent 0 2px,

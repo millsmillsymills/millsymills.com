@@ -18,6 +18,22 @@ import { dispatchClippyTrigger } from './util/events';
 const STORAGE_KEY = 'mills.desktop.v1';
 const Z_BASE = 100;
 
+// Window geometry guards. These mirror `.window` and `.window--maximized`
+// in src/styles/desktop.css; if you change one side, change the others.
+// CSS is the binding constraint at render time — the JS clamps exist so
+// the inline width/height the resize handler writes never exceeds what
+// CSS will draw, otherwise the cursor decouples from the grip near edges.
+//
+// .window: min-width 280px, min-height 180px,
+//          max-width calc(100vw - 32px), max-height calc(100vh - 96px)
+//   → 16px reserved on each side; 16px top + 80px bottom (taskbar lives
+//     in the bottom strip).
+const WINDOW_MIN_W = 280;
+const WINDOW_MIN_H = 180;
+const VIEWPORT_MARGIN_X = 16;
+const VIEWPORT_MARGIN_TOP = 16;
+const VIEWPORT_MARGIN_BOTTOM = 80;
+
 // Window geometry as a pair (always present together).
 interface Rect {
 	x: number;
@@ -457,10 +473,11 @@ class WindowManager {
 		if (el.classList.contains('window--maximized')) return;
 
 		// Bring focus + stop click-through so the resize gesture doesn't also
-		// register as a focus-only pointerdown on parent elements.
+		// register as a focus-only pointerdown on parent elements. Don't
+		// preventDefault here — startDrag doesn't either, and `touch-action:
+		// none` on the grip itself handles the touch-scroll case.
 		this.focus(id);
 		e.stopPropagation();
-		e.preventDefault();
 
 		const rect = el.getBoundingClientRect();
 		const startW = rect.width;
@@ -472,13 +489,23 @@ class WindowManager {
 
 		const onMove = (ev: PointerEvent) => {
 			if (ev.pointerId !== e.pointerId) return;
-			// Width/height clamps mirror the CSS min/max so the JS-driven
-			// inline style and the CSS guards stay in agreement. Upper bound
-			// is viewport-size minus the same margin the .window--maximized
-			// rule reserves, so a fully-resized window doesn't hide the
-			// taskbar or push past the viewport edge.
-			const w = clamp(startW + (ev.clientX - startX), 280, window.innerWidth - rect.left - 16);
-			const h = clamp(startH + (ev.clientY - startY), 180, window.innerHeight - rect.top - 80);
+			// Upper bound is the *tighter* of two constraints, both of which
+			// CSS will enforce at render time:
+			//   - .window max-width / max-height: viewport - 2 × margin
+			//   - right/bottom edge: viewport - rect.{left,top} - margin
+			// Take min so the inline style we write never exceeds what CSS
+			// will draw — otherwise the rendered box stops growing while the
+			// cursor keeps moving and the grip decouples from the pointer.
+			const widthMax = Math.min(
+				window.innerWidth - 2 * VIEWPORT_MARGIN_X,
+				window.innerWidth - rect.left - VIEWPORT_MARGIN_X,
+			);
+			const heightMax = Math.min(
+				window.innerHeight - VIEWPORT_MARGIN_TOP - VIEWPORT_MARGIN_BOTTOM,
+				window.innerHeight - rect.top - VIEWPORT_MARGIN_BOTTOM,
+			);
+			const w = clamp(startW + (ev.clientX - startX), WINDOW_MIN_W, widthMax);
+			const h = clamp(startH + (ev.clientY - startY), WINDOW_MIN_H, heightMax);
 			el.style.width = `${w}px`;
 			el.style.height = `${h}px`;
 		};
