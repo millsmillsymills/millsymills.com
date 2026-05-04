@@ -21,11 +21,12 @@ const IDLE_TIRED_MS = 120_000;
 const IDLE_SLEEP_MS = 300_000;
 const QUIP_VISIBLE_MS = 4000;
 // Minimum gap between any two spoken quips, regardless of trigger. Tune here.
-// Dismissing a quip does NOT reset this gap — see speak() for why.
+// Dismissing a quip does NOT reset this gap — see speak() for why. The
+// `force` option on speak() bypasses the gate for high-signal moments
+// (flag captures), so a CTF win lands even if Clippy spoke 2s ago.
 const QUIP_COOLDOWN_MS = 8000;
 const CLICK_STREAK_WINDOW_MS = 10_000;
 const CLICK_STREAK_THRESHOLD = 7;
-const ERROR_QUIET_MS = 8000;
 const STORAGE_KEY = 'mills.clippy.dismissed';
 
 let aside: HTMLElement | null = null;
@@ -77,13 +78,15 @@ function setPose(next: Pose): void {
 	}
 }
 
-function speak(text: string): void {
+function speak(text: string, options: { force?: boolean } = {}): void {
 	if (!bubble || !bubbleText || !text) return;
 	// Global cooldown: drop the quip if we spoke too recently. Anchored on the
 	// last *spoken* time, not on bubble visibility — so a user-initiated dismiss
-	// can't shorten the gap by clearing the bubble early.
+	// can't shorten the gap by clearing the bubble early. `force: true` bypasses
+	// the gate for events where dropping the quip would feel like a bug (e.g.
+	// a flag capture immediately after an idle-think quip).
 	const now = Date.now();
-	if (now - lastQuipAt < QUIP_COOLDOWN_MS) return;
+	if (!options.force && now - lastQuipAt < QUIP_COOLDOWN_MS) return;
 	lastQuipAt = now;
 	bubbleText.textContent = text;
 	bubble.hidden = false;
@@ -199,13 +202,10 @@ function init(): void {
 
 	// Uncaught script errors → tired pose + commiseration. Plain `error`
 	// listener so we catch both runtime errors and resource-load failures.
-	// Throttled — a broken image plus a dead script can fire dozens of
-	// errors in a tight burst; one quip per ERROR_QUIET_MS is plenty.
-	let lastErrorAt = 0;
+	// Burst suppression (a broken image plus a dead script can fire dozens of
+	// errors in a tight burst) is handled by the global QUIP_COOLDOWN_MS gate
+	// in speak() — no separate per-handler throttle needed.
 	window.addEventListener('error', () => {
-		const now = Date.now();
-		if (now - lastErrorAt < ERROR_QUIET_MS) return;
-		lastErrorAt = now;
 		const entry = pickQuip(getCurrentAppId(), 'error');
 		if (!entry) return;
 		if (entry.pose) setPose(entry.pose);
@@ -218,12 +218,14 @@ function init(): void {
 
 	// Flag captured anywhere → cool pose + contextual quip. Reset the idle
 	// ladder so a capture at minute 4 of an idle session doesn't let Clippy
-	// fall asleep mid-celebration.
+	// fall asleep mid-celebration. `force: true` bypasses the global cooldown:
+	// a CTF win is a once-per-flag user-driven event, and silently dropping
+	// the celebration because Clippy spoke 2s ago would feel like a bug.
 	window.addEventListener('mills:flag-captured', () => {
 		resetIdleTimers();
 		setPose('cool');
 		const entry = pickQuip(getCurrentAppId(), 'flag');
-		if (entry) speak(entry.quip);
+		if (entry) speak(entry.quip, { force: true });
 	});
 
 	// Sprite click — track for the clippy CTF flag, suppress popover during a
