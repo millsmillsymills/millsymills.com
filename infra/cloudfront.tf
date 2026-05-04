@@ -104,10 +104,13 @@ resource "aws_cloudfront_response_headers_policy" "site" {
     # for both top-level and embedded contexts via `=()`. New features that
     # ever ship (e.g. WebAuthn demo #140, theater-mode fullscreen) must
     # update this policy in the same PR; otherwise the API call no-ops
-    # silently. Inspector grades A at >=5 directives — we ship 29.
+    # silently. Inspector grades A at >=5 directives — we ship 36.
+    # `assert-permissions-policy.sh` enforces both the count floor and the
+    # value shape: every directive must be `=()` (deny) or `=(self)`
+    # (self-allow), so a future "fix" that flips to `=*` fails CI.
     items {
       header   = "Permissions-Policy"
-      value    = "accelerometer=(), autoplay=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), microphone=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), storage-access=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()"
+      value    = "accelerometer=(), attribution-reporting=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), compute-pressure=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), storage-access=(), sync-xhr=(), unload=(), usb=(), web-share=(), window-management=(), xr-spatial-tracking=()"
       override = true
     }
   }

@@ -60,7 +60,7 @@ if [ -z "$policy_value" ]; then
 fi
 
 # Count comma-separated directives. The Inspector grades A at >=5; we
-# ship 28 today. Floor the lint at 5 so a refactor that strips the
+# ship 36 today. Floor the lint at 5 so a refactor that strips the
 # policy back to 1-2 directives fails CI loudly.
 directive_count=$(printf '%s' "$policy_value" | awk -F',' '{ print NF }')
 MIN_DIRECTIVES=5
@@ -69,6 +69,31 @@ if [ "$directive_count" -lt "$MIN_DIRECTIVES" ]; then
 	printf '\nFix: extend the Permissions-Policy value in %s.\n' "$CF_TF" >&2
 	printf '     /security/ promises a strict-deny baseline; <%d directives undermines that claim.\n' "$MIN_DIRECTIVES" >&2
 	lint::fatal "Permissions-Policy too narrow: $directive_count directives (need >=$MIN_DIRECTIVES)"
+fi
+
+# Validate every directive's allowlist. The strict-deny posture only holds
+# if each value is `()` (full deny) or `(self)` (self-allow only). A
+# refactor that flips a directive to `=*`, `=(*)`, or any explicit origin
+# breaks the posture while keeping the directive count high — exactly the
+# value-flip bypass adversarial review surfaced. Anything outside the
+# `()` / `(self)` shapes fails the lint.
+violations=$(printf '%s' "$policy_value" | awk -F',' '
+	{
+		for (i = 1; i <= NF; i++) {
+			d = $i
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", d)
+			if (d == "") continue
+			if (d !~ /^[a-z-]+=\(\)$/ && d !~ /^[a-z-]+=\(self\)$/) print d
+		}
+	}
+')
+
+if [ -n "$violations" ]; then
+	printf '\nFix: every Permissions-Policy directive in %s must use `()` (deny) or `(self)` (self-allow).\n' "$CF_TF" >&2
+	printf '     Permissive forms (=*, =(*), explicit origins) break the strict-deny posture.\n' >&2
+	printf '     Offending directive(s):\n' >&2
+	printf '       %s\n' $violations >&2
+	lint::fatal "Permissions-Policy directives widen beyond strict-deny"
 fi
 
 # Belt + suspenders: ensure the security-controls entry is still shipped.
