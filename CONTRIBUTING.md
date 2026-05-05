@@ -4,7 +4,7 @@ Personal site, but PRs from agents and humans both pass through `main` — so co
 
 ## Commit signing (required on `main`)
 
-Every commit that lands on `main` must carry a verified signing identity. Branch protection enforces this server-side; sign locally so your push doesn't bounce.
+Every commit that lands on `main` should carry a verified signing identity. Once the "Require signed commits" branch-protection rule is enabled on `main`, unsigned pushes bounce server-side; until then, treat this as a local convention and sign anyway so the toggle is a no-op when it lands.
 
 SSH signing is the recommended path — it reuses the key you already use to authenticate to GitHub, has no expiry-management overhead, and avoids the GPG key-server dance.
 
@@ -20,12 +20,17 @@ SSH signing is the recommended path — it reuses the key you already use to aut
    ```
 3. Upload the **public** key to GitHub twice — once as an authentication key (if not already), and once as a signing key:
    - Settings → SSH and GPG keys → New SSH key → Key type: **Signing Key**.
-4. Verify locally before pushing:
+4. Configure the local allowed-signers file so `git log --show-signature` can verify your own commits (GitHub verifies remotely against your uploaded signing key regardless; this is for the local check below):
+   ```bash
+   echo "$(git config --get user.email) namespaces=\"git\" $(cat ~/.ssh/id_ed25519.pub)" >> ~/.ssh/allowed_signers
+   git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers
+   ```
+5. Verify locally before pushing:
    ```bash
    git commit --allow-empty -m "test: signed commit"
    git log --show-signature -1
    ```
-   You should see `Good "git" signature for <email>`.
+   You should see `Good "git" signature for <email>`. Without step 4, this prints `No signature` and an `allowedSignersFile` error — the commit is still signed (and GitHub will accept it), but the local verifier can't check it.
 
 ### GPG fallback
 
@@ -33,10 +38,8 @@ If you'd rather use GPG (long-running release-signing key, hardware token, etc.)
 
 ### Agents (Claude Code, Codex, etc.)
 
-Agents inherit the local `git` config, so as long as the host machine is set up per the steps above, agent-produced commits sign automatically. Verify after a session by running `git log --show-signature` on the branch — an unsigned commit at the top means the agent forked a shell with a stripped environment; re-sign with `git commit --amend --no-edit -S` before pushing.
+Agents inherit the local `git` config, so as long as the host machine is set up per the steps above, agent-produced commits sign automatically. Verify after a session by running `git log --show-signature` on the branch — any unsigned commits mean the agent forked a shell with a stripped environment. Re-sign just the tip with `git commit --amend --no-edit -S`; for a chain of unsigned commits, use `git rebase --exec 'git commit --amend --no-edit --no-verify -S' <base>` (where `<base>` is the last signed commit, often `origin/main`) before pushing.
 
 ## Pull requests
 
-- Squash-merge to `main` (`gh pr merge <N> --squash`). Subject line follows `<type>(<scope>): <summary> (#<pr>)` — one logical change per merged commit.
-- Rebase or merge `origin/main` into long-lived feature branches before opening a PR; review upstream-collision fixes in the same PR rather than as follow-ups.
-- Run `npm run check` and `npm run build` before pushing — the build also catches PostCSS parse errors that `check` misses.
+PR + merge convention is in [`CLAUDE.md`](./CLAUDE.md) (squash to `main`, conventional-commit-style subject, rebase long-lived branches before filing). Run `npm run check` AND `npm run build` before pushing — `check` is type-only and skips PostCSS, so the build is what catches CSS parse errors.
