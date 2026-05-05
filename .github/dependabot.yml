@@ -19,6 +19,12 @@ updates:
           - "@astrojs/*"
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # tsconfck@3 (transitive of astro) pins peer typescript@^5 only — TS@6
+      # majors fail `npm ci` on Node 22 / npm 10 (the runner). Re-enable when
+      # astro's tsconfck dep widens to ^6 upstream.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
