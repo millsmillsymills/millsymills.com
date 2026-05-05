@@ -4,6 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <BaseLayout title="404 — millsymills.com" noindex>
 	<div class="not-found">
+		<p class="not-found__sigil" aria-hidden="true">SIGNAL LOST</p>
 		<img
 			class="not-found__hero"
 			src="/images/icons/vaporwave/error-404.png"
@@ -18,15 +19,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <style is:global>
 	body:has(.not-found) {
-		background: #1a0e23;
+		background: #0a0320;
 		color: #ffd6ec;
 	}
 </style>
 
 <style>
+	@keyframes hero-flicker {
+		0%, 92%, 100% { opacity: 1; }
+		94% { opacity: 0.78; }
+		96% { opacity: 1; }
+		97% { opacity: 0.6; }
+		98% { opacity: 1; }
+	}
+
+	@keyframes sigil-shift {
+		0%, 100% { transform: translate(0, 0); }
+		25% { transform: translate(1px, -1px); }
+		50% { transform: translate(-1px, 1px); }
+		75% { transform: translate(1px, 1px); }
+	}
+
 	.not-found {
-		/* dvh keeps the layout from overflowing if BaseLayout ever grows
-		 * a header/footer. 100vh would force a scrollbar in that case. */
+		position: relative;
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
@@ -36,16 +51,65 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 		padding: 32px;
 		text-align: center;
 		font-family: 'VT323', 'Courier New', monospace;
+		isolation: isolate;
+	}
+
+	/* CRT scanline overlay — fixed so it textures the whole viewport,
+	 * pointer-events:none so links and the home button stay clickable. */
+	.not-found::before {
+		content: '';
+		position: fixed;
+		inset: 0;
+		background: repeating-linear-gradient(
+			to bottom,
+			rgba(0, 0, 0, 0.18) 0,
+			rgba(0, 0, 0, 0.18) 1px,
+			transparent 1px,
+			transparent 3px
+		);
+		pointer-events: none;
+		z-index: 1;
+	}
+
+	/* CRT vignette + soft chroma wash above the scanlines. */
+	.not-found::after {
+		content: '';
+		position: fixed;
+		inset: 0;
+		background:
+			radial-gradient(ellipse at center, transparent 55%, rgba(10, 3, 32, 0.6) 100%),
+			linear-gradient(180deg, rgba(255, 79, 168, 0.05), rgba(0, 229, 255, 0.05));
+		pointer-events: none;
+		z-index: 1;
+	}
+
+	.not-found > * {
+		position: relative;
+		z-index: 2;
+	}
+
+	.not-found__sigil {
+		margin: 0;
+		font-family: 'Press Start 2P', 'VT323', monospace;
+		font-size: clamp(14px, 3vw, 22px);
+		letter-spacing: 0.4em;
+		color: #00e5ff;
+		text-shadow:
+			-1.5px 0 0 #ff4fa8,
+			1.5px 0 0 #00e5ff,
+			0 0 8px rgba(0, 229, 255, 0.6);
+		animation: sigil-shift 3s steps(1) infinite;
 	}
 
 	.not-found__hero {
-		/* Cap at the asset's intrinsic 464px so it doesn't upscale and lose
-		 * pixel-art crispness on wide monitors; still scales down on phones. */
 		max-width: min(464px, 90vw);
 		width: 100%;
 		height: auto;
 		image-rendering: pixelated;
-		filter: drop-shadow(4px 4px 0 #321a44);
+		filter:
+			drop-shadow(0 0 12px rgba(255, 79, 168, 0.4))
+			drop-shadow(4px 4px 0 #321a44);
+		animation: hero-flicker 6s linear infinite;
 	}
 
 	.not-found__msg {
@@ -75,5 +139,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 	.not-found__home:active {
 		transform: translate(1px, 1px);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.not-found__hero,
+		.not-found__sigil {
+			animation: none;
+		}
 	}
 </style>
