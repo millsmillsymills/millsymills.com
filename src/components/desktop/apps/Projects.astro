@@ -151,7 +151,15 @@ import { projects } from '../../../data/projects';
 				<header class="project-card__header">
 					<span class="project-card__title">
 						{p.icon && (
-							<img class="project-card__icon" src={p.icon} alt="" width="16" height="16" />
+							<img
+								class="project-card__icon"
+								src={p.icon}
+								alt=""
+								width="16"
+								height="16"
+								loading="lazy"
+								decoding="async"
+							/>
 						)}
 						<span>{p.name}</span>
 					</span>

@@ -14,7 +14,7 @@ export interface Project {
 	/** short blurb shown by `mcp describe`. */
 	readonly describe?: string;
 	/** path to a logo asset under `public/`, e.g. `/images/projects/foo.svg`. Optional. */
-	readonly icon?: string;
+	readonly icon?: `/${string}`;
 }
 
 export const projects: readonly Project[] = [
