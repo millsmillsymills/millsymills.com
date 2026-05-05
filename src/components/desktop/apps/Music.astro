@@ -47,6 +47,35 @@ import { playlist } from '../../../data/playlist';
 		animation-play-state: running;
 	}
 
+	.winamp__nowplay {
+		position: absolute;
+		top: -10px;
+		right: -10px;
+		width: 56px;
+		height: auto;
+		image-rendering: pixelated;
+		filter: drop-shadow(0 0 8px rgba(255, 79, 168, 0.55));
+		opacity: 0;
+		transform: scale(0.8) rotate(-8deg);
+		transition: opacity 200ms ease, transform 200ms ease;
+		pointer-events: none;
+	}
+
+	.winamp__cassette {
+		position: relative;
+	}
+
+	.winamp__cassette[data-music-state='playing'] .winamp__nowplay {
+		opacity: 1;
+		transform: scale(1) rotate(-8deg);
+		animation: winamp-nowplay-bob 1.4s ease-in-out infinite;
+	}
+
+	@keyframes winamp-nowplay-bob {
+		0%, 100% { transform: scale(1) rotate(-8deg) translateY(0); }
+		50%      { transform: scale(1) rotate(-8deg) translateY(-3px); }
+	}
+
 	@keyframes winamp-reel-spin {
 		to { transform: rotate(360deg); }
 	}
@@ -223,7 +252,8 @@ import { playlist } from '../../../data/playlist';
 
 	@media (prefers-reduced-motion: reduce) {
 		.winamp__reel,
-		.winamp__vu span {
+		.winamp__vu span,
+		.winamp__cassette[data-music-state='playing'] .winamp__nowplay {
 			animation: none !important;
 		}
 		.winamp__reel {
@@ -246,6 +276,16 @@ import { playlist } from '../../../data/playlist';
 			</div>
 		</div>
 		<div class="winamp__reel winamp__reel--right" aria-hidden="true"></div>
+		<img
+			class="winamp__nowplay"
+			src="/images/icons/web10/midi-music.png"
+			alt=""
+			aria-hidden="true"
+			width="1193"
+			height="643"
+			loading="lazy"
+			decoding="async"
+		/>
 	</div>
 
 	<div class="winamp__vu" aria-hidden="true">
