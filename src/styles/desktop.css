@@ -1611,6 +1611,33 @@ body:not([data-flags-unlocked='true']) [data-flags-gated] {
 }
 
 /* ------------------------------------------------------------------ */
+/* online/offline indicator in the taskbar status corner              */
+/* ------------------------------------------------------------------ */
+
+.taskbar__online {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 6px;
+	padding: 0 6px;
+	height: 28px;
+}
+
+.taskbar__online img {
+	height: 18px;
+	width: auto;
+	image-rendering: pixelated;
+	transition:
+		filter 200ms ease,
+		opacity 200ms ease;
+	filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.45));
+}
+
+.taskbar__online[data-online='false'] img {
+	filter: grayscale(1) brightness(0.55);
+	opacity: 0.55;
+}
+
+/* ------------------------------------------------------------------ */
 /* reset-confirm modal                                                */
 /* ------------------------------------------------------------------ */
 

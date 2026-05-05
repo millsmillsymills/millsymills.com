@@ -27,11 +27,29 @@ const { menu } = Astro.props;
 		<span class="now-playing__note" aria-hidden="true">♪</span>
 		<span data-now-playing-text>—</span>
 	</span>
+	<span
+		class="taskbar__online"
+		data-taskbar-online
+		data-online="true"
+		role="status"
+		aria-live="polite"
+		aria-label="connection: online"
+	>
+		<img
+			src="/images/icons/vaporwave/online.png"
+			alt=""
+			width="772"
+			height="378"
+			decoding="async"
+			loading="lazy"
+		/>
+	</span>
 	<span class="taskbar__clock motif-chrom" aria-label="current time">--:--</span>
 </nav>
 
 <script>
 	import '../../scripts/taskbar-now-playing';
+	import '../../scripts/taskbar-online';
 </script>
 
 <div class="start-menu" hidden role="menu" aria-label="start menu">
