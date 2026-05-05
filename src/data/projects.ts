@@ -13,6 +13,8 @@ export interface Project {
 	readonly install?: string;
 	/** short blurb shown by `mcp describe`. */
 	readonly describe?: string;
+	/** path to a logo asset under `public/`, e.g. `/images/projects/foo.svg`. Optional. */
+	readonly icon?: string;
 }
 
 export const projects: readonly Project[] = [
