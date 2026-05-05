@@ -11,6 +11,7 @@ import { playlist } from '../../../data/playlist';
 	}
 
 	.winamp__cassette {
+		position: relative;
 		display: grid;
 		grid-template-columns: 60px 1fr 60px;
 		gap: 12px;
@@ -59,10 +60,6 @@ import { playlist } from '../../../data/playlist';
 		transform: scale(0.8) rotate(-8deg);
 		transition: opacity 200ms ease, transform 200ms ease;
 		pointer-events: none;
-	}
-
-	.winamp__cassette {
-		position: relative;
 	}
 
 	.winamp__cassette[data-music-state='playing'] .winamp__nowplay {
