@@ -43,6 +43,32 @@ export const projects: readonly Project[] = [
 			'UniFi MCP server. Tools for clients, sites, events, device control, guest-network toggles.',
 	},
 	{
+		id: 'protonmail-mcp',
+		name: 'protonmail-mcp',
+		tagline: 'MCP server for Proton Mail — addresses, domains, keys',
+		description:
+			'Lets an MCP client manage a Proton Mail account: list/create/delete addresses, add and verify custom domains, edit mail and account settings, inspect encryption keys. Reads are always on; writes opt in via env flag. Built in Go on top of go-proton-api.',
+		repo: 'https://github.com/millsmillsymills/protonmail-mcp',
+		kind: 'mcp',
+		tags: ['mcp', 'protonmail', 'email', 'go'],
+		install: 'claude mcp add protonmail -- protonmail-mcp',
+		describe:
+			'Proton Mail MCP server. Tools for addresses, custom domains, mail/account settings, encryption keys.',
+	},
+	{
+		id: 'gandi-mcp',
+		name: 'gandi-mcp',
+		tagline: 'MCP server for Gandi — domains, DNS, email, certificates',
+		description:
+			'Wraps the Gandi v5 API as 71 MCP tools across domains, LiveDNS, email, billing, organizations, and certificates. Three-tier safety model: readonly by default, opt in to writes, and a separate flag to expose tools that spend money. Defense-in-depth checks at both tool-visibility and runtime.',
+		repo: 'https://github.com/millsmillsymills/gandi-mcp',
+		kind: 'mcp',
+		tags: ['mcp', 'gandi', 'dns', 'domains', 'python'],
+		install: 'claude mcp add gandi -- gandi-mcp',
+		describe:
+			'Gandi MCP server. 71 tools for domains, DNS, email, billing, certs. Writes and purchases are gated.',
+	},
+	{
 		id: 'millsymills.com',
 		name: 'millsymills.com',
 		tagline: 'this site — portfolio + community template',
