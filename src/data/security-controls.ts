@@ -120,9 +120,9 @@ export const securityControls: readonly SecurityControl[] = [
 		title: 'Cross-origin isolation (COOP / COEP / CORP)',
 		category: 'web',
 		status: 'shipped',
-		what: '`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, `Cross-Origin-Resource-Policy: same-origin` on every response.',
+		what: '`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, `Cross-Origin-Resource-Policy: same-origin` on every document response. The `/api/tls/*` JSON endpoint uses a separate response-headers policy with `Cross-Origin-Resource-Policy: cross-origin` so allowlisted cross-origin callers can fetch it from a COEP-isolated document; the CORS allowlist in `inspector_tls.mjs` remains the access boundary.',
 		why: 'Closes Spectre-class side channels and cross-origin window-reference leaks. The combination puts the document in a cross-origin isolated agent cluster, also unlocking precision-timer + SharedArrayBuffer features if we ever need them.',
-		tradeoffs: 'COEP `require-corp` is the strict variant — every cross-origin subresource has to opt in via CORP/CORS. Site is fully self-hosted (no third-party scripts, fonts, images, or iframes; `assert-fonts-csp.sh` keeps it that way), so the strict variant ships without breaking anything. Same-origin CORP also blocks third-party hot-linking of static assets.',
+		tradeoffs: 'COEP `require-corp` is the strict variant — every cross-origin subresource has to opt in via CORP/CORS. Site is fully self-hosted (no third-party scripts, fonts, images, or iframes; `assert-fonts-csp.sh` keeps it that way), so the strict variant ships without breaking anything. Same-origin CORP also blocks third-party hot-linking of static assets. The API-policy carve-out is intentional — JSON responses are not documents, so COOP/COEP do not apply, and CSP is ignored by browsers on `application/json`.',
 		code: ['infra/cloudfront.tf', 'scripts/assert-coop-coep-corp.sh'],
 		verify: {
 			label: 'securityheaders.com report',
