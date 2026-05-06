@@ -74,14 +74,53 @@ resource "aws_lambda_function" "inspector_tls" {
   depends_on = [aws_cloudwatch_log_group.inspector_tls]
 }
 
-# Function URL is the public origin CloudFront will forward to. Auth
-# NONE because the data is intentionally public — TLS metadata is not a
-# secret — and the only "auth" we need is "the request came through
-# CloudFront with a viewer-TLS header." That part we inspect at the
-# Lambda by reading the header presence.
+# Function URL is the origin CloudFront forwards to. Locked to AWS_IAM
+# auth and only invokable by the CloudFront service principal scoped to
+# our distribution (see aws_lambda_permission below). Without this, the
+# raw `<id>.lambda-url.<region>.on.aws` endpoint would be publicly
+# reachable, which means a direct caller bypasses the CloudFront layer
+# (HSTS / CSP / COOP / COEP / CORP / X-Content-Type-Options /
+# Referrer-Policy / Permissions-Policy) and the WAF / OAC chain. The
+# /security/ page promises every response ships those headers; that
+# claim is only true for `millsymills.com/api/tls/inspect`, not for the
+# raw Function URL — so we close the bypass at the Lambda boundary.
 resource "aws_lambda_function_url" "inspector_tls" {
   function_name      = aws_lambda_function.inspector_tls.function_name
-  authorization_type = "NONE"
+  authorization_type = "AWS_IAM"
+}
+
+# CloudFront OAC for the Lambda Function URL. CloudFront sigv4-signs
+# every origin request; the Lambda permission below restricts the
+# resource policy to the CloudFront service principal scoped via
+# source_arn to this specific distribution.
+#
+# Deploy-time note: aws_lambda_permission.inspector_tls_cloudfront has
+# no dependency edge from aws_cloudfront_distribution.site (it can't —
+# the permission's source_arn references the distribution's arn, so
+# inverting the dependency would cycle). On first apply, CloudFront
+# may finish propagating the OAC change before the permission lands;
+# during that window CloudFront-signed requests get 403 from Lambda,
+# which the distribution-level custom_error_response converts to
+# /404.html. Subsequent applies are unaffected because the permission
+# already exists.
+resource "aws_cloudfront_origin_access_control" "inspector_tls" {
+  name                              = local.inspector_tls_name
+  origin_access_control_origin_type = "lambda"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+# Allow CloudFront — and only CloudFront, only this distribution — to
+# invoke the Function URL. AWS_IAM auth on the URL means an unsigned
+# direct call from the public internet returns 403, so the bypass path
+# the /security/ page implicitly disclaimed is closed.
+resource "aws_lambda_permission" "inspector_tls_cloudfront" {
+  statement_id           = "AllowCloudFrontServicePrincipal"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.inspector_tls.function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.site.arn
+  function_url_auth_type = "AWS_IAM"
 }
 
 # Strip the `https://` and any trailing slash from the function URL so
