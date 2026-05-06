@@ -176,8 +176,9 @@ resource "aws_cloudfront_distribution" "site" {
     compress               = true
 
     # AWS-managed CachingDisabled
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.inspector_tls.id
+    cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id   = aws_cloudfront_origin_request_policy.inspector_tls.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.site.id
   }
 
   custom_error_response {
