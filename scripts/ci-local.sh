@@ -47,6 +47,10 @@ section "node: assert Permissions-Policy header wired"
 ./scripts/assert-permissions-policy.sh
 ok "Permissions-Policy strict-deny baseline shipping"
 
+section "node: assert /api/tls/* response-headers policy attached"
+./scripts/assert-api-tls-headers-policy.sh
+ok "/api/tls/* ordered_cache_behavior has response_headers_policy_id"
+
 section "node: vitest"
 npm run test
 ok "npm run test"
