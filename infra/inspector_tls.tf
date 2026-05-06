@@ -89,10 +89,20 @@ resource "aws_lambda_function_url" "inspector_tls" {
   authorization_type = "AWS_IAM"
 }
 
-# CloudFront OAC for the Lambda Function URL. Mirrors the S3 OAC pattern
-# in s3.tf: CloudFront sigv4-signs every origin request, the Lambda
-# permission below restricts who can invoke the URL to CloudFront
-# itself, scoped via source_arn to this distribution.
+# CloudFront OAC for the Lambda Function URL. CloudFront sigv4-signs
+# every origin request; the Lambda permission below restricts the
+# resource policy to the CloudFront service principal scoped via
+# source_arn to this specific distribution.
+#
+# Deploy-time note: aws_lambda_permission.inspector_tls_cloudfront has
+# no dependency edge from aws_cloudfront_distribution.site (it can't —
+# the permission's source_arn references the distribution's arn, so
+# inverting the dependency would cycle). On first apply, CloudFront
+# may finish propagating the OAC change before the permission lands;
+# during that window CloudFront-signed requests get 403 from Lambda,
+# which the distribution-level custom_error_response converts to
+# /404.html. Subsequent applies are unaffected because the permission
+# already exists.
 resource "aws_cloudfront_origin_access_control" "inspector_tls" {
   name                              = local.inspector_tls_name
   origin_access_control_origin_type = "lambda"
