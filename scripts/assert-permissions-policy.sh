@@ -31,11 +31,15 @@ if [ ! -s "$CF_TF" ]; then
 	lint::refuse_blind "$CF_TF missing or empty"
 fi
 
-# Pull the Permissions-Policy value out of the items block whose header
-# is "Permissions-Policy". Block-scoped so we don't accidentally pick up
-# a `value = "..."` line from a neighbouring header. Mirrors the matcher
-# style used by assert-coop-coep-corp.sh.
-policy_value=$(awk '
+# Pull EVERY Permissions-Policy items block's value out of cloudfront.tf.
+# Multiple items blocks can exist when multiple response-headers policies
+# coexist (today: aws_cloudfront_response_headers_policy.site for documents
+# and aws_cloudfront_response_headers_policy.api for /api/tls/* JSON). Each
+# block's value must independently meet the count floor and value shape;
+# otherwise a future PR could weaken one policy's PP without the other,
+# silently turning the strict-deny claim into a half-truth. Block-scoped
+# so a `value = "..."` line from a neighbouring header doesn't bleed in.
+policy_values=$(awk '
 	/items[[:space:]]*\{/ { in_block = 1; is_pp = 0; val = ""; next }
 	in_block && $0 ~ /header[[:space:]]*=[[:space:]]*"Permissions-Policy"/ { is_pp = 1 }
 	in_block && $0 ~ /value[[:space:]]*=[[:space:]]*"/ {
@@ -48,53 +52,65 @@ policy_value=$(awk '
 		val = line
 	}
 	in_block && /\}/ {
-		if (is_pp && val != "") { print val; exit 0 }
+		if (is_pp && val != "") { print val }
 		in_block = 0
 	}
 ' "$CF_TF")
 
-if [ -z "$policy_value" ]; then
+if [ -z "$policy_values" ]; then
 	printf '\nFix: add a custom_headers_config items block in %s with header = "Permissions-Policy".\n' "$CF_TF" >&2
 	printf '     See the existing Cross-Origin-* items for the shape.\n' >&2
 	lint::fatal "Permissions-Policy header missing from CloudFront response-headers policy"
 fi
 
-# Count comma-separated directives. The Inspector grades A at >=5; we
-# ship 36 today. Floor the lint at 5 so a refactor that strips the
-# policy back to 1-2 directives fails CI loudly.
-directive_count=$(printf '%s' "$policy_value" | awk -F',' '{ print NF }')
+# Inspector grades A at >=5 directives; the strict-deny posture allows only
+# `()` (full deny) or `(self)` (self-allow). Validate each Permissions-Policy
+# value found, so adding a second response-headers policy with weaker PP
+# fails CI loudly (rather than passing because the first policy still meets
+# the floor).
 MIN_DIRECTIVES=5
+policy_index=0
+total_directive_count=0
 
-if [ "$directive_count" -lt "$MIN_DIRECTIVES" ]; then
-	printf '\nFix: extend the Permissions-Policy value in %s.\n' "$CF_TF" >&2
-	printf '     /security/ promises a strict-deny baseline; <%d directives undermines that claim.\n' "$MIN_DIRECTIVES" >&2
-	lint::fatal "Permissions-Policy too narrow: $directive_count directives (need >=$MIN_DIRECTIVES)"
-fi
+# IFS=$'\n' iteration is bash-3.2 friendly without process substitution.
+OLDIFS=$IFS
+IFS=$'\n'
+# shellcheck disable=SC2086  # intentional word-splitting on newlines
+set -- $policy_values
+IFS=$OLDIFS
 
-# Validate every directive's allowlist. The strict-deny posture only holds
-# if each value is `()` (full deny) or `(self)` (self-allow only). A
-# refactor that flips a directive to `=*`, `=(*)`, or any explicit origin
-# breaks the posture while keeping the directive count high — exactly the
-# value-flip bypass adversarial review surfaced. Anything outside the
-# `()` / `(self)` shapes fails the lint.
-violations=$(printf '%s' "$policy_value" | awk -F',' '
-	{
-		for (i = 1; i <= NF; i++) {
-			d = $i
-			gsub(/^[[:space:]]+|[[:space:]]+$/, "", d)
-			if (d == "") continue
-			if (d !~ /^[a-z-]+=\(\)$/ && d !~ /^[a-z-]+=\(self\)$/) print d
+for policy_value in "$@"; do
+	policy_index=$((policy_index + 1))
+
+	directive_count=$(printf '%s' "$policy_value" | awk -F',' '{ print NF }')
+	if [ "$directive_count" -lt "$MIN_DIRECTIVES" ]; then
+		printf '\nFix: extend Permissions-Policy #%d in %s (currently %d directives, need >=%d).\n' \
+			"$policy_index" "$CF_TF" "$directive_count" "$MIN_DIRECTIVES" >&2
+		printf '     /security/ promises a strict-deny baseline across every response class.\n' >&2
+		lint::fatal "Permissions-Policy #$policy_index too narrow: $directive_count directives"
+	fi
+
+	violations=$(printf '%s' "$policy_value" | awk -F',' '
+		{
+			for (i = 1; i <= NF; i++) {
+				d = $i
+				gsub(/^[[:space:]]+|[[:space:]]+$/, "", d)
+				if (d == "") continue
+				if (d !~ /^[a-z-]+=\(\)$/ && d !~ /^[a-z-]+=\(self\)$/) print d
+			}
 		}
-	}
-')
+	')
 
-if [ -n "$violations" ]; then
-	printf '\nFix: every Permissions-Policy directive in %s must use `()` (deny) or `(self)` (self-allow).\n' "$CF_TF" >&2
-	printf '     Permissive forms (=*, =(*), explicit origins) break the strict-deny posture.\n' >&2
-	printf '     Offending directive(s):\n' >&2
-	printf '       %s\n' $violations >&2
-	lint::fatal "Permissions-Policy directives widen beyond strict-deny"
-fi
+	if [ -n "$violations" ]; then
+		printf '\nFix: every Permissions-Policy directive in %s (policy #%d) must use `()` (deny) or `(self)` (self-allow).\n' "$CF_TF" "$policy_index" >&2
+		printf '     Permissive forms (=*, =(*), explicit origins) break the strict-deny posture.\n' >&2
+		printf '     Offending directive(s):\n' >&2
+		printf '       %s\n' $violations >&2
+		lint::fatal "Permissions-Policy #$policy_index widens beyond strict-deny"
+	fi
+
+	total_directive_count=$((total_directive_count + directive_count))
+done
 
 # Belt + suspenders: ensure the security-controls entry is still shipped.
 DATA_FILE=src/data/security-controls.ts
@@ -114,4 +130,4 @@ if ! awk -v q="'" '
 	lint::fatal "$DATA_FILE: permissions-policy entry is not status: 'shipped'"
 fi
 
-lint::ok "Permissions-Policy wired in $CF_TF ($directive_count directives) + shipped in $DATA_FILE"
+lint::ok "Permissions-Policy wired in $CF_TF ($policy_index polic$([ "$policy_index" -eq 1 ] && printf 'y' || printf 'ies'), $total_directive_count directives total) + shipped in $DATA_FILE"
