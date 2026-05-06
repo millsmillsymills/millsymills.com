@@ -116,6 +116,70 @@ resource "aws_cloudfront_response_headers_policy" "site" {
   }
 }
 
+# Response-headers policy for the /api/tls/* JSON endpoint. Authored
+# separately from the document policy (`site` above) because:
+#
+#   1. The site policy ships `Cross-Origin-Resource-Policy: same-origin`
+#      and `Cross-Origin-Embedder-Policy: require-corp`. With those on
+#      a JSON response, an allowlisted cross-origin caller (e.g.
+#      `p41m0n.com` — see ALLOWED_ORIGINS in inspector_tls.mjs) gets
+#      blocked at the browser layer even after CORS preflight succeeds,
+#      because COEP-isolated pages can only embed `cross-origin` CORP
+#      resources or pre-flighted CORS resources marked compatible.
+#   2. CSP is a document directive — browsers ignore it on `application/json`.
+#      Shipping `default-src 'self'` on API responses adds noise without
+#      protection.
+#   3. COOP/COEP describe the requesting document's agent cluster, not
+#      the data response. Stripping them off API responses is correct.
+#
+# We keep the per-response defenses that DO apply to JSON: HSTS, nosniff,
+# Referrer-Policy, and the Permissions-Policy strict-deny baseline (a
+# policy header on a JSON response still scopes any same-origin nav that
+# happens to inherit from it, and shipping it consistently keeps the
+# /security/ promise honest across response classes).
+resource "aws_cloudfront_response_headers_policy" "api" {
+  name    = "${replace(var.domain, ".", "-")}-api-headers"
+  comment = "Security headers for ${var.domain} JSON APIs (CORP cross-origin)"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 63072000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
+
+  custom_headers_config {
+    # CORP `cross-origin` so allowlisted cross-origin pages (currently the
+    # `p41m0n.com` rehearsal stack) can fetch /api/tls/inspect from a
+    # COEP-isolated document. The CORS allowlist in inspector_tls.mjs
+    # remains the actual access boundary — CORP `cross-origin` only
+    # opens the browser-side embedding gate; the Lambda still echoes
+    # `access-control-allow-origin` for allowlisted origins only.
+    items {
+      header   = "Cross-Origin-Resource-Policy"
+      value    = "cross-origin"
+      override = true
+    }
+
+    items {
+      header   = "Permissions-Policy"
+      value    = "accelerometer=(), attribution-reporting=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), compute-pressure=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), storage-access=(), sync-xhr=(), unload=(), usb=(), web-share=(), window-management=(), xr-spatial-tracking=()"
+      override = true
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -181,7 +245,7 @@ resource "aws_cloudfront_distribution" "site" {
     # AWS-managed CachingDisabled
     cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     origin_request_policy_id   = aws_cloudfront_origin_request_policy.inspector_tls.id
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.site.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.api.id
   }
 
   custom_error_response {
