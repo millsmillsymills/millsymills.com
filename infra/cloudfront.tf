@@ -194,10 +194,13 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   # Lambda Function URL origin for the /inspector/ TLS readout. See
-  # `infra/inspector_tls.tf` for the function + URL.
+  # `infra/inspector_tls.tf` for the function + URL. The OAC sigv4-signs
+  # every origin request so the Function URL can run with
+  # authorization_type = AWS_IAM and reject the public bypass path.
   origin {
-    domain_name = local.inspector_tls_origin_host
-    origin_id   = "lambda-${local.inspector_tls_name}"
+    domain_name              = local.inspector_tls_origin_host
+    origin_id                = "lambda-${local.inspector_tls_name}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.inspector_tls.id
 
     custom_origin_config {
       http_port              = 80

@@ -8,7 +8,7 @@ Released under [MIT](LICENSE) as a community template — fork it, rename it, sh
 
 - **`src/`** — Astro pages and layouts (`output: 'static'`).
 - **`infra/`** — Terraform for S3 (private, OAC-fronted), CloudFront (HTTPS, security headers, directory-index rewrite), Route53 (apex + `www`, IPv4 and IPv6), ACM (us-east-1), IAM OIDC deploy role, and ProtonMail email DNS (SPF/DKIM/DMARC).
-- **`.github/workflows/`** — CI runs on PRs (Astro build + typecheck + Terraform fmt/validate); deploy runs only after CI passes and requires a manual approval via a GitHub Environment.
+- **`.github/workflows/`** — CI (Astro build + typecheck + Terraform fmt/validate) and deploy. Per-PR / per-push CI triggers are currently disabled (run `./scripts/ci-local.sh` locally instead); the deploy workflow runs on `workflow_dispatch` plus a monthly `schedule` so `/.well-known/security.txt`'s 12-month `Expires:` field can't silently go stale. Deploys are unattended on the GitHub free-private plan (which does not support Environment required-reviewer protection); the trust boundary is OIDC `sub` + `job_workflow_ref` pinned to a specific workflow file, plus a tightly-scoped IAM role. See [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)'s header comment and [`infra/github_oidc.tf`](infra/github_oidc.tf).
 
 ## Quick start (develop)
 
@@ -27,17 +27,18 @@ Node 22+ required.
 One-time prerequisites:
 
 1. A Route53 public hosted zone for your domain (created manually; Terraform reads it via a data source).
-2. An S3 bucket for Terraform state (e.g. `<domain>-terraform-state`) with versioning and SSE-S3 enabled. Uncomment the `backend "s3"` block in `infra/main.tf` once it exists.
+2. An S3 bucket for Terraform state (e.g. `<domain>-terraform-state`) with versioning and SSE-S3 enabled. The `backend "s3" {}` block in `infra/main.tf` is already wired — all backend fields (bucket, key, region, encrypt, use_lockfile) are supplied per-stack via `terraform init -backend-config=...`. See `infra/stacks/*.backend.hcl`.
 3. Terraform 1.10+ installed.
 
-Then:
+Then, using the stack-aware wrapper (which supplies `-backend-config` for you and refuses to touch the wrong stack):
 
 ```bash
-cd infra
-terraform init
-terraform plan
-terraform apply
+./scripts/tf.sh <stack> init    # e.g. ./scripts/tf.sh millsymills init
+./scripts/tf.sh <stack> plan
+./scripts/tf.sh <stack> apply
 ```
+
+Stacks are defined under `infra/stacks/`. Forks should add a `<stack>.tfvars` + `<stack>.backend.hcl` pair for their own domain.
 
 See [CLAUDE.md](CLAUDE.md) for the full migration / deploy / email runbook, including:
 

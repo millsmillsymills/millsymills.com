@@ -144,13 +144,14 @@ export const securityControls: readonly SecurityControl[] = [
 		title: 'live security-headers + TLS inspector',
 		category: 'web',
 		status: 'shipped',
-		what: 'The `/inspector/` desktop app fetches the site\'s own response headers in-browser and grades them against the active CloudFront response-headers policy. A small Lambda behind CloudFront also exposes the negotiated TLS protocol, cipher, and SNI for the user→CloudFront connection at `/api/tls/inspect`.',
+		what: 'The `/inspector/` desktop app fetches the site\'s own response headers in-browser and grades them against the active CloudFront response-headers policy. A small Lambda behind CloudFront also exposes the negotiated TLS protocol, cipher, and SNI for the user→CloudFront connection at `/api/tls/inspect`. The Lambda Function URL is locked to `AWS_IAM` auth and a CloudFront Origin Access Control, so the only path to it is through the CloudFront distribution — direct calls to the raw `<id>.lambda-url.<region>.on.aws` endpoint return 403, preserving every CloudFront-applied security header on the response.',
 		why: 'The /security page documents what *should* be deployed; the inspector lets a visitor verify what *is* deployed in real time. Drift between the two becomes immediately observable instead of silently aging.',
 		tradeoffs: 'The TLS-inspector Lambda reads `CloudFront-Viewer-TLS` from the origin-request headers, so it reflects the user→CloudFront leg only — it cannot see anything about the CloudFront→origin leg. That\'s the leg the visitor cares about, but worth being explicit about. astro preview lacks CloudFront headers so all rows grade F locally; on prod every row should grade A.',
 		code: [
 			'src/components/desktop/apps/Inspector.astro',
 			'infra/inspector_tls.tf',
 			'infra/inspector_tls.mjs',
+			'infra/cloudfront.tf',
 		],
 		prs: [302],
 	},
@@ -230,6 +231,16 @@ export const securityControls: readonly SecurityControl[] = [
 		tradeoffs: 'Useless until Proton is live — null MX means no remote MTA attempts delivery, so no reports get generated.',
 		code: ['infra/email.tf'],
 		prs: [202],
+	},
+	{
+		id: 'dane-smtp',
+		title: 'DANE for inbound SMTP (RFC 7672)',
+		category: 'email',
+		status: 'shipped',
+		what: 'Inbound SMTP TLS is anchored to DNSSEC, not the web PKI. Per RFC 7672, the TLSA record lives at `_25._tcp.<MX-host>` in the MX host\'s zone — for Proton MX, that\'s `_25._tcp.mail.protonmail.ch` and `_25._tcp.mailsec.protonmail.ch`, which Proton already publishes (`3 1 1 …` SPKI hashes). A sender resolves our DNSSEC-signed MX records, jumps to Proton\'s DNSSEC-signed zone for the TLSA, and refuses delivery if the negotiated cert doesn\'t match. End-to-end DANE works without records in our zone.',
+		why: 'Removes the web PKI as a trust anchor for inbound SMTP. A compromised CA cannot issue a fake cert for `mail.protonmail.ch` and intercept inbound mail without also subverting DNSSEC for `protonmail.ch` AND for our domain — the two-zone chain is the bind.',
+		tradeoffs: 'Operational only when MX records point at a Proton MX host whose zone publishes TLSA. Once Proton activation completes for a given stack, the property is automatic: we contribute the DNSSEC-signed MX RRset; Proton contributes the TLSA. Switching MX away from Proton to an MX host that doesn\'t publish TLSA would silently demote DANE-aware senders to opportunistic TLS — a hidden trust regression — so MX changes must verify TLSA presence on the new host before flipping. Proton also owns the TLSA rotation cadence; an unannounced re-key would temporarily break inbound delivery.',
+		code: ['infra/email.tf', 'infra/dnssec.tf'],
 	},
 
 	// ─── supply chain ──────────────────────────────────────────────────
@@ -373,15 +384,6 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'Static `mta-sts.<domain>/.well-known/mta-sts.txt` policy + `_mta-sts` TXT record telling sending MTAs to enforce TLS to inbound mail.',
 		why: 'Upgrades opportunistic SMTP TLS to enforced — blocks passive downgrade attacks visible to peer MTAs.',
 		tradeoffs: 'Gated on Proton activation. Will deploy in `mode: testing` first so TLS-RPT can surface failures before flipping to `enforce`.',
-	},
-	{
-		id: 'dane',
-		title: 'DANE TLSA for SMTP',
-		category: 'email',
-		status: 'roadmap',
-		what: 'TLSA records pinning Proton\'s TLS cert chain, validated via DNSSEC.',
-		why: 'Belt + suspenders alongside MTA-STS. Receivers that support DANE refuse to deliver if Proton\'s cert doesn\'t match the pin.',
-		tradeoffs: 'Requires DNSSEC live (✓), Proton active (✗), and Proton cert rotation visibility.',
 	},
 	{
 		id: 'bimi',
