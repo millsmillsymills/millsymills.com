@@ -2,12 +2,22 @@
 #
 # Architecture: a tiny Node.js Lambda exposed via Function URL. CloudFront
 # adds an origin pointing at that URL, plus a cache behavior matching
-# /api/tls/* that uses the AWS-managed origin-request policy
-# "Managed-AllViewerAndCloudFrontHeaders-2022-06" so the
-# `cloudfront-viewer-tls` header (negotiated TLS protocol, cipher, SNI)
-# survives the origin hop. The Lambda parses that header and returns
-# JSON; the inspector front-end fetches /api/tls/inspect and renders the
-# result.
+# /api/tls/* that uses the custom origin-request policy
+# `aws_cloudfront_origin_request_policy.inspector_tls` (defined in
+# infra/cloudfront.tf). That policy whitelists only `CloudFront-Viewer-TLS`
+# (the negotiated TLS protocol/cipher/SNI we surface) and `Origin` (used
+# for the CORS allow-origin echo); Host is intentionally NOT forwarded so
+# CloudFront rewrites it to the Lambda Function URL hostname. Lambda
+# Function URLs reject any request whose Host header does not match
+# `<id>.lambda-url.<region>.on.aws` with 403, so forwarding the viewer's
+# Host (e.g. millsymills.com) — as the AWS-managed
+# `Managed-AllViewerAndCloudFrontHeaders-2022-06` policy does — would
+# 403 every CloudFront request and CloudFront would substitute /404.html
+# via custom_error_response. See `aws_cloudfront_origin_request_policy.inspector_tls`
+# in infra/cloudfront.tf for the matching commentary.
+#
+# The Lambda parses the forwarded TLS header and returns JSON; the
+# inspector front-end fetches /api/tls/inspect and renders the result.
 #
 # Why not Lambda@Edge? Edge functions can't be reasonably tested locally,
 # can only run in us-east-1, and have a stricter deploy lifecycle. A
