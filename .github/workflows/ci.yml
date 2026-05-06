@@ -33,6 +33,9 @@ jobs:
       - name: Assert icon assets referenced by apps.ts exist
         run: ./scripts/assert-icon-assets-exist.sh
 
+      - name: Assert /api/tls/* response-headers policy attached
+        run: ./scripts/assert-api-tls-headers-policy.sh
+
       - name: Test (vitest)
         run: npm test
 
