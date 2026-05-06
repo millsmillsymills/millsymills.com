@@ -3,19 +3,13 @@
 # Assert the /api/tls/* ordered_cache_behavior in CloudFront has
 # response_headers_policy_id attached.
 #
-# Why this matters:
-#   - PR #336 (closes #331) restored the attachment after a refactor
-#     silently dropped it. Without the attachment, /api/tls/inspect
-#     served no HSTS / CSP / COOP / COEP / CORP / X-Content-Type-Options /
-#     Referrer-Policy / Permissions-Policy — every promise on the
-#     /security/ page held for the static site but failed on the API
-#     path.
-#   - The fix is a one-line attribute addition. Deleting that line
-#     passes `terraform validate`, passes every existing assert-*.sh
-#     (which check the policy's *contents*, not its *attachment*), and
-#     would silently reproduce #331. This lint is the dedicated guard.
-#
-# Wired into scripts/ci-local.sh.
+# Why this matters: existing assert-*.sh siblings check the policy's
+# *contents* (COOP/COEP/CORP, Permissions-Policy). None check whether
+# the policy is *attached* to a behavior. A refactor that drops the
+# attribute on /api/tls/* would pass `terraform validate` and every
+# existing CI gate, leaving the API path serving no HSTS / CSP / COOP /
+# COEP / CORP / X-Content-Type-Options / Referrer-Policy /
+# Permissions-Policy.
 
 set -euo pipefail
 . "$(git rev-parse --show-toplevel)/scripts/lib/lint.sh"
@@ -28,10 +22,14 @@ if [ ! -s "$CF_TF" ]; then
 fi
 
 # Walk every `ordered_cache_behavior { ... }` block in cloudfront.tf,
-# tracking brace depth so a future nested block (none today) can't trick
-# the matcher into closing early. For the block whose path_pattern is
-# "/api/tls/*", confirm response_headers_policy_id is set before the
-# block's closing brace.
+# tracking brace depth so HCL `${var}` interpolation inside attribute
+# values (e.g. `target_origin_id = "lambda-${local.x}"`) doesn't close
+# the block early. Sibling asserts use a simpler `/\}/` matcher because
+# their target items blocks contain only literal strings; this block
+# contains interpolations, so depth tracking is load-bearing here.
+#
+# Skip lines whose first non-space character is `#` so a commented-out
+# attribute can't masquerade as the live attachment.
 #
 # Exit codes:
 #   0 — block found, attribute present
@@ -46,6 +44,7 @@ awk '
 		saw_policy = 0
 		next
 	}
+	in_block && /^[[:space:]]*#/ { next }
 	in_block {
 		opens = gsub(/\{/, "{")
 		depth += opens
@@ -79,9 +78,9 @@ case "$rc" in
 1)
 	lint::fail "/api/tls/* ordered_cache_behavior is missing response_headers_policy_id"
 	printf '\nFix: in %s, inside the `ordered_cache_behavior { path_pattern = "/api/tls/*" ... }`\n' "$CF_TF" >&2
-	printf '     block, set `response_headers_policy_id = aws_cloudfront_response_headers_policy.site.id`.\n' >&2
-	printf '     See PR #336 / issue #331: without this, /api/tls/inspect serves no HSTS / CSP /\n' >&2
-	printf '     COOP / COEP / CORP / X-Content-Type-Options / Referrer-Policy / Permissions-Policy.\n' >&2
+	printf '     block, set `response_headers_policy_id = aws_cloudfront_response_headers_policy.<policy>.id`.\n' >&2
+	printf '     Without it, /api/tls/inspect serves no HSTS / CSP / COOP / COEP / CORP /\n' >&2
+	printf '     X-Content-Type-Options / Referrer-Policy / Permissions-Policy.\n' >&2
 	exit 1
 	;;
 2)
