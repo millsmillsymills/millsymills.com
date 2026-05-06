@@ -231,6 +231,20 @@ export const securityControls: readonly SecurityControl[] = [
 		code: ['infra/email.tf'],
 		prs: [202],
 	},
+	{
+		id: 'dane-smtp',
+		title: 'DANE for inbound SMTP (RFC 7672)',
+		category: 'email',
+		status: 'shipped',
+		what: 'Inbound SMTP TLS is anchored to DNSSEC, not the web PKI. Per RFC 7672, the TLSA record lives at `_25._tcp.<MX-host>` in the MX host\'s zone — for Proton MX, that\'s `_25._tcp.mail.protonmail.ch` and `_25._tcp.mailsec.protonmail.ch`, which Proton already publishes (`3 1 1 …` SPKI hashes). A sender resolves our DNSSEC-signed MX records, jumps to Proton\'s DNSSEC-signed zone for the TLSA, and refuses delivery if the negotiated cert doesn\'t match. End-to-end DANE works without records in our zone.',
+		why: 'Removes the web PKI as a trust anchor for inbound SMTP. A compromised CA cannot issue a fake cert for `mail.protonmail.ch` and intercept inbound mail without also subverting DNSSEC for `protonmail.ch` AND for our domain — the two-zone chain is the bind.',
+		tradeoffs: 'Operational only when the full DNSSEC chain is live: parent (.com) → our zone → Proton\'s zone. Until the registrar publishes our DS record (millsymills migration runbook step 11), validating resolvers can\'t verify the MX RRset in our zone, and DANE-aware senders fall back to opportunistic TLS. Proton owns the TLSA rotation cadence — if they re-key without warning, inbound mail breaks until the new TLSA propagates; this is Proton\'s SLA, not something we can mitigate from our zone.',
+		code: ['infra/email.tf', 'infra/dnssec.tf'],
+		verify: {
+			label: 'dane.sys4.de SMTP-DANE check',
+			href: 'https://dane.sys4.de/smtp/millsymills.com',
+		},
+	},
 
 	// ─── supply chain ──────────────────────────────────────────────────
 	{
