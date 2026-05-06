@@ -238,12 +238,8 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Inbound SMTP TLS is anchored to DNSSEC, not the web PKI. Per RFC 7672, the TLSA record lives at `_25._tcp.<MX-host>` in the MX host\'s zone — for Proton MX, that\'s `_25._tcp.mail.protonmail.ch` and `_25._tcp.mailsec.protonmail.ch`, which Proton already publishes (`3 1 1 …` SPKI hashes). A sender resolves our DNSSEC-signed MX records, jumps to Proton\'s DNSSEC-signed zone for the TLSA, and refuses delivery if the negotiated cert doesn\'t match. End-to-end DANE works without records in our zone.',
 		why: 'Removes the web PKI as a trust anchor for inbound SMTP. A compromised CA cannot issue a fake cert for `mail.protonmail.ch` and intercept inbound mail without also subverting DNSSEC for `protonmail.ch` AND for our domain — the two-zone chain is the bind.',
-		tradeoffs: 'Operational only when the full DNSSEC chain is live: parent (.com) → our zone → Proton\'s zone. Until the registrar publishes our DS record (millsymills migration runbook step 11), validating resolvers can\'t verify the MX RRset in our zone, and DANE-aware senders fall back to opportunistic TLS. Proton owns the TLSA rotation cadence — if they re-key without warning, inbound mail breaks until the new TLSA propagates; this is Proton\'s SLA, not something we can mitigate from our zone.',
+		tradeoffs: 'Operational only when MX records point at a Proton MX host whose zone publishes TLSA. Once Proton activation completes for a given stack, the property is automatic: we contribute the DNSSEC-signed MX RRset; Proton contributes the TLSA. Switching MX away from Proton to an MX host that doesn\'t publish TLSA would silently demote DANE-aware senders to opportunistic TLS — a hidden trust regression — so MX changes must verify TLSA presence on the new host before flipping. Proton also owns the TLSA rotation cadence; an unannounced re-key would temporarily break inbound delivery.',
 		code: ['infra/email.tf', 'infra/dnssec.tf'],
-		verify: {
-			label: 'dane.sys4.de SMTP-DANE check',
-			href: 'https://dane.sys4.de/smtp/millsymills.com',
-		},
 	},
 
 	// ─── supply chain ──────────────────────────────────────────────────
@@ -387,15 +383,6 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'Static `mta-sts.<domain>/.well-known/mta-sts.txt` policy + `_mta-sts` TXT record telling sending MTAs to enforce TLS to inbound mail.',
 		why: 'Upgrades opportunistic SMTP TLS to enforced — blocks passive downgrade attacks visible to peer MTAs.',
 		tradeoffs: 'Gated on Proton activation. Will deploy in `mode: testing` first so TLS-RPT can surface failures before flipping to `enforce`.',
-	},
-	{
-		id: 'dane',
-		title: 'DANE TLSA for SMTP',
-		category: 'email',
-		status: 'roadmap',
-		what: 'TLSA records pinning Proton\'s TLS cert chain, validated via DNSSEC.',
-		why: 'Belt + suspenders alongside MTA-STS. Receivers that support DANE refuse to deliver if Proton\'s cert doesn\'t match the pin.',
-		tradeoffs: 'Requires DNSSEC live (✓), Proton active (✗), and Proton cert rotation visibility.',
 	},
 	{
 		id: 'bimi',
