@@ -84,7 +84,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'CloudFront response-headers policy injects a strict CSP (`default-src \'self\'`, `object-src \'none\'`, `upgrade-insecure-requests`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and SAMEORIGIN frame-ancestors on every response.',
 		why: 'Defense-in-depth against XSS, MIME sniffing, leaky referrers, and clickjacking. The CSP allow-list is intentionally tight — no third-party origins anywhere.',
-		tradeoffs: '`style-src \'self\' \'unsafe-inline\'` is the one knowing concession to make Astro\'s scoped styles work; tightening to nonces is tracked as #129.',
+		tradeoffs: '`style-src \'self\' \'unsafe-inline\'` is the one knowing concession to make Astro\'s scoped styles work; tightening to nonces is tracked as #129. Violation reporting is wired separately as `csp-reporting` below.',
 		code: ['infra/cloudfront.tf'],
 	},
 	{
@@ -138,6 +138,21 @@ export const securityControls: readonly SecurityControl[] = [
 		why: 'Site is fully self-hosted today — no third-party JS/CSS. The lint is forward-pressure: a future dependency that adds a CDN reference trips the build instead of silently undermining the "no third-party JS or CSS" posture.',
 		tradeoffs: 'Same-origin assets are exempt — Astro\'s hashed bundles are already integrity-protected by URL versioning + the OAC pipeline. Astro 6 does not emit SRI hashes natively; if a cross-origin asset ever lands here, the integrity attribute has to be added by hand or by a postbuild pass.',
 		code: ['scripts/assert-sri-on-cross-origin-assets.mjs'],
+	},
+	{
+		id: 'csp-reporting',
+		title: 'CSP violation reporting endpoint',
+		category: 'web',
+		status: 'shipped',
+		what: 'CSP carries `report-uri /api/csp-report; report-to csp` and the response ships `Reporting-Endpoints: csp="https://<domain>/api/csp-report"`. Browsers POST violation reports (both legacy `application/csp-report` and modern `application/reports+json`) to a Lambda Function URL behind CloudFront OAC; the handler validates Content-Type, caps body size at 16KB, and writes the report (plus a small envelope: `receivedAt`, `userAgent`, `viewerCountry`) to S3 as JSON. Reports auto-expire after 30 days via a bucket lifecycle rule.',
+		why: 'A Report-Only rollout is only useful if reports go somewhere. Capturing violations becomes a prerequisite for tightening CSP without breaking the site — the strict-CSP-with-nonces rollout (#129) and Trusted Types enforcement (#130) both depend on this telemetry layer to surface regressions before flipping enforcement on.',
+		tradeoffs: 'Cost cap is `reserved_concurrent_executions = 5` on the Lambda — a flood of reports gets throttled rather than driving up the bill. The Lambda Function URL is locked to AWS_IAM auth + CloudFront OAC, so direct calls to the raw `<id>.lambda-url.<region>.on.aws` endpoint return 403; the only path is through the distribution. No dashboard yet — reports are queryable directly out of the S3 bucket via Athena or `aws s3 cp` until violation volume justifies more.',
+		code: [
+			'infra/csp_report.tf',
+			'infra/csp_report.mjs',
+			'infra/cloudfront.tf',
+		],
+		prs: [],
 	},
 	{
 		id: 'inspector',
