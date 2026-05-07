@@ -14,10 +14,11 @@
 # Reversal — REMOVE DS at registrar FIRST and wait the parent TTL
 # (24h for `.com`) BEFORE disabling Route53 signing in Terraform, or
 # the zone goes BOGUS for validating resolvers:
-#   curl -X DELETE -H "Authorization: Bearer $GANDI_API_KEY" \
+#   curl -X DELETE \
+#     --header @<(printf 'Authorization: Bearer %s\n' "$GANDI_API_KEY") \
 #     https://api.gandi.net/v5/domain/domains/<fqdn>/dnskeys/<id>
 # The <id> is from `GET .../dnskeys` (or saved from the create
-# response).
+# response). Process substitution keeps the bearer off curl's argv.
 
 set -euo pipefail
 
@@ -65,9 +66,13 @@ fi
 
 printf 'submitting DS via DNSKEY (flags=%s algorithm=%s key-len=%d) for %s\n' "$FLAGS" "$ALGO" "${#PUBKEY}" "$FQDN" >&2
 
+# Authorization header passed via process substitution so the bearer
+# token never appears on curl's argv (visible in `ps -ef` and shell
+# history). Verify with `ps -o pid,args -C curl` while the request is
+# in flight — only the @/dev/fd/N reference should appear.
 curl -fsSL \
 	-X POST \
-	-H "Authorization: Bearer ${GANDI_API_KEY}" \
+	--header @<(printf 'Authorization: Bearer %s\n' "$GANDI_API_KEY") \
 	-H 'Content-Type: application/json' \
 	--data "$(jq -nc --argjson algo "$ALGO" --arg pk "$PUBKEY" '{type: "ksk", algorithm: $algo, public_key: $pk}')" \
 	"https://api.gandi.net/v5/domain/domains/${FQDN}/dnskeys"
