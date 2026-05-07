@@ -2,6 +2,7 @@
 import '../styles/desktop.css';
 import { profile } from '../data/profile';
 import Clippy from '../components/desktop/Clippy.astro';
+import { serializeJsonForScript } from '../scripts/util/html';
 
 interface Props {
 	title: string;
@@ -54,6 +55,13 @@ const jsonLd = {
 		},
 	],
 };
+
+// `JSON.stringify` alone would let `</script>`, `<!--`, or `-->` substrings
+// slip into the inline script body unescaped (defense-in-depth — no field is
+// user-controlled today, but `serializeJsonForScript` escapes `<`, `>`, `&`,
+// U+2028, U+2029 to JSON unicode escapes so the JSON-LD blob can't be turned
+// into a parser-confusion XSS sink by a future careless content edit).
+const jsonLdSerialized = serializeJsonForScript(jsonLd);
 ---
 
 <html lang="en">
@@ -88,7 +96,7 @@ const jsonLd = {
 		    and the boot animation gives the network a head-start. */}
 		<link rel="preload" as="image" href="/clippy/idle.png" />
 
-		<script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+		<script is:inline type="application/ld+json" set:html={jsonLdSerialized} />
 
 		{/* Wallpaper bootstrap — must run before .desktop's first paint
 		    so background-image's `var(--desktop-bg)` resolves to the

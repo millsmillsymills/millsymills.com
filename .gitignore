@@ -52,6 +52,11 @@ infra/*.tfvars
 # CE review run artifacts (per-run agent output) — local-only, never committed
 .context/
 
+# Codebase-review findings docs produced by agent passes — local-only working
+# notes; actionable findings get filed as GitHub issues, the doc itself is a
+# stale snapshot once that conversion has happened.
+docs/reviews/
+
 # Playwright MCP capture (console logs + page snapshots from interactive runs)
 .playwright-mcp/
 
