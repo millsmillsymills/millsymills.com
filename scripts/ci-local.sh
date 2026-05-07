@@ -196,10 +196,7 @@ terraform -chdir=infra validate
 ok "terraform validate"
 
 section "actions: zizmor"
-# Static analysis on workflow files. Pinned to --min-severity high
-# while issue #351 (set persist-credentials: false on every checkout)
-# is still open; tighten to medium once that PR lands and the
-# `artipacked` warnings disappear. Two SLSA reusable-workflow `uses:`
+# Static analysis on workflow files. Two SLSA reusable-workflow `uses:`
 # refs carry inline `# zizmor: ignore[unpinned-uses]` -- SLSA's L3
 # trust model authenticates the published `vX.Y.Z` tag itself, so the
 # tag-pin there is deliberate.
@@ -207,8 +204,8 @@ if ! command -v zizmor >/dev/null 2>&1; then
 	printf '\033[1;31m✗ zizmor not on PATH; install with `brew install zizmor` (macOS) or `cargo install zizmor`\033[0m\n' >&2
 	exit 1
 fi
-zizmor --min-severity high .github/workflows/
-ok "zizmor (high+) clean"
+zizmor --min-severity medium .github/workflows/
+ok "zizmor (medium+) clean"
 
 section "post-deploy: inspector_tls Function URL 403 (opt-in)"
 # Off by default — requires AWS creds + a deployed stack. Set
