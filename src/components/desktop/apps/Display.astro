@@ -1,4 +1,5 @@
 ---
+import { themes } from '../../../data/themes';
 import { wallpapers } from '../../../data/wallpapers';
 ---
 
@@ -14,6 +15,21 @@ import { wallpapers } from '../../../data/wallpapers';
 		font-size: 16px;
 		color: var(--ink-muted);
 		margin: 0;
+	}
+
+	.display__section {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.display__heading {
+		font-family: var(--font-pixel);
+		font-size: 10px;
+		letter-spacing: 1px;
+		color: var(--neon-pink);
+		margin: 0;
+		text-transform: lowercase;
 	}
 
 	.display__grid {
@@ -75,37 +91,90 @@ import { wallpapers } from '../../../data/wallpapers';
 		text-align: center;
 		text-transform: lowercase;
 	}
+
+	.display__swatches {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 4px;
+		min-height: 70px;
+		border: 1px solid var(--border);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.display__swatch {
+		min-width: 0;
+	}
+
+	.display__description {
+		font-family: var(--font-screen);
+		font-size: 13px;
+		line-height: 1.15;
+		color: var(--ink-muted);
+		text-align: center;
+	}
 </style>
 
 <article class="display">
 	<p class="display__intro">
-		pick a wallpaper. choice survives reload.
+		pick a theme + wallpaper. choices survive reload.
 	</p>
-	<ul class="display__grid">
-		{
-			wallpapers.map((w) => (
-				<li>
-					<button
-						type="button"
-						class="display__tile"
-						data-wallpaper={w.id}
-						aria-pressed="false"
-						aria-label={`set wallpaper: ${w.label}`}
-					>
-						<img
-							class="display__thumb"
-							src={w.thumbnail}
-							alt=""
-							aria-hidden="true"
-							loading="lazy"
-							decoding="async"
-						/>
-						<span class="display__label">{w.label}</span>
-					</button>
-				</li>
-			))
-		}
-	</ul>
+
+	<section class="display__section" aria-labelledby="display-theme-heading">
+		<h2 id="display-theme-heading" class="display__heading">theme</h2>
+		<ul class="display__grid">
+			{
+				themes.map((theme) => (
+					<li>
+						<button
+							type="button"
+							class="display__tile"
+							data-theme-choice={theme.id}
+							aria-pressed="false"
+							aria-label={`set theme: ${theme.label}`}
+						>
+							<span class="display__swatches" aria-hidden="true">
+								{theme.swatches.map((swatch) => (
+									<span class="display__swatch" style={`background: ${swatch}`} />
+								))}
+							</span>
+							<span class="display__label">{theme.label}</span>
+							<span class="display__description">{theme.description}</span>
+						</button>
+					</li>
+				))
+			}
+		</ul>
+	</section>
+
+	<section class="display__section" aria-labelledby="display-wallpaper-heading">
+		<h2 id="display-wallpaper-heading" class="display__heading">wallpaper</h2>
+		<ul class="display__grid">
+			{
+				wallpapers.map((w) => (
+					<li>
+						<button
+							type="button"
+							class="display__tile"
+							data-wallpaper={w.id}
+							aria-pressed="false"
+							aria-label={`set wallpaper: ${w.label}`}
+						>
+							<img
+								class="display__thumb"
+								src={w.thumbnail}
+								alt=""
+								aria-hidden="true"
+								loading="lazy"
+								decoding="async"
+							/>
+							<span class="display__label">{w.label}</span>
+						</button>
+					</li>
+				))
+			}
+		</ul>
+	</section>
 </article>
 
 <script>
