@@ -23,7 +23,12 @@ if [[ -z "${GANDI_API_KEY:-}" ]]; then
 fi
 
 # LiveDNS API is at https://api.gandi.net/v5/livedns/domains/<fqdn>/records
+#
+# Authorization header passed via process substitution so the bearer
+# token never appears on curl's argv (visible in `ps -ef` and shell
+# history). Verify with `ps -o pid,args -C curl` while the request is
+# in flight — only the @/dev/fd/N reference should appear.
 curl -fsSL \
-	-H "Authorization: Bearer ${GANDI_API_KEY}" \
+	--header @<(printf 'Authorization: Bearer %s\n' "$GANDI_API_KEY") \
 	-H 'Accept: application/json' \
 	"https://api.gandi.net/v5/livedns/domains/${DOMAIN}/records"
