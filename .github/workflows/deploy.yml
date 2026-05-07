@@ -93,6 +93,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          persist-credentials: false
           # On workflow_run we must explicitly check out the SHA that
           # triggered CI — the default would be main's tip at queue
           # time, which may have moved.
