@@ -195,5 +195,30 @@ section "terraform: validate"
 terraform -chdir=infra validate
 ok "terraform validate"
 
+section "actions: zizmor"
+# Static analysis on workflow files. Two SLSA reusable-workflow `uses:`
+# refs carry inline `# zizmor: ignore[unpinned-uses]` -- SLSA's L3
+# trust model authenticates the published `vX.Y.Z` tag itself, so the
+# tag-pin there is deliberate.
+if ! command -v zizmor >/dev/null 2>&1; then
+	printf '\033[1;31m✗ zizmor not on PATH; install with `brew install zizmor` (macOS) or `cargo install zizmor`\033[0m\n' >&2
+	exit 1
+fi
+zizmor --min-severity medium .github/workflows/
+ok "zizmor (medium+) clean"
+
+section "post-deploy: inspector_tls Function URL 403 (opt-in)"
+# Off by default — requires AWS creds + a deployed stack. Set
+# MMS_SMOKE_STACK=<stack> (e.g. p41m0n) to run after `tf.sh apply`. The
+# OAC + IAM-auth combo on the inspector_tls Lambda Function URL is the
+# load-bearing protection for /api/tls/* (issue #354 / PR #343); the
+# script asserts the raw URL still returns 403 to unsigned requests.
+if [[ -n "${MMS_SMOKE_STACK:-}" ]]; then
+	./scripts/smoke-inspector-tls.sh "$MMS_SMOKE_STACK"
+	ok "inspector_tls Function URL returns 403 for $MMS_SMOKE_STACK"
+else
+	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
+fi
+
 section "done"
 ok "all CI checks passed locally"
