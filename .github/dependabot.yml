@@ -11,6 +11,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       astro:
@@ -31,11 +33,23 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: terraform
     directory: "/infra"
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 3
+    groups:
+      terraform-providers:
+        patterns:
+          - "*"
