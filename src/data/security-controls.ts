@@ -152,7 +152,7 @@ export const securityControls: readonly SecurityControl[] = [
 			'infra/csp_report.mjs',
 			'infra/cloudfront.tf',
 		],
-		prs: [],
+		prs: [355],
 	},
 	{
 		id: 'inspector',

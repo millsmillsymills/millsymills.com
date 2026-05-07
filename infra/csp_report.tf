@@ -205,8 +205,17 @@ resource "aws_lambda_permission" "csp_report_cloudfront" {
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.site.arn
   function_url_auth_type = "AWS_IAM"
+
+  # source_arn references the distribution arn but Terraform treats
+  # that as a string interpolation, not a dependency edge. Make the
+  # ordering explicit so the permission lands after the distribution
+  # rather than racing the OAC propagation on first apply.
+  depends_on = [aws_cloudfront_distribution.site]
 }
 
 locals {
-  csp_report_origin_host = replace(replace(aws_lambda_function_url.csp_report.function_url, "https://", ""), "/", "")
+  csp_report_origin_host = trimsuffix(
+    replace(aws_lambda_function_url.csp_report.function_url, "https://", ""),
+    "/",
+  )
 }

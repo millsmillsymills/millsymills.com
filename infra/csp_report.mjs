@@ -28,6 +28,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const s3 = new S3Client({});
 const BUCKET = process.env.REPORT_BUCKET;
+if (!BUCKET) {
+	throw new Error('REPORT_BUCKET env var is required');
+}
 const MAX_BODY_BYTES = 16_384;
 
 const ACCEPTED_CONTENT_TYPES = new Set([
@@ -45,12 +48,19 @@ function header(headers, name) {
 	return undefined;
 }
 
+function pad2(n) {
+	return String(n).padStart(2, '0');
+}
+
 function objectKey(now, requestId) {
 	const yyyy = now.getUTCFullYear();
-	const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-	const dd = String(now.getUTCDate()).padStart(2, '0');
-	const hms = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}`;
-	return `reports/${yyyy}/${mm}/${dd}/${hms}-${requestId}.json`;
+	const mm = pad2(now.getUTCMonth() + 1);
+	const dd = pad2(now.getUTCDate());
+	const hh = pad2(now.getUTCHours());
+	const mi = pad2(now.getUTCMinutes());
+	const ss = pad2(now.getUTCSeconds());
+	const safeId = String(requestId).replace(/[^a-zA-Z0-9_-]/g, '_');
+	return `reports/${yyyy}/${mm}/${dd}/${hh}${mi}${ss}-${safeId}.json`;
 }
 
 export const handler = async (event) => {
@@ -93,14 +103,31 @@ export const handler = async (event) => {
 	const requestId = event?.requestContext?.requestId ?? `${now.getTime()}`;
 	const key = objectKey(now, requestId);
 
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: key,
-			Body: JSON.stringify(envelope),
-			ContentType: 'application/json',
-		}),
-	);
+	try {
+		await s3.send(
+			new PutObjectCommand({
+				Bucket: BUCKET,
+				Key: key,
+				Body: JSON.stringify(envelope),
+				ContentType: 'application/json',
+			}),
+		);
+	} catch (err) {
+		// Structured single-line log so CloudWatch Logs Insights can
+		// distinguish S3-throttle / IAM-misconfig / transient-network
+		// failures from a code-level uncaught exception. Browsers drop
+		// CSP reports on any non-2xx, so the loss is unavoidable here;
+		// the log line is the only way to count + alarm the failures.
+		console.error(JSON.stringify({
+			level: 'error',
+			msg: 'csp-report s3 put failed',
+			bucket: BUCKET,
+			key,
+			errName: err?.name,
+			errCode: err?.Code ?? err?.code,
+		}));
+		return { statusCode: 500, body: '' };
+	}
 
 	return { statusCode: 204, body: '' };
 };

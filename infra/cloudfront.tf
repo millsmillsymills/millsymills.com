@@ -55,7 +55,7 @@ resource "aws_cloudfront_origin_request_policy" "inspector_tls" {
 # Function URL hostname.
 resource "aws_cloudfront_origin_request_policy" "csp_report" {
   name    = "${replace(var.domain, ".", "-")}-csp-report-origin-req"
-  comment = "Forward Content-Type, User-Agent, CloudFront-Viewer-Country to csp_report Lambda; let CloudFront rewrite Host"
+  comment = "Forward whitelisted headers to csp_report Lambda; let CloudFront rewrite Host"
 
   headers_config {
     header_behavior = "whitelist"
