@@ -183,6 +183,13 @@ for tfv in infra/stacks/*.tfvars; do
 done
 ok "stacks/*.tfvars deploy_environment matches each workflow's environment block"
 
+section "python: ct_monitor unit tests"
+# Lambda code is stdlib + boto3 only and isn't deployed via this CI,
+# but the SNS body interpolates untrusted crt.sh fields so the
+# sanitizer + issuer allow-list need test coverage.
+python3 -m unittest discover -s infra/tests -t .
+ok "infra/ct_monitor.py unit tests"
+
 section "terraform: fmt"
 terraform -chdir=infra fmt -check -recursive
 ok "terraform fmt"
