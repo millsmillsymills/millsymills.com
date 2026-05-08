@@ -248,6 +248,16 @@ export const securityControls: readonly SecurityControl[] = [
 		prs: [202],
 	},
 	{
+		id: 'mta-sts',
+		title: 'MTA-STS (RFC 8461)',
+		category: 'email',
+		status: 'roadmap',
+		what: 'Publishes `_mta-sts.<domain> TXT "v=STSv1; id=…"` and serves a policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt` listing the Proton MX hosts as the only valid SMTP endpoints. Sending MTAs that respect MTA-STS upgrade opportunistic TLS to enforced TLS for inbound mail.',
+		why: 'MTA-STS blocks passive downgrade attacks on inbound SMTP that DNSSEC + DANE alone don\'t cover for senders that don\'t implement DANE (most large providers ship MTA-STS; DANE adoption is narrower). Visible control that peer MTAs can observe via HTTPS, complementing the DNSSEC-rooted DANE chain.',
+		tradeoffs: 'Phase 1 ships `mode: testing` on the rehearsal stack (`p41m0n.com`) so senders log policy mismatches via TLS-RPT but still deliver; reversible. Phase 2 promotes to `mode: enforce` after 2-4 weeks of clean TLS-RPT reports show `policy-type: sts`, and to `millsymills.com` after the cutover. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
+		code: ['infra/mta_sts.tf', 'src/pages/.well-known/mta-sts.txt.ts'],
+	},
+	{
 		id: 'dane-smtp',
 		title: 'DANE for inbound SMTP (RFC 7672)',
 		category: 'email',
