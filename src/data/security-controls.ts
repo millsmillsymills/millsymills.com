@@ -340,6 +340,17 @@ export const securityControls: readonly SecurityControl[] = [
 		code: ['src/data/pgp.ts', 'scripts/generate-wkd.sh', 'scripts/assert-pgp-consistency.sh'],
 	},
 	{
+		id: 'signed-commits',
+		title: 'Signed commits on main',
+		category: 'identity',
+		status: 'shipped',
+		what: 'Every commit on `main` is signed via SSH commit signing. `CONTRIBUTING.md` documents the one-time setup (reuse the GitHub auth key, `git config gpg.format ssh`, register a Signing Key in GitHub Settings) and the verification command (`git log --show-signature`).',
+		why: 'Branch protection bypassed via stolen credentials becomes visibly broken: a push that lacks a verified signature has no green badge and (once the branch protection rule lands) is rejected at the remote. Provenance of every change has a rooted chain to the signer\'s identity.',
+		tradeoffs: 'The `Require signed commits` branch protection rule on `main` requires GitHub Pro on private repos -- the API rejects it on the free private plan with `403 Upgrade to GitHub Pro`. Until the plan upgrade, the rule is enforced by convention via `CONTRIBUTING.md` and verified by manual `git log --show-signature` rather than rejected server-side. Existing pre-rule history on `main` stays unsigned (no force-push backfill).',
+		code: ['CONTRIBUTING.md'],
+		prs: [321],
+	},
+	{
 		id: 'mail-pow',
 		title: 'Mail address behind proof-of-work',
 		category: 'identity',
