@@ -54,7 +54,12 @@ extract_pin() {
 	local matches
 	matches=$(grep -hoE "${USES_PATTERN}" "${file}" | sort -u)
 	local count
-	count=$(printf '%s\n' "${matches}" | grep -c .)
+	# `grep -c .` always prints a count to stdout (including 0), but exits
+	# 1 on zero matches. Default bash inherit_errexit is off so a failing
+	# command substitution does NOT abort the parent shell, but pin that
+	# to `|| true` so the zero-pin branch is provably reachable rather
+	# than depending on a subtle shopt default.
+	count=$(printf '%s\n' "${matches}" | grep -c . || true)
 	if [[ "${count}" -gt 1 ]]; then
 		echo "FAIL: expected exactly 1 SLSA generator pin in ${file}, found ${count}:" >&2
 		printf '%s\n' "${matches}" | sed 's/^/  /' >&2
@@ -98,6 +103,10 @@ if ! ${is_node20}; then
 	exit 0
 fi
 
+# Strict less-than: the deadline date itself flips us into the FAIL
+# branch. That matches GitHub's own framing — 2026-06-02 IS the day
+# Node 24 becomes the runner default, so any Node-20 pin still in place
+# on the deadline date is already a regression risk.
 if [[ "${today}" < "${DEADLINE}" ]]; then
 	# Pin both sides of the subtraction to UTC so the countdown can't drift
 	# by ±1 day across timezones; macOS `date -j` defaults to local time.
