@@ -340,6 +340,17 @@ export const securityControls: readonly SecurityControl[] = [
 		code: ['src/data/pgp.ts', 'scripts/generate-wkd.sh', 'scripts/assert-pgp-consistency.sh'],
 	},
 	{
+		id: 'signed-commits',
+		title: 'Signed commits on main',
+		category: 'identity',
+		status: 'shipped',
+		what: 'Branch protection on `main` requires a verified signature on every commit (`required_signatures.enabled = true`, `enforce_admins = true`); GitHub rejects an unsigned push with `GH006: Protected branch update failed -- Commits must have verified signatures`. `CONTRIBUTING.md` documents the SSH signing setup contributors run once: reuse the GitHub auth key, `git config gpg.format ssh`, register a Signing Key in GitHub Settings, verify with `git log --show-signature`.',
+		why: 'Branch protection bypassed via stolen credentials becomes visibly broken: pushes without a signature get rejected at the remote, and squash-merges through the GitHub UI use GitHub\'s own signing key. Provenance of every new change on `main` has a rooted chain to the signer\'s identity.',
+		tradeoffs: 'Existing pre-rule history on `main` stays unsigned -- no force-push backfill. Direct CLI pushes to `main` (rare; PR squash-merge is the merge path) require the contributor\'s host to have signing wired up; squash-merges from the GitHub UI are auto-signed by GitHub regardless.',
+		code: ['CONTRIBUTING.md'],
+		prs: [321],
+	},
+	{
 		id: 'mail-pow',
 		title: 'Mail address behind proof-of-work',
 		category: 'identity',
