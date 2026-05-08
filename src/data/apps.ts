@@ -233,10 +233,6 @@ const _APPS_DATA = [
 		glyph: '🆅',
 		title: 'vscode.exe',
 		ogDescription: 'an evocative, pink-tinted vscode reskin. browse real dotfiles and snippets of the site\'s own source.',
-		// Hidden until the dotfile examples in src/data/dotfiles/ are
-		// reviewed for accuracy and privacy — see #237 / #236. Flip to
-		// `false` once that review lands.
-		hidden: true,
 		x: 140,
 		y: 80,
 		width: 900,
