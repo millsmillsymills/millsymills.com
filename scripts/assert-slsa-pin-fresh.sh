@@ -51,7 +51,16 @@ readonly -a NODE20_VERSIONS=(
 
 extract_pin() {
 	local file="$1"
-	grep -hoE "${USES_PATTERN}" "${file}" | sort -u
+	local matches
+	matches=$(grep -hoE "${USES_PATTERN}" "${file}" | sort -u)
+	local count
+	count=$(printf '%s\n' "${matches}" | grep -c .)
+	if [[ "${count}" -gt 1 ]]; then
+		echo "FAIL: expected exactly 1 SLSA generator pin in ${file}, found ${count}:" >&2
+		printf '%s\n' "${matches}" | sed 's/^/  /' >&2
+		exit 1
+	fi
+	echo "${matches}"
 }
 
 deploy_pin=$(extract_pin .github/workflows/deploy.yml)
@@ -90,7 +99,11 @@ if ! ${is_node20}; then
 fi
 
 if [[ "${today}" < "${DEADLINE}" ]]; then
-	days_left=$(( ($(date -j -f "%Y-%m-%d" "${DEADLINE}" +%s 2>/dev/null || date -d "${DEADLINE}" +%s) - $(date -u +%s)) / 86400 ))
+	# Pin both sides of the subtraction to UTC so the countdown can't drift
+	# by ±1 day across timezones; macOS `date -j` defaults to local time.
+	deadline_epoch=$(TZ=UTC date -j -f "%Y-%m-%d" "${DEADLINE}" +%s 2>/dev/null \
+		|| date -u -d "${DEADLINE}" +%s)
+	days_left=$(((deadline_epoch - $(date -u +%s)) / 86400))
 	echo "WARN: SLSA generator pin ${current_version} embeds Node-20 actions (${days_left} days until ${DEADLINE})"
 	echo "      Upstream tracking: ${UPSTREAM_ISSUE}"
 	echo "      Local tracking:    ${LOCAL_ISSUE}"
