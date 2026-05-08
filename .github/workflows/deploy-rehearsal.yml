@@ -111,6 +111,10 @@ jobs:
   # See deploy.yml for the full SLSA L3 rationale; this rehearsal copy
   # uses the same deliberate tag-pin (the generator workflow is
   # authenticated by GitHub against the published `vX.Y.Z` tag).
+  #
+  # Node-20 / Node-24 deadline context lives in deploy.yml above this
+  # same `uses:`. Both files must be bumped in lockstep — pin drift is
+  # caught by scripts/assert-slsa-pin-fresh.sh.
   provenance:
     needs: build
     permissions:
