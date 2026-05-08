@@ -24,6 +24,8 @@
 //   * `MAX_BODY_BYTES = 16384` rejects oversize payloads at 413 before
 //     the S3 write.
 
+import { randomUUID } from 'node:crypto';
+
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const s3 = new S3Client({});
@@ -50,6 +52,26 @@ function header(headers, name) {
 
 function pad2(n) {
 	return String(n).padStart(2, '0');
+}
+
+function isPlainObject(value) {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// Top-level shape per accepted content type:
+//   * `application/reports+json`  — Reporting API: array of report objects.
+//   * `application/csp-report`    — legacy report-uri: { "csp-report": {...} }.
+//   * `application/json`          — older Firefox quirk for report-uri,
+//                                   same `{csp-report: {...}}` shape.
+// Anything else is rejected at 400 before it lands in S3.
+function isWellFormedReport(contentType, parsed) {
+	if (contentType === 'application/reports+json') {
+		return Array.isArray(parsed) && parsed.every(isPlainObject);
+	}
+	if (contentType === 'application/csp-report' || contentType === 'application/json') {
+		return isPlainObject(parsed) && isPlainObject(parsed['csp-report']);
+	}
+	return false;
 }
 
 function objectKey(now, requestId) {
@@ -91,6 +113,16 @@ export const handler = async (event) => {
 		return { statusCode: 400, body: '' };
 	}
 
+	// Top-level shape check per content type. The bucket is private, so
+	// no exploit either way, but downstream tooling (CloudWatch Insights,
+	// future analytics) has no schema contract otherwise: any curl that
+	// makes it past the OAC + IAM-auth boundary with `application/json`
+	// could persist arbitrary JSON. Reject anything that isn't the shape
+	// the matching browser format actually emits.
+	if (!isWellFormedReport(contentType, parsed)) {
+		return { statusCode: 400, body: '' };
+	}
+
 	const now = new Date();
 	const envelope = {
 		receivedAt: now.toISOString(),
@@ -100,7 +132,11 @@ export const handler = async (event) => {
 		report: parsed,
 	};
 
-	const requestId = event?.requestContext?.requestId ?? `${now.getTime()}`;
+	// Function URL events always carry a requestId; the fallback is
+	// belt-and-suspenders for non-FunctionURL invocations (e.g. local
+	// tests) where two same-millisecond calls would otherwise collide
+	// on the same S3 object key.
+	const requestId = event?.requestContext?.requestId ?? `${now.getTime()}-${randomUUID()}`;
 	const key = objectKey(now, requestId);
 
 	try {
