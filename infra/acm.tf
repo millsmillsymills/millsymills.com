@@ -3,7 +3,15 @@ resource "aws_acm_certificate" "site" {
   domain_name       = var.domain
   validation_method = "DNS"
 
-  subject_alternative_names = ["www.${var.domain}"]
+  # `mta-sts.<domain>` is included unconditionally so the cert covers
+  # the subdomain even before MTA-STS is enabled (`var.enable_mta_sts`
+  # gates only the Route53 publish; the cert SAN + CloudFront alias
+  # are cheap to ship and let the user flip the policy on later
+  # without a cert-replacement round-trip). See `infra/mta_sts.tf`.
+  subject_alternative_names = [
+    "www.${var.domain}",
+    "mta-sts.${var.domain}",
+  ]
 
   lifecycle {
     create_before_destroy = true

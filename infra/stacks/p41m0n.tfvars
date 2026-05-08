@@ -29,3 +29,11 @@ protonmail_dkim_selectors = {
   protonmail2 = "protonmail2.domainkey.dcj2miv2gaceelgnmv3mwo6jisec66bvrpgjnocazioc4ngrydcua.domains.proton.ch."
   protonmail3 = "protonmail3.domainkey.dcj2miv2gaceelgnmv3mwo6jisec66bvrpgjnocazioc4ngrydcua.domains.proton.ch."
 }
+
+# Phase 1 MTA-STS rehearsal per #134. Publishes the discovery TXT so
+# senders look up the policy at https://mta-sts.p41m0n.com/.well-known/
+# mta-sts.txt. The policy file ships `mode: testing` initially -- bump
+# `mta_sts_id` and flip the policy file to `mode: enforce` after 2-4
+# weeks of clean TLS-RPT reports show `policy-type: sts`.
+enable_mta_sts = true
+mta_sts_id     = "20260507000000"
