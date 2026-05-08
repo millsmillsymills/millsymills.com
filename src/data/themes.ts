@@ -40,8 +40,21 @@ export const themes: readonly Theme[] = [
 	},
 ];
 
-export const defaultTheme = themes[0];
+// Decoupled from `themes[0]` so reordering the array can't silently
+// move the default. Mirrors `wallpapers.ts`'s `defaultWallpaper()` /
+// `default: true` pattern -- the misconfiguration manifests as a
+// build-time throw rather than a silent default flip.
+export const DEFAULT_THEME_ID = 'vaporwave' as const;
 
-export function findTheme(id: string | null): Theme | undefined {
+export const defaultTheme: Theme = (() => {
+	const theme = themes.find((t) => t.id === DEFAULT_THEME_ID);
+	if (!theme) {
+		throw new Error(`themes.ts: no theme with id ${DEFAULT_THEME_ID}`);
+	}
+	return theme;
+})();
+
+export function findTheme(id: string | null | undefined): Theme | undefined {
+	if (!id) return undefined;
 	return themes.find((theme) => theme.id === id);
 }
