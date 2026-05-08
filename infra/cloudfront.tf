@@ -228,6 +228,58 @@ resource "aws_cloudfront_response_headers_policy" "api" {
   }
 }
 
+# Response-headers policy for /api/csp-report. Authored separately from
+# `api` (above) because the CSP endpoint's contract is same-origin POSTs
+# only -- it has no cross-origin embed requirement, unlike /api/tls/*
+# which legitimately needs `Cross-Origin-Resource-Policy: cross-origin`
+# so the p41m0n.com rehearsal stack can fetch /api/tls/inspect from a
+# COEP-isolated document.
+#
+# Latent today (every csp_report response body is empty: 204/400/405/
+# 413/415/500), but becomes a real cross-origin reflection risk the
+# moment the response carries any payload. Default-deny here matches
+# the same-origin-only contract.
+#
+# HSTS / nosniff / Referrer-Policy / Permissions-Policy are kept for
+# parity with the rest of the surface; the only delta from `api` is the
+# CORP value flip.
+resource "aws_cloudfront_response_headers_policy" "csp_report" {
+  name    = "${replace(var.domain, ".", "-")}-csp-report-headers"
+  comment = "Security headers for ${var.domain} /api/csp-report (CORP same-origin)"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 63072000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
+
+  custom_headers_config {
+    items {
+      header   = "Cross-Origin-Resource-Policy"
+      value    = "same-origin"
+      override = true
+    }
+
+    items {
+      header   = "Permissions-Policy"
+      value    = "accelerometer=(), attribution-reporting=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), compute-pressure=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), storage-access=(), sync-xhr=(), unload=(), usb=(), web-share=(), window-management=(), xr-spatial-tracking=()"
+      override = true
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -331,7 +383,7 @@ resource "aws_cloudfront_distribution" "site" {
     # AWS-managed CachingDisabled
     cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     origin_request_policy_id   = aws_cloudfront_origin_request_policy.csp_report.id
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.api.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.csp_report.id
   }
 
   custom_error_response {
