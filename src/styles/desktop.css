@@ -132,6 +132,154 @@
 	--c-not-allowed: url('/cursors/3dwno.png') 16 16, not-allowed;
 }
 
+:root[data-theme='bimbows'] {
+	--bg-void: #c0c0c0;
+	--bg-deep: #808080;
+	--bg-raised: #d4d0c8;
+	--bg-edge: #ffffff;
+	--ink-primary: #000000;
+	--ink-muted: #202020;
+	--ink-dim: #404040;
+	--neon-pink: #ff0000;
+	--neon-pink-hi: #ff6666;
+	--neon-pink-lo: #990000;
+	--neon-cyan: #000080;
+	--neon-cyan-hi: #0000c0;
+	--neon-cyan-lo: #000040;
+	--neon-lilac: #800080;
+	--pink-50: #d4d0c8;
+	--pink-100: #c0c0c0;
+	--pink-200: #008080;
+	--pink-300: #ffffff;
+	--pink-400: #000080;
+	--pink-500: #000040;
+	--pink-600: #000080;
+	--lilac-100: #808080;
+	--lilac-300: #000000;
+	--cream: var(--ink-primary);
+	--ink: var(--ink-primary);
+	--ink-soft: var(--ink-muted);
+	--border: #000000;
+	--titlebar-bg: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+	--titlebar-fg: #ffffff;
+	--window-bg: #d4d0c8;
+	--window-shadow: 4px 4px 0 0 #000000;
+	--chrome-radius-window: 0px;
+	--chrome-radius-button: 0px;
+	--font-pixel: 'MS Sans Serif', 'Tahoma', system-ui, sans-serif;
+	--font-screen: 'Tahoma', 'Geneva', system-ui, sans-serif;
+}
+
+:root[data-theme='barbie'] {
+	--bg-void: #ff69b4;
+	--bg-deep: #ff1493;
+	--bg-raised: #ffb6c1;
+	--bg-edge: #fff0f5;
+	--ink-primary: #fff0f5;
+	--ink-muted: #ffe4f1;
+	--ink-dim: #ffd1e8;
+	--neon-pink: #ff007f;
+	--neon-pink-hi: #ff8ac8;
+	--neon-pink-lo: #c40062;
+	--neon-cyan: #ff69b4;
+	--neon-cyan-hi: #fff0f5;
+	--neon-cyan-lo: #da70d6;
+	--neon-lilac: #da70d6;
+	--pink-50: #fff0f5;
+	--pink-100: #ffb6c1;
+	--pink-200: #ff69b4;
+	--pink-300: #fff0f5;
+	--pink-400: #ff007f;
+	--pink-500: #ff1493;
+	--pink-600: #ff007f;
+	--lilac-100: #da70d6;
+	--lilac-300: #fff0f5;
+	--cream: var(--ink-primary);
+	--ink: var(--ink-primary);
+	--ink-soft: var(--ink-muted);
+	--border: #fff0f5;
+	--titlebar-bg: linear-gradient(90deg, #ff007f 0%, #ff69b4 50%, #fff0f5 100%);
+	--titlebar-fg: #4a0030;
+	--window-bg: #ffb6c1;
+	--window-shadow: 4px 4px 0 0 #ff007f;
+	--chrome-radius-window: 20px;
+	--chrome-radius-button: 12px;
+}
+
+:root[data-theme='hacker'] {
+	--bg-void: #000000;
+	--bg-deep: #0a0a0a;
+	--bg-raised: #111111;
+	--bg-edge: #1a1a1a;
+	--ink-primary: #00ff41;
+	--ink-muted: #00cc33;
+	--ink-dim: #008f24;
+	--neon-pink: #00ff41;
+	--neon-pink-hi: #66ff8a;
+	--neon-pink-lo: #00aa2b;
+	--neon-cyan: #ff0000;
+	--neon-cyan-hi: #ff6666;
+	--neon-cyan-lo: #990000;
+	--neon-lilac: #00cc33;
+	--pink-50: #001a08;
+	--pink-100: #00330d;
+	--pink-200: #000000;
+	--pink-300: #00ff41;
+	--pink-400: #00ff41;
+	--pink-500: #00cc33;
+	--pink-600: #00ff41;
+	--lilac-100: #001a08;
+	--lilac-300: #00ff41;
+	--cream: var(--ink-primary);
+	--ink: var(--ink-primary);
+	--ink-soft: var(--ink-muted);
+	--border: #00ff41;
+	--titlebar-bg: linear-gradient(90deg, #00330d 0%, #00ff41 100%);
+	--titlebar-fg: #000000;
+	--window-bg: #111111;
+	--window-shadow: 0 0 8px 2px #00ff41;
+	--chrome-radius-window: 0px;
+	--chrome-radius-button: 0px;
+	--font-pixel: 'Courier New', monospace;
+	--font-screen: 'Courier New', monospace;
+}
+
+:root[data-theme='arizona'] {
+	--bg-void: #0a2e2e;
+	--bg-deep: #0d3b3b;
+	--bg-raised: #1a5c5c;
+	--bg-edge: #2a7a7a;
+	--ink-primary: #fff8dc;
+	--ink-muted: #f4d58d;
+	--ink-dim: #d9ad43;
+	--neon-pink: #ff6eb4;
+	--neon-pink-hi: #ff9ccc;
+	--neon-pink-lo: #d94d91;
+	--neon-cyan: #00d4aa;
+	--neon-cyan-hi: #66ffe0;
+	--neon-cyan-lo: #00977a;
+	--neon-lilac: #ffd700;
+	--pink-50: #0d3b3b;
+	--pink-100: #1a5c5c;
+	--pink-200: #0a2e2e;
+	--pink-300: #ff6eb4;
+	--pink-400: #ff6eb4;
+	--pink-500: #d94d91;
+	--pink-600: #ff6eb4;
+	--lilac-100: #1a5c5c;
+	--lilac-300: #ffd700;
+	--cream: var(--ink-primary);
+	--ink: var(--ink-primary);
+	--ink-soft: var(--ink-muted);
+	--border: #00d4aa;
+	--titlebar-bg: linear-gradient(90deg, #00d4aa 0%, #ff6eb4 55%, #ffd700 100%);
+	--titlebar-fg: #0a2e2e;
+	--window-bg: #1a5c5c;
+	--window-shadow: 4px 4px 0 0 #00d4aa;
+	--chrome-radius-window: 8px;
+	--chrome-radius-button: 4px;
+}
+
 /* ------------------------------------------------------------------ */
 /* motifs — opt-in texture utilities                                  */
 /* ------------------------------------------------------------------ */

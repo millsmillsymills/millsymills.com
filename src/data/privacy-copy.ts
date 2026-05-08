@@ -19,6 +19,7 @@ export const browserStorageKeys: BrowserStorageKey[] = [
 	{ key: 'mills.flags.v1', storage: 'local', purpose: 'captured CTF flags' },
 	{ key: 'mills.vscode.v1', storage: 'local', purpose: 'vscode.exe open tabs + active tab' },
 	{ key: 'mills.wallpaper.v1', storage: 'local', purpose: 'selected desktop wallpaper id' },
+	{ key: 'mills.theme.v1', storage: 'local', purpose: 'selected desktop theme id' },
 	{ key: 'mills.boot.played', storage: 'session', purpose: '"played boot sequence already" flag' },
 	{ key: 'mills.clippy.dismissed', storage: 'local', purpose: 'clippy dismissed permanently ("don\'t come back")' },
 	{ key: 'mills.clippy.dismissed', storage: 'session', purpose: 'clippy dismissed for this tab only' },
