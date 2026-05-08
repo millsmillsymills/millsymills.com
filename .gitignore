@@ -27,6 +27,10 @@ pnpm-debug.log*
 infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
+infra/bootstrap-state/.terraform/
+infra/bootstrap-state/terraform.tfstate
+infra/bootstrap-state/terraform.tfstate.backup
+infra/bootstrap-state/errored.tfstate
 # `infra/errored.tfstate` is written when an apply aborts mid-flight and the
 # remote-state save itself fails (e.g. STS token expiry); it's a recovery
 # artifact, not a source of truth. Re-running apply with fresh creds reads
