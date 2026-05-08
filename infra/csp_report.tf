@@ -219,3 +219,88 @@ locals {
     "/",
   )
 }
+
+# --------------------------------------------------------------------
+# Operational alarms.
+#
+# Two failure modes worth alerting on:
+#
+#   1. Throttling. `reserved_concurrent_executions = 5` is a deliberate
+#      cost guard, but during a Report-Only -> enforce CSP flip the
+#      browser fleet can burst well past 5 concurrent invocations and
+#      reports get silently dropped exactly when they're most needed
+#      (legitimate violations from real users). The Throttles metric
+#      surfaces that pressure.
+#
+#   2. S3 PutObject failures. `infra/csp_report.mjs` already emits a
+#      structured JSON log line (`msg = "csp-report s3 put failed"`)
+#      with errName/errCode fields when the put fails. A metric filter
+#      converts the log line into a CloudWatch metric so we can alarm
+#      on it.
+#
+# Both alarms publish to a dedicated SNS topic so a future alert volume
+# spike (e.g. AWS-side S3 incident) can be muted without touching the
+# CT-monitor pager.
+# --------------------------------------------------------------------
+
+resource "aws_sns_topic" "csp_report_ops" {
+  name = "${local.csp_report_name}-ops"
+}
+
+resource "aws_sns_topic_subscription" "csp_report_ops_email" {
+  topic_arn = aws_sns_topic.csp_report_ops.arn
+  protocol  = "email"
+  endpoint  = local.ct_alert_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "csp_report_throttles" {
+  alarm_name          = "${local.csp_report_name}-throttles"
+  alarm_description   = "csp_report Lambda was throttled -- bursts beyond reserved_concurrent_executions are silently dropping CSP reports."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Throttles"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+
+  dimensions = {
+    FunctionName = aws_lambda_function.csp_report.function_name
+  }
+}
+
+# Metric filter on the structured log line emitted by csp_report.mjs
+# when the PutObjectCommand fails. JSON pattern matches the `msg`
+# field exactly so unrelated structured logs (or future log lines)
+# don't trip the alarm.
+resource "aws_cloudwatch_log_metric_filter" "csp_report_put_failed" {
+  name           = "${local.csp_report_name}-put-failed"
+  log_group_name = aws_cloudwatch_log_group.csp_report.name
+  pattern        = "{ $.msg = \"csp-report s3 put failed\" }"
+
+  metric_transformation {
+    name          = "${local.csp_report_name}-put-failed"
+    namespace     = "MillsymillsCom/CspReport"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "csp_report_put_failed" {
+  alarm_name          = "${local.csp_report_name}-put-failed"
+  alarm_description   = "csp_report Lambda failed to PutObject to the reports bucket. Check CloudWatch Logs Insights for errName / errCode -- structured fields preserved by the JSON log line."
+  namespace           = aws_cloudwatch_log_metric_filter.csp_report_put_failed.metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.csp_report_put_failed.metric_transformation[0].name
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+}

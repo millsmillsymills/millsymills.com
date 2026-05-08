@@ -227,5 +227,15 @@ else
 	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
 fi
 
+section "post-deploy: csp_report Function URL 403 (opt-in)"
+# Same shape as the inspector_tls smoke. Asserts the OAC + IAM-auth
+# boundary on /api/csp-report (issue #369 followup to PR #355).
+if [[ -n "${MMS_SMOKE_STACK:-}" ]]; then
+	./scripts/smoke-csp-report.sh "$MMS_SMOKE_STACK"
+	ok "csp_report Function URL returns 403 for $MMS_SMOKE_STACK"
+else
+	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
+fi
+
 section "done"
 ok "all CI checks passed locally"
