@@ -237,5 +237,18 @@ else
 	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
 fi
 
+section "audit: terraform state bucket controls (opt-in)"
+# Off by default — requires AWS creds. Set MMS_VERIFY_STATE_BUCKET=true
+# to run. Asserts the live `millsymills-terraform-state` bucket matches
+# the controls codified in `infra/bootstrap-state/main.tf`
+# (versioning, SSE, public-access-block, ownership, TLS-only policy,
+# noncurrent-version lifecycle). Closes the verification half of #283.
+if [[ "${MMS_VERIFY_STATE_BUCKET:-}" == "true" ]]; then
+	./scripts/verify-state-bucket.sh
+	ok "state bucket controls match infra/bootstrap-state/"
+else
+	printf '\033[2mskipped (set MMS_VERIFY_STATE_BUCKET=true to run)\033[0m\n'
+fi
+
 section "done"
 ok "all CI checks passed locally"
