@@ -9,16 +9,50 @@
  * twice.
  */
 
-import { applyToDocument, getActiveId, resolveWallpaper, setActiveId, STORAGE_KEY } from './wallpaper';
+import {
+	applyToDocument as applyWallpaperToDocument,
+	getActiveId as getActiveWallpaperId,
+	resolveWallpaper,
+	setActiveId as setActiveWallpaperId,
+	STORAGE_KEY as WALLPAPER_STORAGE_KEY,
+} from './wallpaper';
+import {
+	applyToDocument as applyThemeToDocument,
+	getActiveId as getActiveThemeId,
+	resolveTheme,
+	setActiveId as setActiveThemeId,
+	STORAGE_KEY as THEME_STORAGE_KEY,
+} from './theme';
+import { defaultTheme } from '../data/themes';
 import { defaultWallpaper } from '../data/wallpapers';
 import { dispatchClippyTrigger } from './util/events';
 
-function syncActiveTile(root: HTMLElement, id: string): void {
+function syncActiveWallpaperTile(root: HTMLElement, id: string): void {
 	root.querySelectorAll<HTMLButtonElement>('[data-wallpaper]').forEach((btn) => {
 		const isActive = btn.dataset.wallpaper === id;
 		btn.classList.toggle('display__tile--active', isActive);
 		btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 	});
+}
+
+function syncActiveThemeTile(root: HTMLElement, id: string): void {
+	root.querySelectorAll<HTMLButtonElement>('[data-theme-choice]').forEach((btn) => {
+		const isActive = btn.dataset.themeChoice === id;
+		btn.classList.toggle('display__tile--active', isActive);
+		btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+	});
+}
+
+function syncAllWallpapers(id: string): void {
+	document
+		.querySelectorAll<HTMLElement>('.display')
+		.forEach((el) => syncActiveWallpaperTile(el, id));
+}
+
+function syncAllThemes(id: string): void {
+	document
+		.querySelectorAll<HTMLElement>('.display')
+		.forEach((el) => syncActiveThemeTile(el, id));
 }
 
 function bind(root: HTMLElement): void {
@@ -27,19 +61,29 @@ function bind(root: HTMLElement): void {
 			const id = btn.dataset.wallpaper;
 			if (!id) return;
 			const wallpaper = resolveWallpaper(id);
-			applyToDocument(wallpaper);
-			setActiveId(wallpaper.id);
+			applyWallpaperToDocument(wallpaper);
+			setActiveWallpaperId(wallpaper.id);
 			// Sync every Display instance — there can be two on the page
 			// (desktop window + mobile shell), and both should reflect the
 			// new selection so navigating between surfaces stays coherent.
-			document
-				.querySelectorAll<HTMLElement>('.display')
-				.forEach((el) => syncActiveTile(el, wallpaper.id));
+			syncAllWallpapers(wallpaper.id);
 			dispatchClippyTrigger('wallpaper', 'display');
 		});
 	});
 
-	syncActiveTile(root, getActiveId() ?? defaultWallpaper().id);
+	root.querySelectorAll<HTMLButtonElement>('[data-theme-choice]').forEach((btn) => {
+		btn.addEventListener('click', () => {
+			const id = btn.dataset.themeChoice;
+			if (!id) return;
+			const theme = resolveTheme(id);
+			applyThemeToDocument(theme);
+			setActiveThemeId(theme.id);
+			syncAllThemes(theme.id);
+		});
+	});
+
+	syncActiveWallpaperTile(root, getActiveWallpaperId() ?? defaultWallpaper().id);
+	syncActiveThemeTile(root, getActiveThemeId() ?? defaultTheme.id);
 }
 
 function init(): void {
@@ -56,12 +100,17 @@ if (typeof window !== 'undefined') {
 	// Cross-tab sync: if another tab picks a different wallpaper, mirror
 	// that choice here so the UI doesn't lie about state.
 	window.addEventListener('storage', (e) => {
-		if (e.key !== STORAGE_KEY) return;
-		const wallpaper = resolveWallpaper(e.newValue);
-		applyToDocument(wallpaper);
-		document
-			.querySelectorAll<HTMLElement>('.display')
-			.forEach((el) => syncActiveTile(el, wallpaper.id));
+		if (e.key === WALLPAPER_STORAGE_KEY) {
+			const wallpaper = resolveWallpaper(e.newValue);
+			applyWallpaperToDocument(wallpaper);
+			syncAllWallpapers(wallpaper.id);
+		}
+
+		if (e.key === THEME_STORAGE_KEY) {
+			const theme = resolveTheme(e.newValue);
+			applyThemeToDocument(theme);
+			syncAllThemes(theme.id);
+		}
 	});
 }
 

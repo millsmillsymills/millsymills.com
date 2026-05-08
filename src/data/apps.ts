@@ -247,7 +247,7 @@ const _APPS_DATA = [
 		label: 'display',
 		glyph: '🖼️',
 		title: 'display.cpl',
-		ogDescription: 'a tiny windows-style display panel. pick a wallpaper from a curated vaporwave set; choice persists in localStorage.',
+		ogDescription: 'a tiny windows-style display panel. pick a desktop theme and wallpaper; choices persist in localStorage.',
 		// Wallpaper only renders on the desktop layout (mshell never
 		// surfaces .desktop's bg-image), so this app is meaningless on
 		// mobile.
