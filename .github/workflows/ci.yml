@@ -69,6 +69,9 @@ jobs:
       - name: Assert /api/tls/* response-headers policy attached
         run: ./scripts/assert-api-tls-headers-policy.sh
 
+      - name: Assert SLSA generator pin fresh before Node 24 deadline
+        run: ./scripts/assert-slsa-pin-fresh.sh
+
       - name: Test (vitest)
         run: npm test
 
