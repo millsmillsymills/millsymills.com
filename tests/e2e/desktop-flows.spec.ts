@@ -14,13 +14,30 @@ function windowFor(page: Page, id: string) {
 	return page.locator(`.window[data-window-id="${id}"]`);
 }
 
-test.describe('desktop shell tracer bullets', () => {
-	test.beforeEach(async ({ page }) => {
-		await suppressBoot(page);
+// Single top-level beforeEach for the whole file:
+//   * suppress the boot animation deterministically.
+//   * fail any test where the desktop shell silently throws -- without
+//     a `pageerror` listener, an uncaught exception during a tracer
+//     flow lets the test pass on green selectors despite a real bug.
+test.beforeEach(async ({ page }) => {
+	await suppressBoot(page);
+	page.on('pageerror', (err) => {
+		throw new Error(`uncaught page error: ${err.stack ?? err.message}`);
 	});
+});
 
+// `mills.boot.played` was set in beforeEach. Confirm the boot overlay
+// actually got pulled from the DOM rather than just trusting the
+// sessionStorage flag -- a regression in `boot.ts` could swallow the
+// flag and leave the overlay covering the click target.
+async function assertBootSuppressed(page: Page): Promise<void> {
+	await expect(page.locator('.boot-overlay')).toHaveCount(0);
+}
+
+test.describe('desktop shell tracer bullets', () => {
 	test('opens, maximizes, hides, and reopens a window from the launcher', async ({ page }) => {
 		await page.goto('/');
+		await assertBootSuppressed(page);
 
 		const aboutWindow = windowFor(page, 'about');
 		await page.locator('[data-open-window="about"]').first().click();
@@ -41,7 +58,9 @@ test.describe('desktop shell tracer bullets', () => {
 		await expect(aboutWindow).toBeVisible();
 	});
 
-	test('command palette reveals and captures hidden flag after flags are unlocked', async ({ page }) => {
+	test('command palette reveals and captures hidden flag after flags are unlocked', async ({
+		page,
+	}) => {
 		await page.addInitScript((key) => {
 			localStorage.setItem(key, JSON.stringify({ console: Date.now() }));
 		}, flagsStateKey);
@@ -52,9 +71,15 @@ test.describe('desktop shell tracer bullets', () => {
 		await expect(palette).toBeVisible();
 
 		await page.getByRole('textbox', { name: 'search apps' }).fill('hack');
-		await expect(page.locator('.cmdp__item', { hasText: 'reveal hidden flag' })).toBeVisible();
+		// Click the matched item directly rather than fill+Enter --
+		// `Enter` immediately after `fill` races any debounce/RAF/
+		// microtask in the palette's filter pipeline; the highlighted
+		// item is set during render, not during fill. Click is the
+		// stable contract.
+		const secretItem = palette.locator('.cmdp__item', { hasText: 'reveal hidden flag' });
+		await expect(secretItem).toBeVisible();
+		await secretItem.click();
 
-		await page.keyboard.press('Enter');
 		await expect(page.getByRole('textbox', { name: 'search apps' })).toHaveValue(
 			'flag{command_k_to_rule_them_all}',
 		);
@@ -62,20 +87,82 @@ test.describe('desktop shell tracer bullets', () => {
 			.poll(async () => page.evaluate((key) => localStorage.getItem(key), flagsStateKey))
 			.toContain('"palette"');
 	});
+
+	test('command palette opens without flags but does not surface the hidden-flag entry', async ({
+		page,
+	}) => {
+		// First-time visitor: no flags captured. The palette still
+		// opens (Ctrl+K is unconditional) but the secret entry must
+		// stay hidden -- otherwise the reward stops being a reward.
+		await page.goto('/');
+
+		await page.keyboard.press('Control+K');
+		const palette = page.getByRole('dialog', { name: 'command palette' });
+		await expect(palette).toBeVisible();
+
+		await page.getByRole('textbox', { name: 'search apps' }).fill('hack');
+		await expect(palette.locator('.cmdp__item', { hasText: 'reveal hidden flag' })).toHaveCount(0);
+	});
+
+	test('Ctrl+K is a toggle: second press closes the palette', async ({ page }) => {
+		await page.goto('/');
+
+		const palette = page.getByRole('dialog', { name: 'command palette' });
+		await page.keyboard.press('Control+K');
+		await expect(palette).toBeVisible();
+
+		await page.keyboard.press('Control+K');
+		await expect(palette).toBeHidden();
+	});
+
+	test('clicking a background window raises it above the previously focused one (z-order)', async ({
+		page,
+	}) => {
+		await page.goto('/');
+
+		const aboutWindow = windowFor(page, 'about');
+		const terminalWindow = windowFor(page, 'terminal');
+
+		// Open windows via the bound click handler programmatically --
+		// using `.click()` on the launcher icon would have to compete
+		// with the already-open `about` window covering the desktop.
+		// `HTMLElement.click()` still fires the bound listener but
+		// bypasses the pointer-event-interception layer.
+		await page.evaluate(() => {
+			document.querySelector<HTMLElement>('[data-open-window="about"]')!.click();
+		});
+		await expect(aboutWindow).toBeVisible();
+		await page.evaluate(() => {
+			document.querySelector<HTMLElement>('[data-open-window="terminal"]')!.click();
+		});
+		await expect(terminalWindow).toBeVisible();
+
+		// terminal opened last -> currently topmost.
+		const aboutZ = async () =>
+			Number(await aboutWindow.evaluate((el) => (el as HTMLElement).style.zIndex || '0'));
+		const terminalZ = async () =>
+			Number(await terminalWindow.evaluate((el) => (el as HTMLElement).style.zIndex || '0'));
+
+		expect(await terminalZ()).toBeGreaterThan(await aboutZ());
+
+		// Click the title bar of `about` to raise it. Use the title
+		// bar specifically so we don't compete with inner-body buttons,
+		// and because the window-manager binds focus on `pointerdown`
+		// of the window subtree (`bindWindows`).
+		await aboutWindow.locator('.window__titlebar').first().click();
+		await expect.poll(async () => (await aboutZ()) > (await terminalZ())).toBe(true);
+	});
 });
 
 test.describe('high-value app tracer bullets', () => {
-	test.beforeEach(async ({ page }) => {
-		await suppressBoot(page);
-	});
-
 	test('terminal command renders output in the DOM', async ({ page }) => {
 		await page.goto('/terminal/');
 
 		const terminalWindow = windowFor(page, 'terminal');
 		await expect(terminalWindow).toBeVisible();
-		await terminalWindow.getByRole('textbox', { name: 'terminal input' }).fill('echo e2e-terminal-smoke');
-		await terminalWindow.getByRole('textbox', { name: 'terminal input' }).press('Enter');
+		const input = terminalWindow.getByRole('textbox', { name: 'terminal input' });
+		await input.fill('echo e2e-terminal-smoke');
+		await input.press('Enter');
 
 		await expect(terminalWindow.getByText('e2e-terminal-smoke', { exact: true })).toBeVisible();
 	});
