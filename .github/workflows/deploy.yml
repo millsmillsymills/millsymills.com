@@ -9,13 +9,15 @@ name: Deploy
 # once per month so /.well-known/security.txt's `Expires:` field
 # (build_time + 12mo) never silently goes stale.
 #
-# Trust model: this repo is on the GitHub free-private plan, which
-# DOES NOT support required-reviewer protection on Environments. The
-# API returns HTTP 422 ("Failed to create the environment protection
-# rule. Please ensure the billing plan supports the required reviewers
-# protection rule.") — confirmed during the p41m0n rehearsal. So
-# every scheduled and dispatched run deploys UNATTENDED. The trust
-# boundary is enforced entirely by:
+# Trust model: every scheduled and dispatched run currently deploys
+# UNATTENDED. The repo is on the GitHub Pro plan as of #144, so a
+# required-reviewer protection rule on the `production` environment
+# IS now possible (Pro is the threshold; the free-private plan
+# previously rejected the API with HTTP 422). It is intentionally
+# NOT yet enabled, because turning it on would block the monthly
+# `schedule:` deploy on a manual approval -- the unattended cron is
+# what keeps /.well-known/security.txt's `Expires:` field fresh.
+# The trust boundary is enforced by:
 #   - OIDC sub = `repo:<owner/name>:environment:production`
 #   - OIDC job_workflow_ref pinned to THIS file on `refs/heads/main`
 #     (so a different workflow on main, even one declaring the same
@@ -31,10 +33,10 @@ name: Deploy
 #     distribution. See `infra/github_oidc.tf` for the exact policy.
 # A maintainer who can push to `main` bypasses any reviewer gate by
 # approving themselves anyway, so for a personal portfolio the
-# OIDC-pin + IAM-scope model is the load-bearing protection — not the
-# missing reviewer step. Upgrade to GitHub Pro ($4/mo) to add a
-# reviewer gate if the unattended-monthly-deploy property becomes
-# unacceptable. See `infra/github_oidc.tf` for the trust policy.
+# OIDC-pin + IAM-scope model is the load-bearing protection -- a
+# required-reviewer rule would be hygiene, not the trust anchor.
+# Adding it is a separate decision that has to weigh the manual-
+# approval cost against the scheduled-rebuild cadence.
 #
 # SLSA L3 + sigstore: each deploy ships `dist.tar.gz`, a cosign
 # keyless signature (`.sig` + `.pem`), and a SLSA v1.0 build-L3
@@ -211,11 +213,13 @@ jobs:
       id-token: write
 
     # Targets the `production` GitHub Environment for variable
-    # scoping (`vars.SITE_DOMAIN` etc. resolve from this env). On the
-    # free-private plan there is no required-reviewer gate — see the
-    # trust-model block at the top of this file. The OIDC sub claim
-    # in the IAM trust policy is bound to `environment:production`,
-    # so the env name is the load-bearing claim, not just metadata.
+    # scoping (`vars.SITE_DOMAIN` etc. resolve from this env). No
+    # required-reviewer gate is configured -- see the trust-model
+    # block at the top of this file for why (Pro plan now permits
+    # the rule, but enabling it would block the unattended monthly
+    # `schedule:` deploy). The OIDC sub claim in the IAM trust
+    # policy is bound to `environment:production`, so the env name
+    # is the load-bearing claim, not just metadata.
     environment:
       name: production
       url: https://${{ vars.SITE_DOMAIN }}
