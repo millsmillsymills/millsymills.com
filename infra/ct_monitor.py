@@ -21,12 +21,15 @@ SNS email body, otherwise an attacker could inject newlines + plausible
 "AWS confirmation" verbiage to mask the real findings.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
+from typing import Any, TypedDict
 
 import boto3
 
@@ -39,47 +42,60 @@ LOOKBACK_HOURS = int(os.environ.get("LOOKBACK_HOURS", "48"))
 
 CRTSH_URL = "https://crt.sh/?q={query}&output=json"
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
-_FIELD_MAX_LEN = 512
+_FIELD_MAX_CHARS = 512
+_DN_SPLIT = re.compile(r"[,;]")
 
 sns = boto3.client("sns")
 
 
-def _clean(value):
+class CrtshEntry(TypedDict, total=False):
+    id: int | str
+    entry_timestamp: str
+    issuer_name: str
+    common_name: str
+    name_value: str
+
+
+def _clean(value: object) -> str:
     """Strip C0/DEL control chars and cap length so a single field
     cannot inject newlines or overflow the SNS body. crt.sh fields are
     intrinsically untrusted -- see module docstring."""
-    return _CONTROL_CHARS.sub(" ", str(value or ""))[:_FIELD_MAX_LEN]
+    return _CONTROL_CHARS.sub(" ", str(value or ""))[:_FIELD_MAX_CHARS]
 
 
-def fetch_certs(domain):
+def fetch_certs(domain: str) -> list[CrtshEntry]:
     url = CRTSH_URL.format(query=urllib.parse.quote(domain))
     req = urllib.request.Request(
         url,
         headers={"User-Agent": f"{domain}-ct-monitor"},
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 (fixed scheme)
         return json.loads(resp.read().decode("utf-8"))
 
 
-def is_allowed(issuer):
+def is_allowed(issuer: str) -> bool:
     """Match the allow-list against the `O=` or `CN=` component of the
-    DN, not free substrings. Free substring matching would silently
-    allow-list a future CA whose DN contains `Amazon` outside the
-    organization name (e.g. `O=Amazon Web Reseller CA` -- contrived,
-    but the substring check is weaker than the existing comment
-    implies)."""
-    needle = issuer.lower()
-    return any(
-        f"o={s.lower()}" in needle or f"cn={s.lower()}" in needle
-        for s in ALLOWED_ISSUER_SUBSTRINGS
-    )
+    DN, with strict equality on the component value -- not free
+    substring matching. Substring matching would silently allow-list
+    `O=AmazonEvil` or `O=Amazonia` once `Amazon` is on the list, since
+    `\"o=amazon\" in \"o=amazonevil...\"` is true. Strict component
+    equality avoids that."""
+    needles = {s.lower() for s in ALLOWED_ISSUER_SUBSTRINGS}
+    for raw in _DN_SPLIT.split(issuer):
+        component = raw.strip().lower()
+        if "=" not in component:
+            continue
+        key, _, value = component.partition("=")
+        if key.strip() in {"o", "cn"} and value.strip() in needles:
+            return True
+    return False
 
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict[str, Any], context: object) -> dict[str, Any]:
     cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
 
     certs = fetch_certs(DOMAIN)
-    suspicious = []
+    suspicious: list[CrtshEntry] = []
     skipped = 0
     for cert in certs:
         # crt.sh entry_timestamp is naive UTC ISO-8601, e.g. "2026-04-01T12:34:56.789".
@@ -97,25 +113,32 @@ def lambda_handler(event, context):
         if not is_allowed(cert.get("issuer_name", "")):
             suspicious.append(cert)
 
+    result: dict[str, Any] = {
+        "checked": len(certs),
+        "skipped": skipped,
+        "suspicious": len(suspicious),
+    }
     if not suspicious:
-        return {"status": "ok", "checked": len(certs), "skipped": skipped}
+        result["status"] = "ok"
+        return result
 
     sns.publish(
         TopicArn=SNS_TOPIC_ARN,
         Subject=f"[ct-monitor] Unexpected cert issuance for {DOMAIN}",
         Message=format_alert(DOMAIN, suspicious),
     )
-    return {"status": "alert", "suspicious": len(suspicious), "skipped": skipped}
+    result["status"] = "alert"
+    return result
 
 
-def _safe_id(value):
+def _safe_id(value: object) -> str:
     try:
-        return str(int(value))
+        return str(int(value))  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return _clean(value)
 
 
-def format_alert(domain, certs):
+def format_alert(domain: str, certs: list[CrtshEntry]) -> str:
     lines = [
         f"CT log monitoring detected {len(certs)} certificate(s) for {domain}",
         f"issued by an issuer outside the allow-list ({', '.join(ALLOWED_ISSUER_SUBSTRINGS)}).",
