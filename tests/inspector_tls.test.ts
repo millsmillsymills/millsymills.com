@@ -69,12 +69,48 @@ describe('inspector_tls handler', () => {
 		});
 		expect(res.statusCode).toBe(200);
 		const body = bodyOf(res);
-		// 300 'A's would pass the regex (length cap is 128 per component),
-		// but the raw header was sliced to 256 before split, so cipher/sni
-		// disappear past the truncation point.
-		expect((body.protocol as string).length).toBeLessThanOrEqual(256);
+		// Two defenses cooperate: the raw header is sliced to 256 bytes
+		// (so cipher/sni past the truncation point disappear), and each
+		// surviving component is rejected by the {0,128} length cap in
+		// the regex. The 'A'.repeat(300) protocol component fails both —
+		// it exceeds 128 chars even after the 256-byte slice.
+		expect(body.protocol).toBe('');
 		expect(body.cipher).toBe('');
 		expect(body.sni).toBe('');
+	});
+
+	it('blanks all components when header coerces to a comma-joined array', async () => {
+		// Multi-value header arrays stringify as 'a,b,c'; split(':') yields
+		// one component containing commas, which fails the regex. None of
+		// the array members should be reflected.
+		const res = await invoke({
+			'cloudfront-viewer-tls': ['TLSv1.3', 'TLS_AES_256_GCM_SHA384', 'sni'] as unknown as string,
+		});
+		expect(res.statusCode).toBe(200);
+		const body = bodyOf(res);
+		expect(body.protocol).toBe('');
+		expect(body.cipher).toBe('');
+		expect(body.sni).toBe('');
+	});
+
+	it('treats a two-component header as missing sni', async () => {
+		const res = await invoke({ 'cloudfront-viewer-tls': 'TLSv1.3:TLS_AES_256_GCM_SHA384' });
+		expect(res.statusCode).toBe(200);
+		const body = bodyOf(res);
+		expect(body.protocol).toBe('TLSv1.3');
+		expect(body.cipher).toBe('TLS_AES_256_GCM_SHA384');
+		expect(body.sni).toBe('');
+	});
+
+	it('ignores extra colon-delimited segments past the third', async () => {
+		const res = await invoke({
+			'cloudfront-viewer-tls': 'TLSv1.3:TLS_AES_256_GCM_SHA384:millsymills.com:extra:more',
+		});
+		expect(res.statusCode).toBe(200);
+		const body = bodyOf(res);
+		expect(body.protocol).toBe('TLSv1.3');
+		expect(body.cipher).toBe('TLS_AES_256_GCM_SHA384');
+		expect(body.sni).toBe('millsymills.com');
 	});
 
 	it('rejects components longer than 128 chars', async () => {
@@ -84,16 +120,6 @@ describe('inspector_tls handler', () => {
 		});
 		const body = bodyOf(res);
 		expect(body.cipher).toBe('');
-	});
-
-	it('coerces non-string header values', async () => {
-		// Some Lambda runtimes can deliver multi-value headers as arrays.
-		// String coercion produces "a,b" — the regex blanks it out
-		// per-component, no crash.
-		const res = await invoke({
-			'cloudfront-viewer-tls': ['TLSv1.3', 'TLS_AES_256_GCM_SHA384', 'sni'] as unknown as string,
-		});
-		expect(res.statusCode).toBe(200);
 	});
 
 	it('only reflects allow-listed Origin in CORS', async () => {
@@ -109,5 +135,14 @@ describe('inspector_tls handler', () => {
 			origin: 'https://attacker.example',
 		});
 		expect(deny.headers).not.toHaveProperty('access-control-allow-origin');
+	});
+
+	it('accepts uppercase Origin header for CORS reflection', async () => {
+		const res = await invoke({
+			'cloudfront-viewer-tls': 'TLSv1.3:TLS_AES_256_GCM_SHA384:millsymills.com',
+			Origin: 'https://millsymills.com',
+		});
+		expect(res.headers['access-control-allow-origin']).toBe('https://millsymills.com');
+		expect(res.headers['vary']).toBe('origin');
 	});
 });
