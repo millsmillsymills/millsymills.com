@@ -81,7 +81,7 @@ variable "ct_monitor_alert_address" {
 }
 
 variable "ct_monitor_extra_issuers" {
-  description = "Extra issuer-name substrings to add to the CT-monitor allow-list, alongside the always-included `Amazon`. Use only if you start issuing certs for this domain from a CA other than ACM."
+  description = "Extra issuer organization names to add to the CT-monitor allow-list, alongside the always-included `Amazon`. Each value is matched against the `O=` or `CN=` component of the issuer DN (case-insensitive); free-substring matching was tightened to avoid silently allow-listing future CAs whose DN happens to contain an allow-listed name in an unrelated component. Use only if you start issuing certs for this domain from a CA other than ACM (e.g. `[\"Let's Encrypt\"]`)."
   type        = list(string)
   default     = []
 }
