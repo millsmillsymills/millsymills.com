@@ -232,7 +232,7 @@ resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = [var.domain, "www.${var.domain}"]
+  aliases             = [var.domain, "www.${var.domain}", "mta-sts.${var.domain}"]
   price_class         = "PriceClass_100" # US/EU only — cheapest
 
   origin {

@@ -113,6 +113,22 @@ Managed in `infra/email.tf`. The config is safe to deploy before Proton is set u
 
 DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip the `p=quarantine` training phase because Proton is the only legitimate sender and aligned DKIM/SPF should pass on day one.
 
+### MTA-STS rollout (#134)
+
+Managed in `infra/mta_sts.tf`. The `mta-sts.<domain>` ACM SAN, CloudFront alias, and A/AAAA records ship unconditionally; the `_mta-sts.<domain>` discovery TXT is gated on `var.enable_mta_sts`. The policy file lives at `src/pages/.well-known/mta-sts.txt.ts` and is served from `https://mta-sts.<domain>/.well-known/mta-sts.txt`.
+
+Phase 1 (rehearsal on `p41m0n.com`) ships `mode: testing` + `max_age: 86400`. Senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Watch the next 24-48h cycle of TLS-RPT reports for `policy-type: sts` (vs `no-policy-found`) to confirm senders picked it up.
+
+Phase 2 (promote to `millsymills.com`) flips `enable_mta_sts = true` in `infra/stacks/millsymills.tfvars` post-cutover. Same Terraform module, same Astro page; only the per-stack tfvars change.
+
+Flipping to `mode: enforce` (after 2-4 weeks of clean TLS-RPT reports):
+
+1. Edit `src/pages/.well-known/mta-sts.txt.ts`: `mode: enforce`, `max_age: 604800`.
+2. Bump `mta_sts_id` in the matching `infra/stacks/<stack>.tfvars` (timestamp). Senders refresh their cached policy when the id changes.
+3. Deploy + `terraform apply`. Both must land before senders observe the new policy.
+
+**Reversal in `mode: enforce` is asymmetric.** Publish `mode: none` in the policy file AND wait `max_age` BEFORE setting `enable_mta_sts = false` to drop the TXT record, otherwise enforcing senders refuse delivery during the rollback window. The policy file is what tells senders to back off; the TXT record only controls discovery.
+
 ## Deploy workflow
 
 Deploys run via `.github/workflows/deploy.yml` on workflow_dispatch and on a monthly `schedule:` trigger. (The auto-fire-on-push trigger is currently commented out — see the workflow header.) Both target the `production` GitHub Environment for variable scoping.
