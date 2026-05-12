@@ -239,6 +239,48 @@ test('parseBody returns {} for empty body', () => {
 	assert.deepEqual(__test.parseBody({ body: '' }), {});
 });
 
+test('updateCredentialCounter issues a conditional UpdateCommand', async () => {
+	await __test.updateCredentialCounter('cred1', 5);
+	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
+	assert.equal(updates.length, 1);
+	const input = updates[0].input;
+	assert.equal(input.TableName, 'creds-test');
+	assert.deepEqual(input.Key, { credentialId: 'cred1' });
+	assert.equal(input.UpdateExpression, 'SET #counter = :new');
+	assert.match(input.ConditionExpression, /#counter < :new/);
+	assert.equal(input.ExpressionAttributeValues[':new'], 5);
+});
+
+test('updateCredentialCounter swallows ConditionalCheckFailedException (counter regression)', async () => {
+	ddbResponses.set('UpdateCommand', () => {
+		const err = new Error('counter not strictly greater');
+		err.name = 'ConditionalCheckFailedException';
+		throw err;
+	});
+	const originalWarn = console.warn;
+	const warnings = [];
+	console.warn = (...args) => warnings.push(args);
+	try {
+		await __test.updateCredentialCounter('cred1', 3);
+	} finally {
+		console.warn = originalWarn;
+	}
+	assert.equal(warnings.length, 1);
+	assert.match(String(warnings[0][0]), /counter regression/);
+});
+
+test('updateCredentialCounter rethrows non-conditional errors', async () => {
+	ddbResponses.set('UpdateCommand', () => {
+		const err = new Error('throttled');
+		err.name = 'ProvisionedThroughputExceededException';
+		throw err;
+	});
+	await assert.rejects(
+		() => __test.updateCredentialCounter('cred1', 3),
+		/throttled/,
+	);
+});
+
 test('all four routes are registered', () => {
 	const routes = [...__test.ROUTES.keys()].sort();
 	assert.deepEqual(routes, [
