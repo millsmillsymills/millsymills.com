@@ -1,37 +1,36 @@
-# WebAuthn / passkey demo backend (issue #140) -- infra scaffold slice.
+# WebAuthn / passkey demo backend (issue #140).
 #
-# Ships the Lambda Function URL + DynamoDB credential store + IAM role
-# only. The handler is a stub returning 200 (see
-# `infra/lambdas/webauthn_demo/index.mjs`); a followup PR replaces it
-# with the real `@simplewebauthn/server`-backed registration +
-# authentication flows. The `/demo/passkey` Astro page and the
-# CloudFront-vs-direct-Function-URL decision are separate followups
-# tracked under #140.
+# Scaffold landed in PR #444 (Function URL + DynamoDB credential store +
+# IAM role + stub handler). The real `@simplewebauthn/server`-backed
+# registration + authentication handlers landed in PR for #446 (this
+# file). Still outstanding: the `/demo/passkey` Astro page (#445) and
+# the CloudFront-vs-direct-Function-URL decision (#447).
 #
 # Architecture differs from `infra/csp_report.tf` / `infra/inspector_tls.tf`
 # in one place: the Function URL is `authorization_type = "NONE"` (public)
 # rather than `AWS_IAM` behind a CloudFront OAC. That's a deliberate
 # slice-level decision -- the followup CloudFront-slice PR will revisit
 # it. The demo collects no PII; credentials are ephemeral (TTL'd) and
-# origin-bound at the application layer by the real handler. Until that
-# handler lands the stub returns a static body and ignores the table.
+# origin-bound at the application layer.
 #
 # Cost guard: reserved_concurrent_executions = 5 mirrors csp_report --
 # a runaway demo cannot blow the account budget.
 
 locals {
-  webauthn_demo_name = "${replace(var.domain, ".", "-")}-webauthn-demo"
+  webauthn_demo_name       = "${replace(var.domain, ".", "-")}-webauthn-demo"
+  webauthn_demo_lambda_dir = "${path.module}/lambdas/webauthn_demo"
+  webauthn_sessions_table  = "${local.webauthn_demo_name}-sessions"
 }
 
 # --------------------------------------------------------------------
 # DynamoDB credential store.
 #
-# Schema is the bare minimum the followup logic-slice will extend:
 # `credentialId` (hash key) is the WebAuthn credential identifier;
 # `expiresAt` is an epoch-seconds TTL attribute so DynamoDB purges
-# stale demo registrations automatically. The followup PR adds
-# `publicKey`, `counter`, `userHandle`, `transports` -- DynamoDB is
-# schemaless so those land without a migration.
+# stale demo registrations automatically (24h, set in the handler).
+# Remaining attributes (publicKey/counter/userHandle/transports) are
+# schemaless in DynamoDB -- the handler writes them without a
+# migration.
 # --------------------------------------------------------------------
 
 resource "aws_dynamodb_table" "webauthn_credentials" {
@@ -59,13 +58,75 @@ resource "aws_dynamodb_table" "webauthn_credentials" {
 }
 
 # --------------------------------------------------------------------
-# Lambda function + Function URL.
+# DynamoDB session store.
+#
+# In-flight ceremony state (challenge + userHandle + type) keyed on a
+# random sessionId, with a 5-minute TTL set by the handler. Separating
+# this from the credentials table keeps the credential row's lifecycle
+# (24h TTL, persists across the registration/auth split) independent of
+# the short-lived ceremony state. Item shape:
+#
+#   sessionId  (S, PK) -- random base64url, 16 bytes
+#   challenge  (S)     -- challenge bytes echoed back by the client
+#   userHandle (S)     -- synthetic, no PII
+#   type       (S)     -- "registration" | "authentication"
+#   expiresAt  (N)     -- epoch seconds, ~5 min from creation
 # --------------------------------------------------------------------
+
+resource "aws_dynamodb_table" "webauthn_sessions" {
+  name         = local.webauthn_sessions_table
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "sessionId"
+
+  attribute {
+    name = "sessionId"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expiresAt"
+    enabled        = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+}
+
+# --------------------------------------------------------------------
+# Lambda function + Function URL.
+#
+# The handler depends on `@simplewebauthn/server`; the AWS SDK is
+# supplied by the Lambda Node.js runtime (matches the
+# `infra/csp_report.mjs` pattern). The `null_resource` runs `npm ci
+# --omit=dev` whenever `package-lock.json` changes, so the `node_modules`
+# the archive_file zips is always reproducible from the committed lock.
+# --------------------------------------------------------------------
+
+resource "null_resource" "webauthn_demo_install" {
+  triggers = {
+    lockfile = filesha256("${local.webauthn_demo_lambda_dir}/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command     = "npm ci --omit=dev"
+    working_dir = local.webauthn_demo_lambda_dir
+  }
+}
 
 data "archive_file" "webauthn_demo" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/webauthn_demo/index.mjs"
+  source_dir  = local.webauthn_demo_lambda_dir
   output_path = "${path.module}/.terraform/webauthn_demo.zip"
+
+  # `tests/` is an unzipped dev-only payload -- exclude it to keep the
+  # deployable bundle minimal and avoid shipping the test fixtures.
+  excludes = [
+    "tests",
+    ".npmrc",
+  ]
+
+  depends_on = [null_resource.webauthn_demo_install]
 }
 
 resource "aws_iam_role" "webauthn_demo" {
@@ -119,7 +180,10 @@ resource "aws_iam_role_policy" "webauthn_demo" {
           "dynamodb:UpdateItem",
           "dynamodb:DeleteItem",
         ]
-        Resource = aws_dynamodb_table.webauthn_credentials.arn
+        Resource = [
+          aws_dynamodb_table.webauthn_credentials.arn,
+          aws_dynamodb_table.webauthn_sessions.arn,
+        ]
       },
     ]
   })
@@ -134,7 +198,12 @@ resource "aws_lambda_function" "webauthn_demo" {
   runtime          = "nodejs22.x"
   architectures    = ["arm64"]
   timeout          = 5
-  memory_size      = 128
+  # Bumped from 128 (PR #444 stub) to 256 -- @simplewebauthn/server pulls
+  # in ASN.1 + COSE + CBOR + WebCrypto for attestation/assertion parsing,
+  # which is heavier than the stub. 256 MB keeps the cold-start budget
+  # comfortably inside the 5s timeout and stays inside the demo cost
+  # envelope (PAY_PER_REQUEST DynamoDB + capped concurrency).
+  memory_size = 256
 
   # Cap concurrent invocations so a runaway demo cannot blow the bill.
   # 5 leaves headroom for normal demo traffic; bursts beyond that get
@@ -144,7 +213,10 @@ resource "aws_lambda_function" "webauthn_demo" {
 
   environment {
     variables = {
-      WEBAUTHN_TABLE = aws_dynamodb_table.webauthn_credentials.name
+      WEBAUTHN_TABLE           = aws_dynamodb_table.webauthn_credentials.name
+      WEBAUTHN_SESSIONS_TABLE  = aws_dynamodb_table.webauthn_sessions.name
+      WEBAUTHN_RP_ID           = var.domain
+      WEBAUTHN_EXPECTED_ORIGIN = "https://${var.domain}"
     }
   }
 
@@ -168,6 +240,6 @@ resource "aws_lambda_function_url" "webauthn_demo" {
 }
 
 output "webauthn_demo_url" {
-  description = "Public HTTPS endpoint for the WebAuthn demo Lambda. Wire this into the `/demo/passkey` Astro page in the followup page-slice PR (#140)."
+  description = "Public HTTPS endpoint for the WebAuthn demo Lambda. Routes /registration/options, /registration/verify, /authentication/options, /authentication/verify (all POST). Wire this into the `/demo/passkey` Astro page in the followup page-slice PR (#445)."
   value       = aws_lambda_function_url.webauthn_demo.function_url
 }
