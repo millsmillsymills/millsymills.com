@@ -9,7 +9,7 @@
  * dispatching synthetic StorageEvent payloads.
  */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultTheme, themes, THEME_STORAGE_KEY } from '../data/themes';
 import { defaultWallpaper, wallpapers } from '../data/wallpapers';
@@ -106,5 +106,23 @@ describe('display-picker storage listener — wallpaper branch', () => {
 		expect(themes.length).toBeGreaterThan(0);
 		const value = document.documentElement.style.getPropertyValue('--desktop-bg');
 		expect(value).toBe(`url('${defaultWallpaper().src}')`);
+	});
+});
+
+describe('display-picker init idempotence', () => {
+	it('double-init still binds exactly one click handler', async () => {
+		const root = document.createElement('div');
+		root.className = 'display';
+		const tile = document.createElement('button');
+		tile.dataset.themeChoice = 'hacker';
+		root.appendChild(tile);
+		document.body.appendChild(root);
+		const setItem = vi.spyOn(localStorage, 'setItem');
+		vi.resetModules();
+		await import('./display-picker');
+		vi.resetModules();
+		await import('./display-picker');
+		tile.click();
+		expect(setItem.mock.calls.filter(([k]) => k === THEME_STORAGE_KEY)).toHaveLength(1);
 	});
 });
