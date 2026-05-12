@@ -270,6 +270,37 @@
 		white-space: nowrap;
 		border: 0;
 	}
+
+	@media (max-width: 520px) {
+		.inspector {
+			padding: 14px 12px 18px;
+		}
+
+		.inspector__status {
+			flex-wrap: wrap;
+		}
+
+		.inspector__status dl {
+			min-width: 0;
+		}
+
+		.inspector__status dd {
+			min-width: 0;
+			overflow-wrap: anywhere;
+		}
+
+		.inspector__grades {
+			display: block;
+			max-width: 100%;
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		.inspector__grades td:nth-child(1) {
+			white-space: normal;
+			overflow-wrap: anywhere;
+		}
+	}
 </style>
 
 <script>
