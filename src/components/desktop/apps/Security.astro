@@ -3,6 +3,7 @@ import {
 	securityControls,
 	CATEGORY_LABELS,
 	REPO_URL,
+	REPO_BLOB_URL,
 	type ControlCategory,
 	type SecurityControl,
 } from '../../../data/security-controls';
@@ -29,7 +30,7 @@ const groupedShipped = SHIPPED_ORDER.map((cat) => ({
 	items: shipped.filter((c) => c.category === cat),
 })).filter((g) => g.items.length > 0);
 
-const codeUrl = (path: string) => `${REPO_URL}/blob/main/${path}`;
+const codeUrl = (path: string) => `${REPO_BLOB_URL}/${path}`;
 const prUrl = (n: number) => `${REPO_URL}/pull/${n}`;
 
 // Allow-list of href schemes that mdInline() will emit. `javascript:`,
@@ -200,7 +201,7 @@ const isExternal = (href: string) => /^https?:\/\//.test(href);
 
 	<footer class="security__footer">
 		<p>
-			source of truth: <a href={`${REPO_URL}/blob/main/src/data/security-controls.ts`} target="_blank" rel="noopener"><code>src/data/security-controls.ts</code></a>.
+			source of truth: <a href={`${REPO_BLOB_URL}/src/data/security-controls.ts`} target="_blank" rel="noopener"><code>src/data/security-controls.ts</code></a>.
 			every PR that ships a new control updates that file in the same diff — drift between
 			page + reality is a CI failure waiting to happen.
 		</p>

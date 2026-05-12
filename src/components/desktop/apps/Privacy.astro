@@ -1,5 +1,6 @@
 ---
-import { copy, browserStorageKeys, REPO_BLOB_URL } from '../../../data/privacy-copy';
+import { copy, browserStorageKeys } from '../../../data/privacy-copy';
+import { REPO_BLOB_URL } from '../../../data/security-controls';
 
 const gitShaFull = import.meta.env.PUBLIC_GIT_SHA ?? 'unknown';
 const gitShaShort = gitShaFull.slice(0, 7);

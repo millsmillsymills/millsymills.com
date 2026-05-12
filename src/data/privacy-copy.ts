@@ -97,5 +97,3 @@ export const copy = {
 	},
 	attestationPrefix: 'served from commit',
 };
-
-export const REPO_BLOB_URL = `${REPO_URL}/blob/main`;

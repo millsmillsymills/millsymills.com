@@ -65,6 +65,8 @@ export const CATEGORY_LABELS: Record<ControlCategory, string> = {
 // branding/identity claim that shouldn't drift across files.
 export const REPO_URL = 'https://github.com/millsmillsymills/millsymills.com';
 
+export const REPO_BLOB_URL = `${REPO_URL}/blob/main`;
+
 export const securityControls: readonly SecurityControl[] = [
 	// ─── web platform ──────────────────────────────────────────────────
 	{
