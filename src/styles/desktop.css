@@ -1240,13 +1240,7 @@ body.mshell-app-open {
 	font-family: var(--font-pixel);
 	font-size: 11px;
 	max-width: 280px;
-	transform: translateX(120%);
-	transition: transform 220ms ease;
 	pointer-events: auto;
-}
-
-.flag-toast.flag-toast--in {
-	transform: translateX(0);
 }
 
 /* First-capture variant — promoted to a larger alert-style banner so the
