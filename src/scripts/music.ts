@@ -173,6 +173,10 @@ class MusicPlayer {
 				? '/images/vaporwave-ui/buttons/mute.png'
 				: '/images/vaporwave-ui/buttons/unmute.png';
 		}
+		if (this.muteBtn) {
+			this.muteBtn.setAttribute('aria-pressed', String(this.audio.muted));
+			this.muteBtn.setAttribute('aria-label', this.audio.muted ? 'unmute' : 'mute');
+		}
 	}
 
 	private prev(): void {
@@ -190,11 +194,20 @@ class MusicPlayer {
 	}
 
 	private setPlayGlyph(which: 'play' | 'pause'): void {
-		if (!this.playImg) return;
-		this.playImg.src =
-			which === 'pause'
-				? '/images/vaporwave-ui/buttons/pause.png'
-				: '/images/vaporwave-ui/buttons/play.png';
+		if (this.playImg) {
+			this.playImg.src =
+				which === 'pause'
+					? '/images/vaporwave-ui/buttons/pause.png'
+					: '/images/vaporwave-ui/buttons/play.png';
+		}
+		// aria-pressed=true when the player is actively playing (button shows
+		// pause glyph). aria-label flips so screen readers announce the action
+		// the next click will take, not the current state.
+		if (this.playBtn) {
+			const playing = which === 'pause';
+			this.playBtn.setAttribute('aria-pressed', String(playing));
+			this.playBtn.setAttribute('aria-label', playing ? 'pause' : 'play');
+		}
 	}
 
 	private renderTime(): void {
