@@ -52,7 +52,6 @@ export interface QuipBank {
 export const quips: QuipBank = {
 	default: {
 		wakeup: [
-			{ quip: 'hi! it looks like you are visiting a personal website.' },
 			{ quip: 'wake up, neo.' },
 			{ quip: 'follow the white rabbit.' },
 			{ quip: 'knock, knock.' },
