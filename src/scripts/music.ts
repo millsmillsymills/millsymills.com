@@ -137,8 +137,16 @@ class MusicPlayer {
 		this.current = i;
 		const track = this.tracks[i];
 		this.audio.src = track.src;
-		if (this.titleEl) this.titleEl.textContent = track.title;
-		if (this.artistEl) this.artistEl.textContent = track.artist;
+		if (this.titleEl) {
+			this.titleEl.textContent = track.title;
+			// Mirror full string into `title` so the ellipsis-truncated cell
+			// still surfaces the whole track name on hover / long-press.
+			this.titleEl.title = track.title;
+		}
+		if (this.artistEl) {
+			this.artistEl.textContent = track.artist;
+			this.artistEl.title = track.artist;
+		}
 		this.refreshTrackHighlight();
 		if (autoplay) this.audio.play().catch((err) => this.setStatus(playErrorMessage(err)));
 	}
