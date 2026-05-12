@@ -193,8 +193,10 @@
 .vscode-editor-code {
 	margin: 0;
 	font-family: var(--font-mono);
-	font-size: 0.82rem;
-	line-height: 1.4;
+	/* Absolute px, not rem — html font-size is 20px (desktop.css), so a
+	 * "VS Code default 13px" target as rem would read as a fragile fraction. */
+	font-size: 13px;
+	line-height: 1.5;
 	white-space: pre;
 }
 .vscode-editor-gutter {
