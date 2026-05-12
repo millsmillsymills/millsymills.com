@@ -320,3 +320,30 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_body_too_large" {
   alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
   ok_actions          = [aws_sns_topic.csp_report_ops.arn]
 }
+
+# Catches "Lambda stopped being invoked at all" -- the failure mode the
+# other three alarms can't see. They all use `treat_missing_data =
+# "notBreaching"` and only fire on positive samples, so a broken
+# Function URL / revoked IAM / accidental delete produces silence.
+# `treat_missing_data = "breaching"` here flips the polarity: the alarm
+# fires precisely when there's no data. 24h dry-spell tolerates the
+# demo's bursty/zero-traffic baseline while still surfacing genuine
+# outages within a day.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_invocations_zero" {
+  alarm_name          = "${local.webauthn_demo_name}-invocations-zero"
+  alarm_description   = "webauthn_demo Lambda has had zero invocations for 24h. Likely a broken Function URL, revoked IAM role, or accidental delete -- not benign demo traffic gaps."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Invocations"
+  statistic           = "Sum"
+  period              = 3600
+  evaluation_periods  = 24
+  threshold           = 1
+  comparison_operator = "LessThanThreshold"
+  treat_missing_data  = "breaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+
+  dimensions = {
+    FunctionName = aws_lambda_function.webauthn_demo.function_name
+  }
+}
