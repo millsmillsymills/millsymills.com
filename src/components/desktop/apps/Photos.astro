@@ -115,6 +115,14 @@ const gridPhotos = photos.slice(stripCount);
 	@media (max-width: 520px) {
 		.gallery__strip {
 			margin: 0 -16px 16px;
+			padding-bottom: 26px;
+		}
+		.gallery__tag {
+			white-space: normal;
+			max-width: calc(100% + 8px);
+			text-align: center;
+			line-height: 1.25;
+			word-break: break-word;
 		}
 		.gallery__grid {
 			grid-template-columns: repeat(2, 1fr);
