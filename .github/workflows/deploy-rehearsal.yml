@@ -171,12 +171,6 @@ jobs:
 
       - name: Install cosign
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
-        with:
-          # Pin to cosign v2: v3 made `--bundle` required for sign-blob and
-          # dropped the separate `--output-signature` / `--output-certificate`
-          # artifact shape that `/.well-known/slsa/` publishes and `/security/`
-          # documents. v3 bundle migration tracked separately.
-          cosign-release: 'v2.6.3'
 
       - name: Cosign sign-blob (keyless)
         env:
@@ -184,15 +178,14 @@ jobs:
         run: |
           set -euo pipefail
           cosign sign-blob \
-            --output-signature dist.tar.gz.sig \
-            --output-certificate dist.tar.gz.pem \
+            --bundle dist.tar.gz.cosign.bundle \
             dist.tar.gz
 
       - name: Stage SLSA artifacts under /.well-known/slsa/
         run: |
           set -euo pipefail
           mkdir -p dist/.well-known/slsa
-          cp dist.tar.gz dist.tar.gz.sig dist.tar.gz.pem dist.tar.gz.intoto.jsonl \
+          cp dist.tar.gz dist.tar.gz.cosign.bundle dist.tar.gz.intoto.jsonl \
             dist/.well-known/slsa/
 
       - name: Configure AWS credentials (OIDC)
