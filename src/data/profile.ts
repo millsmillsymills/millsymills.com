@@ -57,6 +57,7 @@ export const experience = [
 		title: 'Corporate Security Engineer',
 		company: 'Trail of Bits',
 		period: '2023 – present',
+		location: 'Seattle, WA (remote)',
 		bullets: [
 			'Planned and executed migration of 150+ host fleet from SimpleMDM to Jamf.',
 			'Built identity lifecycle workflows (onboarding, offboarding, access auditing) in Bash, Python, and Slack.',
@@ -73,6 +74,7 @@ export const experience = [
 		title: 'Associate Security Consultant',
 		company: 'Leviathan Security Group',
 		period: '2022 – 2023',
+		location: 'Seattle, WA (remote)',
 		bullets: [
 			'Discovered and cataloged vulnerabilities in customer environments.',
 			'Prioritized vulnerabilities and provided mitigation instructions.',
@@ -84,6 +86,7 @@ export const experience = [
 		title: 'Security Architect',
 		company: 'RealSelf',
 		period: '2017 – 2022',
+		location: 'Seattle, WA (in-office through 2020, remote 2020–2022)',
 		bullets: [
 			'Owned the vendor vetting program and Risk Register.',
 			'Threat-modeled production users, internal employees, and third-party vendors.',
@@ -102,6 +105,7 @@ export const experience = [
 		title: 'Level 3 Support Engineer',
 		company: 'Commonwealth Financial Network',
 		period: '2013 – 2017',
+		location: 'San Diego, CA (in-office)',
 		bullets: [
 			'Final escalation point for 50+ Level 1 and Level 2 technicians in a FINRA/SEC-regulated environment.',
 			'Mitigated active incidents — Poweliks, Cryptolocker — under FINRA/SEC compliance, plus insider threats involving social engineering and unauthorized hardware.',
