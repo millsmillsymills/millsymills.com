@@ -66,12 +66,6 @@ export const gear: readonly GearGroup[] = [
 				why: 'DNS + certs in the same provider as everything else.',
 			},
 			{
-				name: 'Terraform 1.10+',
-				detail: 'state in S3 with use_lockfile (no DynamoDB)',
-				url: 'https://www.terraform.io/',
-				why: 'single tool for all infra. S3-native locking removed the last vestigial DDB table.',
-			},
-			{
 				name: 'GitHub Actions OIDC',
 				detail: 'no long-lived AWS credentials in the repo',
 				why: 'short-lived role assumption — IAM trust policy pins the sub claim to the production environment AND the workflow_ref to main. tampered workflow file from another branch can\'t mint the deploy token.',
@@ -114,11 +108,6 @@ export const gear: readonly GearGroup[] = [
 	{
 		title: 'homelab',
 		items: [
-			{
-				name: 'chimera (unraid server)',
-				detail: 'custom z790 · i5-12600k · 128GB DDR5 · 100TB + 2TB SSD cache',
-				why: 'lives in the basement, runs the containers, hosts the MCPs, holds the media.',
-			},
 			{
 				name: 'UniFi networking stack',
 				detail: 'controller + switches + APs',
