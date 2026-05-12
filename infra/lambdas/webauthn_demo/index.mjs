@@ -111,27 +111,30 @@ function parseBody(event) {
 		? Buffer.from(String(raw), 'base64').toString('utf8')
 		: String(raw);
 	if (decoded.length > MAX_BODY_BYTES) {
-		// EMF blob lets CloudWatch ingest a custom metric from the log
-		// line for free, vs $0.30/M for PutMetricData. A sustained rate
-		// of oversize bodies on a public no-auth endpoint is the DoS
-		// signal alarmed on in `infra/webauthn_demo.tf` (BodyTooLarge
-		// >= 5 in 5 min). `Dimensions: [[]]` emits the metric at the
-		// namespace level so the alarm reads it without a dimension key.
-		console.warn(JSON.stringify({
-			_aws: {
-				Timestamp: Date.now(),
-				CloudWatchMetrics: [{
-					Namespace: 'MillsymillsCom/WebauthnDemo',
-					Dimensions: [[]],
-					Metrics: [{ Name: 'BodyTooLarge', Unit: 'Count' }],
-				}],
-			},
-			level: 'warn',
-			msg: 'webauthn-demo body too large',
-			bytes: decoded.length,
-			max: MAX_BODY_BYTES,
-			BodyTooLarge: 1,
-		}));
+		// EMF metric for the body-too-large alarm in webauthn_demo.tf.
+		// Wrapped so a hypothetical stringify/log failure can't turn the
+		// 413 path into an uncaught exception (which the outer handler
+		// catch would remap to 400 with the wrong message and lose the
+		// metric silently).
+		try {
+			console.warn(JSON.stringify({
+				_aws: {
+					Timestamp: Date.now(),
+					CloudWatchMetrics: [{
+						Namespace: 'MillsymillsCom/WebauthnDemo',
+						Dimensions: [[]],
+						Metrics: [{ Name: 'BodyTooLarge', Unit: 'Count' }],
+					}],
+				},
+				level: 'warn',
+				msg: 'webauthn-demo body too large',
+				bytes: decoded.length,
+				max: MAX_BODY_BYTES,
+				BodyTooLarge: 1,
+			}));
+		} catch (emfErr) {
+			console.error('emf emit failed', { err: emfErr?.message });
+		}
 		const err = new Error('body too large');
 		err.statusCode = 413;
 		throw err;
