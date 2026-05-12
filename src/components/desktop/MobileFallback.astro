@@ -11,6 +11,7 @@ import Projects from './apps/Projects.astro';
 import Uses from './apps/Uses.astro';
 import Privacy from './apps/Privacy.astro';
 import Incidents from './apps/Incidents.astro';
+import Inspector from './apps/Inspector.astro';
 import VSCode from './apps/VSCode.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
@@ -42,6 +43,8 @@ const contentFor = (id: string) => {
 			return Privacy;
 		case 'incidents':
 			return Incidents;
+		case 'inspector':
+			return Inspector;
 		case 'vscode':
 			return VSCode;
 		default:
