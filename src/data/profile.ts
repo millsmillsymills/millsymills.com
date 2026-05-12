@@ -117,6 +117,8 @@ export const experience = [
 	},
 ] as const;
 
+export type Employer = (typeof experience)[number]['company'];
+
 export const photos = [
 	{
 		src: '/images/cats/tabby-fluff.jpg',
