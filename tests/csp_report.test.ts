@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // `infra/csp_report.mjs` requires REPORT_BUCKET at import time and
@@ -231,6 +232,96 @@ describe('csp_report handler — schema validation', () => {
 			}),
 		);
 		expect(res.statusCode).toBe(400);
+	});
+
+	it('rejects application/reports+json with an empty array', async () => {
+		// `[].every(...)` is `true` -- without an explicit length guard,
+		// an empty Reporting API payload would persist a zero-value
+		// envelope to S3. Verify the guard exists.
+		const res = await invoke(
+			postReport({
+				body: JSON.stringify([]),
+				headers: { 'content-type': 'application/reports+json' },
+			}),
+		);
+		expect(res.statusCode).toBe(400);
+		expect(sendMock).not.toHaveBeenCalled();
+	});
+
+	it('rejects legacy application/csp-report with an array body', async () => {
+		// The legacy `report-uri` format is a single object under the
+		// `csp-report` key, not an array. A malformed client posting an
+		// array under that content type should 400, not 204.
+		const res = await invoke(
+			postReport({
+				body: JSON.stringify([{ 'csp-report': { 'violated-directive': 'script-src' } }]),
+				headers: { 'content-type': 'application/csp-report' },
+			}),
+		);
+		expect(res.statusCode).toBe(400);
+		expect(sendMock).not.toHaveBeenCalled();
+	});
+});
+
+describe('csp_report handler — property tests', () => {
+	// Arbitrary JSON values: primitives, arrays, and plain objects nested
+	// up to a small depth. Excludes the few well-formed shapes the
+	// handler accepts (verified via post-condition in the property).
+	const arbJson: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
+		json: fc.oneof(
+			{ depthSize: 'small', withCrossShrink: true },
+			fc.constant(null),
+			fc.boolean(),
+			fc.integer(),
+			fc.double({ noNaN: true }),
+			fc.string(),
+			fc.array(tie('json'), { maxLength: 4 }),
+			fc.dictionary(fc.string(), tie('json'), { maxKeys: 4 }),
+		),
+	})).json;
+
+	function isAcceptedShape(contentType: string, value: unknown): boolean {
+		if (contentType === 'application/reports+json') {
+			return (
+				Array.isArray(value) &&
+				value.length > 0 &&
+				value.every((v) => typeof v === 'object' && v !== null && !Array.isArray(v))
+			);
+		}
+		const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+			typeof v === 'object' && v !== null && !Array.isArray(v);
+		return (
+			isPlainObject(value) && isPlainObject((value as Record<string, unknown>)['csp-report'])
+		);
+	}
+
+	it('rejects arbitrary non-conforming shapes across all accepted content types', async () => {
+		await fc.assert(
+			fc.asyncProperty(
+				fc.constantFrom(
+					'application/reports+json',
+					'application/csp-report',
+					'application/json',
+				),
+				arbJson,
+				async (contentType, payload) => {
+					// Filter out the (rare) cases where the random shape happens
+					// to be valid -- the property is "non-conforming => 400",
+					// not "everything => 400".
+					fc.pre(!isAcceptedShape(contentType, payload));
+					sendMock.mockClear();
+					const res = await invoke(
+						postReport({
+							body: JSON.stringify(payload),
+							headers: { 'content-type': contentType },
+						}),
+					);
+					expect(res.statusCode).toBe(400);
+					expect(sendMock).not.toHaveBeenCalled();
+				},
+			),
+			{ numRuns: 64 },
+		);
 	});
 });
 

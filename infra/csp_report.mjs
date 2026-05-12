@@ -66,7 +66,11 @@ function isPlainObject(value) {
 // Anything else is rejected at 400 before it lands in S3.
 function isWellFormedReport(contentType, parsed) {
 	if (contentType === 'application/reports+json') {
-		return Array.isArray(parsed) && parsed.every(isPlainObject);
+		// `[].every(...)` is `true`, so the array-emptiness guard must be
+		// explicit -- an empty reports array carries no signal and should
+		// not persist a zero-value envelope to S3.
+		if (!Array.isArray(parsed) || parsed.length === 0) return false;
+		return parsed.every(isPlainObject);
 	}
 	if (contentType === 'application/csp-report' || contentType === 'application/json') {
 		return isPlainObject(parsed) && isPlainObject(parsed['csp-report']);
@@ -102,7 +106,16 @@ export const handler = async (event) => {
 
 	const rawBody = event?.body ?? '';
 	const body = event?.isBase64Encoded ? Buffer.from(rawBody, 'base64').toString('utf-8') : rawBody;
-	if (Buffer.byteLength(body, 'utf-8') > MAX_BODY_BYTES) {
+	const bodyBytes = Buffer.byteLength(body, 'utf-8');
+	if (bodyBytes > MAX_BODY_BYTES) {
+		// Structured log so a CloudWatch metric filter can surface abuse:
+		// a flood of oversize bodies is a DoS signal, not a quiet 413.
+		console.warn(JSON.stringify({
+			level: 'warn',
+			msg: 'csp-report body cap exceeded',
+			bytes: bodyBytes,
+			max: MAX_BODY_BYTES,
+		}));
 		return { statusCode: 413, body: '' };
 	}
 
