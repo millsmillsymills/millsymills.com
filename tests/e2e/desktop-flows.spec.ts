@@ -129,19 +129,27 @@ test.describe('desktop shell tracer bullets', () => {
 		// `HTMLElement.click()` still fires the bound listener but
 		// bypasses the pointer-event-interception layer.
 		await page.evaluate(() => {
-			document.querySelector<HTMLElement>('[data-open-window="about"]')!.click();
+			const el = document.querySelector<HTMLElement>('[data-open-window="about"]');
+			if (!el) throw new Error('[data-open-window="about"] launcher missing');
+			el.click();
 		});
 		await expect(aboutWindow).toBeVisible();
 		await page.evaluate(() => {
-			document.querySelector<HTMLElement>('[data-open-window="terminal"]')!.click();
+			const el = document.querySelector<HTMLElement>('[data-open-window="terminal"]');
+			if (!el) throw new Error('[data-open-window="terminal"] launcher missing');
+			el.click();
 		});
 		await expect(terminalWindow).toBeVisible();
 
 		// terminal opened last -> currently topmost.
+		// Read computed z-index, not inline `style.zIndex` -- if the window
+		// manager ever stops writing z-index inline (e.g. moves to a CSS
+		// class), inline reads silently return '' and `|| '0'` masks the
+		// regression with both windows reporting 0.
 		const aboutZ = async () =>
-			Number(await aboutWindow.evaluate((el) => (el as HTMLElement).style.zIndex || '0'));
+			Number(await aboutWindow.evaluate((el) => getComputedStyle(el).zIndex || '0'));
 		const terminalZ = async () =>
-			Number(await terminalWindow.evaluate((el) => (el as HTMLElement).style.zIndex || '0'));
+			Number(await terminalWindow.evaluate((el) => getComputedStyle(el).zIndex || '0'));
 
 		expect(await terminalZ()).toBeGreaterThan(await aboutZ());
 
