@@ -276,6 +276,12 @@ test('updateCredentialCounter issues a conditional UpdateCommand', async () => {
 	assert.equal(input.ExpressionAttributeValues[':new'], 5);
 });
 
+test('updateCredentialCounter skips DDB write for counter=0 authenticators (U2F)', async () => {
+	await __test.updateCredentialCounter('cred-u2f', 0);
+	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
+	assert.equal(updates.length, 0);
+});
+
 test('updateCredentialCounter swallows ConditionalCheckFailedException (counter regression)', async () => {
 	ddbResponses.set('UpdateCommand', () => {
 		const err = new Error('counter not strictly greater');
