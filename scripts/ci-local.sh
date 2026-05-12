@@ -198,6 +198,15 @@ section "python: ct_monitor unit tests"
 python3 -m unittest discover -s infra/tests -t .
 ok "infra/ct_monitor.py unit tests"
 
+section "node: webauthn_demo lambda unit tests"
+# Lambda for the /demo/passkey backend (issue #140). Stdlib `node:test`
+# runner; the handler stubs out DynamoDB so no AWS calls happen. devDeps
+# (the @aws-sdk/* packages bundled at runtime by Lambda) are installed
+# locally for the import to resolve.
+(cd infra/lambdas/webauthn_demo && npm ci >/dev/null 2>&1)
+node --test 'infra/lambdas/webauthn_demo/tests/**/*.test.mjs'
+ok "infra/lambdas/webauthn_demo unit tests"
+
 section "terraform: fmt"
 terraform -chdir=infra fmt -check -recursive
 ok "terraform fmt"
