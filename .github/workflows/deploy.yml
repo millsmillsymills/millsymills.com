@@ -94,6 +94,33 @@ jobs:
       hashes: ${{ steps.hash.outputs.hashes }}
 
     steps:
+      # Belt-and-braces alongside the Terraform-managed branch protection
+      # rule in infra/github_branch_protection.tf (#432). The Terraform
+      # rule is enforced at apply time; this check runs every scheduled
+      # and dispatched deploy, so a silent UI toggle-off of
+      # `Require signed commits` on `main` fails the deploy loudly
+      # BEFORE any S3 mutation. Closes #434.
+      #
+      # GITHUB_TOKEN scope: the default token has `contents: read` at the
+      # job level above, which is sufficient for
+      # `GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures`
+      # on a repo it's running in. If this ever returns 403 in CI, swap
+      # `GH_TOKEN` for a fine-grained PAT secret (the
+      # `TF_VAR_github_token` secret used by the github_terraform_provider
+      # would work, scoped read-only).
+      - name: Verify signed-commits enforcement on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          enabled=$(gh api "repos/${REPO}/branches/main/protection/required_signatures" --jq '.enabled')
+          if [ "${enabled}" != "true" ]; then
+            echo "required_signatures drift on main: expected true, got '${enabled}'" >&2
+            exit 1
+          fi
+          echo "signed-commits enforcement on main: enabled"
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
