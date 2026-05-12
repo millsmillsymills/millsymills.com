@@ -1,9 +1,11 @@
 ---
-import { copy, browserStorageKeys } from '../../../data/privacy-copy';
+import { copy, browserStorageKeys, REPO_BLOB_URL } from '../../../data/privacy-copy';
 
 const gitShaFull = import.meta.env.PUBLIC_GIT_SHA ?? 'unknown';
 const gitShaShort = gitShaFull.slice(0, 7);
 const repoUrl = copy.licenseAndSource.repoUrl;
+
+const citeHref = (path: string) => `${REPO_BLOB_URL}/${path}`;
 ---
 
 <article class="privacy">
@@ -13,16 +15,31 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 	<section>
 		<h2>{copy.whatWeCollect.heading}</h2>
 		<p>{copy.whatWeCollect.body}</p>
+		<ul class="citations">
+			{copy.whatWeCollect.citations.map((c) => (
+				<li><a href={citeHref(c.path)} target="_blank" rel="noopener"><code>{c.label}</code></a></li>
+			))}
+		</ul>
 	</section>
 
 	<section>
 		<h2>{copy.whatsOnTheWire.heading}</h2>
 		<p>{copy.whatsOnTheWire.body}</p>
+		<ul class="citations">
+			{copy.whatsOnTheWire.citations.map((c) => (
+				<li><a href={citeHref(c.path)} target="_blank" rel="noopener"><code>{c.label}</code></a></li>
+			))}
+		</ul>
 	</section>
 
 	<section>
 		<h2>{copy.mailPow.heading}</h2>
 		<p>{copy.mailPow.body}</p>
+		<ul class="citations">
+			{copy.mailPow.citations.map((c) => (
+				<li><a href={citeHref(c.path)} target="_blank" rel="noopener"><code>{c.label}</code></a></li>
+			))}
+		</ul>
 	</section>
 
 	<section>
@@ -39,16 +56,31 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 				</>
 			))}
 		</dl>
+		<ul class="citations">
+			{copy.localStorage.citations.map((c) => (
+				<li><a href={citeHref(c.path)} target="_blank" rel="noopener"><code>{c.label}</code></a></li>
+			))}
+		</ul>
 	</section>
 
 	<section>
 		<h2>{copy.serverLogs.heading}</h2>
 		<p>{copy.serverLogs.body}</p>
+		<ul class="citations">
+			{copy.serverLogs.citations.map((c) => (
+				<li><a href={citeHref(c.path)} target="_blank" rel="noopener"><code>{c.label}</code></a></li>
+			))}
+		</ul>
 	</section>
 
 	<section>
 		<h2>{copy.botsAndAi.heading}</h2>
 		<p>{copy.botsAndAi.body}</p>
+		<ul class="citations">
+			{copy.botsAndAi.citations.map((c) => (
+				<li><a href={citeHref(c.path)} target="_blank" rel="noopener"><code>{c.label}</code></a></li>
+			))}
+		</ul>
 	</section>
 
 	<section>
@@ -117,6 +149,24 @@ const repoUrl = copy.licenseAndSource.repoUrl;
 	.privacy .ls-keys dd {
 		margin: 0;
 		color: var(--ink-soft);
+	}
+	.privacy .citations {
+		list-style: none;
+		padding: 0;
+		margin: 0.25rem 0 0.5rem;
+		font-size: 0.8rem;
+		color: var(--ink-soft);
+	}
+	.privacy .citations li {
+		display: block;
+		margin: 0.1rem 0;
+	}
+	.privacy .citations li::before {
+		content: '↪ ';
+		opacity: 0.6;
+	}
+	.privacy .citations code {
+		font-size: 0.8rem;
 	}
 	.privacy .attestation {
 		margin-top: 1.5rem;
