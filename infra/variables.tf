@@ -27,7 +27,7 @@ variable "deploy_branch" {
 }
 
 variable "github_token" {
-  description = "GitHub token used by the `github` provider to manage repo-level controls (currently just the `main` branch protection rule). Supply a fine-grained PAT scoped to `var.github_repo` with `Repository permissions → Administration: Read and write`. Pass via `TF_VAR_github_token=...` (preferred — never lands in tfvars on disk) or as `github_token = \"...\"` in `infra/terraform.tfvars` (gitignored). Blank means apply will fail on the GitHub-managed resources; the AWS-managed resources still apply because the provider only initializes credentials when a managed/data resource references it."
+  description = "GitHub token used by the `github` provider to manage repo-level controls (currently just the `main` branch protection rule). Supply a fine-grained PAT scoped to `var.github_repo` with `Repository permissions → Administration: Read and write`. Pass via `TF_VAR_github_token=...` (preferred — never lands in tfvars on disk) or as `github_token = \"...\"` in `infra/terraform.tfvars` (gitignored). Required for every plan/apply once the `github_branch_protection_v3` resource is in state: Terraform refreshes every managed resource on each run, and a blank token surfaces as `401 Bad credentials` from the GitHub API during refresh. Use `-target=` flags + `-refresh=false` to skip GitHub temporarily if you need an AWS-only emergency apply."
   type        = string
   default     = ""
   sensitive   = true

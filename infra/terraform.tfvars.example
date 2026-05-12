@@ -13,8 +13,9 @@ github_repo = "owner/repo"
 
 # GitHub token used by the `github` provider to manage the `main`
 # branch protection rule (see infra/github_branch_protection.tf).
-# Required only for `apply` that touches the github_branch_protection_v3
-# resource; AWS-only applies are unaffected by a blank value.
+# Required for every plan/apply once the resource is in state — Terraform
+# refreshes all managed resources on each run, so a blank token fails on
+# the GitHub API refresh with `401 Bad credentials`.
 #
 # Recommended: a fine-grained personal access token scoped to this
 # single repo, with `Repository permissions → Administration:

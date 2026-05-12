@@ -22,6 +22,16 @@
 # scheduled `gh api` drift assertion (sub-task 3) are deliberately not in
 # this file; they remain to be decided in followup work.
 
+# Import the existing UI-configured rule on first apply instead of POSTing
+# a new one. The GitHub REST endpoint for branch protection is upsert, so
+# without this block first apply would silently replace any UI-set fields
+# this resource doesn't declare. Import ID format is `repository:branch`
+# (per provider v3 docs).
+import {
+  to = github_branch_protection_v3.main
+  id = "${split("/", var.github_repo)[1]}:${var.deploy_branch}"
+}
+
 resource "github_branch_protection_v3" "main" {
   repository             = split("/", var.github_repo)[1]
   branch                 = var.deploy_branch
