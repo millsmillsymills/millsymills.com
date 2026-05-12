@@ -1035,13 +1035,15 @@ a {
 	color: var(--ink-muted);
 }
 
-/* Flexbox + justify-content: center so an incomplete last row centers
-   instead of left-aligning under a 4-column grid. CSS Grid can't do this
-   directly because grid items always align to the start of their row. */
+/* Fixed 3-column grid so 13 visible apps wrap to a balanced 4 full rows
+   + 1 orphan, instead of the flexbox-driven 4-col + lonely-vscode shape
+   the wider mobile breakpoints (390 / 414 / 768) used to produce.
+   The lone last item spans every column so it centers under the grid
+   rather than left-aligning under column 1. */
 .mshell__grid {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	justify-items: center;
 	gap: 16px 8px;
 	margin: 0;
 	padding: 0;
@@ -1049,13 +1051,13 @@ a {
 }
 
 .mshell__grid > li {
-	flex: 0 0 80px;
+	width: 100%;
+	display: flex;
+	justify-content: center;
 }
 
-@media (max-width: 360px) {
-	.mshell__grid > li {
-		flex: 0 0 70px;
-	}
+.mshell__grid > li:last-child:nth-child(3n + 1) {
+	grid-column: 1 / -1;
 }
 
 .mshell-icon {
@@ -1070,7 +1072,7 @@ a {
 	color: var(--neon-cyan);
 	text-align: center;
 	font-family: var(--font-pixel);
-	font-size: 9px;
+	font-size: 11px;
 	letter-spacing: 0.5px;
 	text-shadow: 1px 1px 0 var(--bg-void);
 }
@@ -1107,7 +1109,7 @@ a {
 
 .mshell-icon__label {
 	display: inline-block;
-	max-width: 80px;
+	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
