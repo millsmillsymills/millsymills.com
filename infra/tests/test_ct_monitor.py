@@ -94,6 +94,15 @@ class IsAllowedTests(unittest.TestCase):
         # Some CAs render DNs with `;` between RDNs.
         self.assertTrue(ct_monitor.is_allowed("C=US; O=Amazon; CN=ok"))
 
+    def test_strips_control_chars_before_split(self):
+        # crt.sh fields are untrusted. A control-char-injected RDN must
+        # not let an attacker forge an allow-listed component -- _clean
+        # normalises C0/DEL to spaces before the comma split, so an
+        # injected NUL inside `O=...` doesn't sneak past the parser.
+        self.assertFalse(
+            ct_monitor.is_allowed("C=XX, O=Evil\x00 CA, CN=evil.example"),
+        )
+
 
 class FormatAlertTests(unittest.TestCase):
     def test_sanitizes_injected_newlines(self):
@@ -211,6 +220,47 @@ class LambdaHandlerTests(unittest.TestCase):
         self.assertEqual(result["skipped"], 0)
         self.assertEqual(result["suspicious"], 0)
         publish.assert_not_called()
+
+    def test_result_shape_ok_path(self):
+        # The ok branch must not carry `unexpected`; callers that
+        # `match` on status rely on the discriminated union to know
+        # which keys are present.
+        certs = [
+            {
+                "entry_timestamp": _now_iso(),
+                "issuer_name": "C=US, O=Amazon, CN=Amazon RSA 2048 M02",
+                "id": 1,
+                "common_name": "ok.example",
+                "name_value": "ok.example",
+            },
+        ]
+        result, _ = self._run(certs)
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(
+            set(result.keys()),
+            {"status", "checked", "skipped", "suspicious"},
+        )
+
+    def test_result_shape_alert_path(self):
+        # The alert branch carries `unexpected` -- the offending CrtshEntry
+        # list -- so callers can introspect without re-fetching crt.sh.
+        certs = [
+            {
+                "entry_timestamp": _now_iso(),
+                "issuer_name": "C=XX, O=Rogue CA",
+                "id": 99,
+                "common_name": "evil.example",
+                "name_value": "evil.example",
+            },
+        ]
+        result, _ = self._run(certs)
+        self.assertEqual(result["status"], "alert")
+        self.assertEqual(
+            set(result.keys()),
+            {"status", "checked", "skipped", "suspicious", "unexpected"},
+        )
+        self.assertEqual(len(result["unexpected"]), 1)
+        self.assertEqual(result["unexpected"][0]["id"], 99)
 
     def test_allowlisted_and_outside_lookback_combo(self):
         # Mix: one allow-listed in-window, one suspicious-but-stale,
