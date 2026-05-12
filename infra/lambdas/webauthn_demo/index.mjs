@@ -44,6 +44,7 @@ import {
 	DeleteCommand,
 	GetCommand,
 	PutCommand,
+	UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import {
 	generateAuthenticationOptions,
@@ -217,15 +218,32 @@ async function putCredential(record) {
 	);
 }
 
+// Conditional UpdateItem: two concurrent /authentication/verify
+// requests for the same credential could otherwise read counter=N and
+// both write N+1, losing the monotonicity that WebAuthn relies on for
+// cloned-authenticator detection. The condition is the WebAuthn
+// invariant itself -- a regression is either a replay or a clone.
 async function updateCredentialCounter(credentialId, newCounter) {
-	const existing = await getCredentialById(credentialId);
-	if (!existing) return;
-	await ddb.send(
-		new PutCommand({
-			TableName: CREDENTIALS_TABLE,
-			Item: { ...existing, counter: newCounter },
-		}),
-	);
+	if (!credentialId || typeof credentialId !== 'string') return;
+	try {
+		await ddb.send(
+			new UpdateCommand({
+				TableName: CREDENTIALS_TABLE,
+				Key: { credentialId },
+				UpdateExpression: 'SET #counter = :new',
+				ConditionExpression:
+					'attribute_exists(credentialId) AND #counter < :new',
+				ExpressionAttributeNames: { '#counter': 'counter' },
+				ExpressionAttributeValues: { ':new': newCounter },
+			}),
+		);
+	} catch (err) {
+		if (err?.name === 'ConditionalCheckFailedException') {
+			console.warn('webauthn-demo counter regression rejected', { newCounter });
+			return;
+		}
+		throw err;
+	}
 }
 
 // --------------------------------------------------------------------
@@ -442,4 +460,5 @@ export const __test = {
 	parseBody,
 	normalizePath,
 	ROUTES,
+	updateCredentialCounter,
 };
