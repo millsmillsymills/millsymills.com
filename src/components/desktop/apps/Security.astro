@@ -270,6 +270,7 @@ const isExternal = (href: string) => /^https?:\/\//.test(href);
 		justify-content: space-between;
 		gap: 0.75rem;
 		margin-bottom: 0.3rem;
+		flex-wrap: wrap;
 	}
 	.control__title {
 		font-family: var(--font-screen, monospace);
@@ -315,9 +316,12 @@ const isExternal = (href: string) => /^https?:\/\//.test(href);
 	.control__meta dd {
 		margin: 0 0 0.3rem;
 		color: var(--ink-soft);
+		min-width: 0;
+		overflow-wrap: anywhere;
 	}
 	.control__meta code {
 		font-size: 0.85rem;
+		overflow-wrap: anywhere;
 	}
 	.control__meta a {
 		color: var(--pink-600);
@@ -340,5 +344,21 @@ const isExternal = (href: string) => /^https?:\/\//.test(href);
 		background: var(--bg-edge);
 		padding: 0.1rem 0.35rem;
 		border-radius: 3px;
+	}
+
+	/* Narrow viewports (mobile shell, ~390px). The two-column dl chokes on
+	 * long code paths and the header row needs the status badge to drop
+	 * below the title rather than wedge against it. */
+	@media (max-width: 480px) {
+		.security {
+			padding: 0.75rem 0.85rem;
+		}
+		.control__meta {
+			grid-template-columns: 1fr;
+			gap: 0.1rem 0;
+		}
+		.control__meta dt {
+			padding-top: 0.35rem;
+		}
 	}
 </style>
