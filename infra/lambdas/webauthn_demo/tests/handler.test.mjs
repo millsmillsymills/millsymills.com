@@ -331,6 +331,54 @@ test('updateCredentialCounter swallows ConditionalCheckFailedException (counter 
 	}
 	assert.equal(warnings.length, 1);
 	assert.match(String(warnings[0][0]), /counter regression/);
+	const ctx = warnings[0][1];
+	assert.equal(ctx.newCounter, 3);
+	assert.equal(typeof ctx.credentialIdHash, 'string');
+	assert.equal(ctx.credentialIdHash.length, 8);
+	assert.equal(ctx.credentialIdHash, __test.credentialDiscriminator('cred1'));
+});
+
+test('credentialDiscriminator is the first 8 hex chars of SHA-256', () => {
+	const hash = __test.credentialDiscriminator('cred1');
+	assert.equal(hash.length, 8);
+	assert.match(hash, /^[0-9a-f]{8}$/);
+	// Same input -> same output (deterministic, non-reversible by design).
+	assert.equal(hash, __test.credentialDiscriminator('cred1'));
+	assert.notEqual(hash, __test.credentialDiscriminator('cred2'));
+});
+
+test('errFields packs message + stack + cause', () => {
+	const inner = new Error('boom');
+	const outer = new Error('wrapped', { cause: inner });
+	const fields = __test.errFields(outer);
+	assert.equal(fields.err, 'wrapped');
+	assert.equal(typeof fields.stack, 'string');
+	assert.equal(fields.cause, inner);
+});
+
+test('errFields on undefined returns undefined fields (no crash)', () => {
+	assert.deepEqual(__test.errFields(undefined), {
+		err: undefined,
+		stack: undefined,
+		cause: undefined,
+	});
+});
+
+test('originMatches logs a structured warn on parse failure', () => {
+	const originalWarn = console.warn;
+	const warnings = [];
+	console.warn = (...args) => warnings.push(args);
+	try {
+		const result = __test.originMatches({
+			response: { clientDataJSON: 'not-base64-json' },
+		});
+		assert.equal(result, false);
+	} finally {
+		console.warn = originalWarn;
+	}
+	assert.equal(warnings.length, 1);
+	assert.match(String(warnings[0][0]), /originMatches parse failed/);
+	assert.equal(typeof warnings[0][1].err, 'string');
 });
 
 test('updateCredentialCounter rethrows non-conditional errors', async () => {
