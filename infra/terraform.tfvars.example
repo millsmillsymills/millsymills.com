@@ -26,6 +26,13 @@ github_repo = "owner/repo"
 #
 # so the token never lands in tfvars on disk. Setting it here works too
 # (terraform.tfvars is gitignored) but loses the rotation property.
+#
+# Note: `$(gh auth token)` returns the gh CLI's own OAuth token — broad
+# scope (whatever the CLI was authenticated with), no per-token expiry,
+# rotated only when you re-auth the CLI. Fine for one-off applies, but
+# loses the per-PAT rotation property of a fine-grained PAT (explicit
+# expiry, scoped to a single repo, revocable on its own). For routine
+# ops, export a fine-grained PAT as `TF_VAR_github_token` instead.
 # github_token = ""
 
 # ProtonMail verification token (from Proton admin -> Settings ->
