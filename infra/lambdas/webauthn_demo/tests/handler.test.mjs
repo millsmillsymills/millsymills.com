@@ -10,7 +10,7 @@
 // network calls happen during the run.
 
 import assert from 'node:assert/strict';
-import { test, beforeEach } from 'node:test';
+import { test, beforeEach, afterEach } from 'node:test';
 
 process.env.WEBAUTHN_RP_ID = 'example.test';
 process.env.WEBAUTHN_EXPECTED_ORIGIN = 'https://example.test';
@@ -37,9 +37,19 @@ DynamoDBDocumentClient.prototype.send = async function send(cmd) {
 // prototype-chain `send` method now points at the override above.
 const { handler, __test } = await import('../index.mjs');
 
+// Silence `console.warn` by default so EMF blobs and regression-rejected
+// warnings don't pollute test output. Individual tests that need to
+// inspect the warn output (EMF metric test, counter-regression test)
+// install their own stub inside the test body, which restores cleanly.
+let originalConsoleWarn;
 beforeEach(() => {
 	ddbCalls.length = 0;
 	ddbResponses = new Map();
+	originalConsoleWarn = console.warn;
+	console.warn = () => {};
+});
+afterEach(() => {
+	console.warn = originalConsoleWarn;
 });
 
 function eventOf({ method = 'POST', path = '/', body, isBase64Encoded = false } = {}) {
@@ -95,9 +105,32 @@ test('body larger than 4 KB emits an EMF metric line for CloudWatch', async () =
 		.find((parsed) => parsed && parsed._aws);
 	assert.ok(emf, 'expected an EMF JSON line on the 413 path');
 	assert.equal(emf._aws.CloudWatchMetrics[0].Namespace, 'MillsymillsCom/WebauthnDemo');
+	assert.deepEqual(emf._aws.CloudWatchMetrics[0].Dimensions, [[]]);
 	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Name, 'BodyTooLarge');
 	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Unit, 'Count');
 	assert.equal(emf.BodyTooLarge, 1);
+});
+
+test('413 path swallows emf emit failure (does not change status)', async () => {
+	const originalWarn = console.warn;
+	const originalError = console.error;
+	const errors = [];
+	console.warn = () => {
+		throw new Error('intentional emf failure');
+	};
+	console.error = (msg, ctx) => errors.push([msg, ctx]);
+	try {
+		const oversize = 'a'.repeat(5000);
+		const res = await handler(
+			eventOf({ path: '/registration/options', body: `"${oversize}"` }),
+		);
+		assert.equal(res.statusCode, 413);
+	} finally {
+		console.warn = originalWarn;
+		console.error = originalError;
+	}
+	const emfFail = errors.find(([m]) => /emf emit failed/.test(String(m)));
+	assert.ok(emfFail, 'expected emf-failure to be logged via console.error');
 });
 
 test('non-JSON body is rejected with 400', async () => {
