@@ -29,7 +29,7 @@ import re
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict, Union
 
 import boto3
 
@@ -56,6 +56,24 @@ class CrtshEntry(TypedDict, total=False):
     name_value: str
 
 
+class CtOk(TypedDict):
+    status: Literal["ok"]
+    checked: int
+    skipped: int
+    suspicious: int
+
+
+class CtAlert(TypedDict):
+    status: Literal["alert"]
+    checked: int
+    skipped: int
+    suspicious: int
+    unexpected: list[CrtshEntry]
+
+
+CtResult = Union[CtOk, CtAlert]
+
+
 def _clean(value: object) -> str:
     """Strip C0/DEL control chars and cap length so a single field
     cannot inject newlines or overflow the SNS body. crt.sh fields are
@@ -79,9 +97,13 @@ def is_allowed(issuer: str) -> bool:
     substring matching. Substring matching would silently allow-list
     `O=AmazonEvil` or `O=Amazonia` once `Amazon` is on the list, since
     `\"o=amazon\" in \"o=amazonevil...\"` is true. Strict component
-    equality avoids that."""
+    equality avoids that.
+
+    The DN is run through `_clean` first so a control-char-injected
+    RDN (e.g. `O=Bad\\x00, CN=Amazon`) can't smuggle a fake comma past
+    the split and forge an allow-listed component."""
     needles = {s.lower() for s in ALLOWED_ISSUER_SUBSTRINGS}
-    for raw in _DN_SPLIT.split(issuer):
+    for raw in _DN_SPLIT.split(_clean(issuer)):
         component = raw.strip().lower()
         if "=" not in component:
             continue
@@ -91,7 +113,7 @@ def is_allowed(issuer: str) -> bool:
     return False
 
 
-def lambda_handler(event: dict[str, Any], context: object) -> dict[str, Any]:
+def lambda_handler(event: dict[str, Any], context: object) -> CtResult:
     cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
 
     certs = fetch_certs(DOMAIN)
@@ -113,22 +135,28 @@ def lambda_handler(event: dict[str, Any], context: object) -> dict[str, Any]:
         if not is_allowed(cert.get("issuer_name", "")):
             suspicious.append(cert)
 
-    result: dict[str, Any] = {
-        "checked": len(certs),
-        "skipped": skipped,
-        "suspicious": len(suspicious),
-    }
     if not suspicious:
-        result["status"] = "ok"
-        return result
+        ok: CtOk = {
+            "status": "ok",
+            "checked": len(certs),
+            "skipped": skipped,
+            "suspicious": 0,
+        }
+        return ok
 
     sns.publish(
         TopicArn=SNS_TOPIC_ARN,
         Subject=f"[ct-monitor] Unexpected cert issuance for {DOMAIN}",
         Message=format_alert(DOMAIN, suspicious),
     )
-    result["status"] = "alert"
-    return result
+    alert: CtAlert = {
+        "status": "alert",
+        "checked": len(certs),
+        "skipped": skipped,
+        "suspicious": len(suspicious),
+        "unexpected": suspicious,
+    }
+    return alert
 
 
 def _safe_id(value: object) -> str:
