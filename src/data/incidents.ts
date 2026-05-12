@@ -14,12 +14,14 @@
  * site); mills' own response location is still the role's `location`.
  */
 
+import type { Employer } from './profile';
+
 export type Severity = 'info' | 'low' | 'med' | 'high' | 'critical';
 
 export interface Incident {
 	year: number;
 	severity: Severity;
-	employer: string;
+	employer: Employer;
 	cve?: string;
 	title: string;
 	annotation: string;
