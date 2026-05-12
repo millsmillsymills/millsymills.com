@@ -11,6 +11,22 @@ github_repo = "owner/repo"
 # role. Defaults to "main".
 # deploy_branch = "main"
 
+# GitHub token used by the `github` provider to manage the `main`
+# branch protection rule (see infra/github_branch_protection.tf).
+# Required only for `apply` that touches the github_branch_protection_v3
+# resource; AWS-only applies are unaffected by a blank value.
+#
+# Recommended: a fine-grained personal access token scoped to this
+# single repo, with `Repository permissions → Administration:
+# Read and write` (no other scopes — branch protection is the only
+# resource managed). Pass at apply time via:
+#
+#   TF_VAR_github_token=$(gh auth token) ./scripts/tf.sh millsymills apply
+#
+# so the token never lands in tfvars on disk. Setting it here works too
+# (terraform.tfvars is gitignored) but loses the rotation property.
+# github_token = ""
+
 # ProtonMail verification token (from Proton admin -> Settings ->
 # Domains -> add <your domain>). Until this is set, the email
 # records deploy in "unspoofable null" mode: null MX + v=spf1 -all.
