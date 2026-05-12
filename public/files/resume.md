@@ -26,7 +26,7 @@ others. Replaces costly vendor functionality with in-house automations.
 
 ## Experience
 
-### Corporate Security Engineer — Trail of Bits, 2023 – present
+### Corporate Security Engineer — Trail of Bits, 2023 – present · Seattle, WA (remote)
 
 - Planned and executed migration of 150+ host fleet from SimpleMDM to Jamf.
 - Built identity lifecycle workflows for onboarding, offboarding, and
@@ -51,7 +51,7 @@ others. Replaces costly vendor functionality with in-house automations.
 - Administered Google Workspace and CrowdStrike Falcon. Used Terraform for
   internal infrastructure projects.
 
-### Associate Security Consultant — Leviathan Security Group, 2022 – 2023
+### Associate Security Consultant — Leviathan Security Group, 2022 – 2023 · Seattle, WA (remote)
 
 - Discovered and cataloged vulnerabilities in customer environments.
 - Prioritized vulnerabilities and provided mitigation instructions.
@@ -59,7 +59,7 @@ others. Replaces costly vendor functionality with in-house automations.
 - Created custom tooling to speed up engagement onboarding for other
   consultants.
 
-### Security Architect — RealSelf, 2017 – 2022
+### Security Architect — RealSelf, 2017 – 2022 · Seattle, WA (in-office through 2020, remote 2020–2022)
 
 - Owned the vendor vetting program and Risk Register, working with
   procurement and business stakeholders to evaluate third-party security
@@ -93,7 +93,7 @@ others. Replaces costly vendor functionality with in-house automations.
 - Moved asset management from a spreadsheet to an AWS-hosted Snipe-IT
   instance.
 
-### Level 3 Support Engineer — Commonwealth Financial Network, 2013 – 2017
+### Level 3 Support Engineer — Commonwealth Financial Network, 2013 – 2017 · San Diego, CA (in-office)
 
 - Final escalation point for 50+ Level 1 and Level 2 technicians in a
   FINRA/SEC-regulated environment.
