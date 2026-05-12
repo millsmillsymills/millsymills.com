@@ -35,6 +35,10 @@ section "node: assert browserStorage keys documented in privacy-copy"
 node scripts/assert-privacy-storage-keys.mjs
 ok "privacy-copy.ts matches src/scripts/ storage usage"
 
+section "node: assert incident employers match profile.ts experience tenures"
+node scripts/assert-incident-employers.mjs
+ok "incidents.ts employer + year matches profile.ts; resume.md matches profile.ts"
+
 section "node: assert security-controls.ts code paths resolve"
 ./scripts/assert-security-controls-paths.sh
 ok "every cited code path on /security/ exists in the repo"
