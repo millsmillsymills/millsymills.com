@@ -243,3 +243,80 @@ output "webauthn_demo_url" {
   description = "Public HTTPS endpoint for the WebAuthn demo Lambda. Routes /registration/options, /registration/verify, /authentication/options, /authentication/verify (all POST). Wire this into the `/demo/passkey` Astro page in the followup page-slice PR (#445)."
   value       = aws_lambda_function_url.webauthn_demo.function_url
 }
+
+# --------------------------------------------------------------------
+# Operational alarms.
+#
+# Mirrors the csp_report alarm posture (`infra/csp_report.tf`): a
+# public, no-auth, internet-facing Lambda capped at
+# reserved_concurrent_executions = 5 needs visibility on throttling,
+# unhandled errors, and oversize-body abuse. Alarms publish to the
+# shared `csp_report_ops` SNS topic so all Lambda-side ops alerts land
+# on one channel; spinning up a webauthn-only topic is overkill while
+# there's exactly one operator on the other end.
+# --------------------------------------------------------------------
+
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_throttles" {
+  alarm_name          = "${local.webauthn_demo_name}-throttles"
+  alarm_description   = "webauthn_demo Lambda was throttled -- bursts beyond reserved_concurrent_executions are silently dropping passkey demo requests."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Throttles"
+  statistic           = "Sum"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+
+  dimensions = {
+    FunctionName = aws_lambda_function.webauthn_demo.function_name
+  }
+}
+
+# why: the handler maps every known failure mode (origin mismatch,
+# unknown session, oversize body, etc.) to a 4xx JSON response without
+# raising, so a Lambda Errors increment means an unexpected exception
+# escaped the handler -- worth surfacing immediately on a public
+# no-auth endpoint.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_errors" {
+  alarm_name          = "${local.webauthn_demo_name}-errors"
+  alarm_description   = "webauthn_demo Lambda raised an uncaught exception. The handler maps known failures to 4xx JSON responses, so this signals an unexpected error path -- check CloudWatch Logs Insights."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+
+  dimensions = {
+    FunctionName = aws_lambda_function.webauthn_demo.function_name
+  }
+}
+
+# Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` via
+# CloudWatch Embedded Metric Format: a single `console.warn` JSON blob
+# with an `_aws` envelope tells CloudWatch to ingest the named metric
+# for free, vs $0.30/M for PutMetricData. A handful of 413s a day is
+# benign (fuzzers, broken clients); sustained volume on a public
+# no-auth endpoint is a DoS signal. Threshold + windows match the
+# csp_report body-cap alarm.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_body_too_large" {
+  alarm_name          = "${local.webauthn_demo_name}-body-too-large"
+  alarm_description   = "webauthn_demo Lambda rejected oversize bodies (>4 KiB) at a sustained rate. Likely abuse or a misbehaving client; investigate request volume on the Function URL."
+  namespace           = "MillsymillsCom/WebauthnDemo"
+  metric_name         = "BodyTooLarge"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 5
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+}

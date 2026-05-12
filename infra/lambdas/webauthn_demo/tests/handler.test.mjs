@@ -75,6 +75,31 @@ test('body larger than 4 KB is rejected with 413', async () => {
 	assert.equal(res.statusCode, 413);
 });
 
+test('body larger than 4 KB emits an EMF metric line for CloudWatch', async () => {
+	const original = console.warn;
+	const lines = [];
+	console.warn = (msg) => lines.push(typeof msg === 'string' ? msg : JSON.stringify(msg));
+	try {
+		const oversize = 'a'.repeat(5000);
+		const res = await handler(
+			eventOf({ path: '/registration/options', body: `"${oversize}"` }),
+		);
+		assert.equal(res.statusCode, 413);
+	} finally {
+		console.warn = original;
+	}
+	const emf = lines
+		.map((line) => {
+			try { return JSON.parse(line); } catch { return null; }
+		})
+		.find((parsed) => parsed && parsed._aws);
+	assert.ok(emf, 'expected an EMF JSON line on the 413 path');
+	assert.equal(emf._aws.CloudWatchMetrics[0].Namespace, 'MillsymillsCom/WebauthnDemo');
+	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Name, 'BodyTooLarge');
+	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Unit, 'Count');
+	assert.equal(emf.BodyTooLarge, 1);
+});
+
 test('non-JSON body is rejected with 400', async () => {
 	const res = await handler(eventOf({ path: '/registration/options', body: 'not-json' }));
 	assert.equal(res.statusCode, 400);
