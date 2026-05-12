@@ -223,8 +223,15 @@ async function putCredential(record) {
 // both write N+1, losing the monotonicity that WebAuthn relies on for
 // cloned-authenticator detection. The condition is the WebAuthn
 // invariant itself -- a regression is either a replay or a clone.
+//
+// WebAuthn L3 §6.1.1: an authenticator that does not implement
+// signature counters MUST report `signCount = 0` on every assertion.
+// SimpleWebAuthn already accepted this auth, so persisting 0 is a
+// no-op -- and skipping it avoids a guaranteed `0 < 0` condition
+// failure on every assertion for U2F-style keys.
 async function updateCredentialCounter(credentialId, newCounter) {
 	if (!credentialId || typeof credentialId !== 'string') return;
+	if (newCounter === 0) return;
 	try {
 		await ddb.send(
 			new UpdateCommand({
