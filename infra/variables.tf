@@ -26,6 +26,13 @@ variable "deploy_branch" {
   default     = "main"
 }
 
+variable "github_token" {
+  description = "GitHub token used by the `github` provider to manage repo-level controls (currently just the `main` branch protection rule). Supply a fine-grained PAT scoped to `var.github_repo` with `Repository permissions → Administration: Read and write`. Pass via `TF_VAR_github_token=...` (preferred — never lands in tfvars on disk) or as `github_token = \"...\"` in `infra/terraform.tfvars` (gitignored). Required for every plan/apply once the `github_branch_protection_v3` resource is in state: Terraform refreshes every managed resource on each run, and a blank token surfaces as `401 Bad credentials` from the GitHub API during refresh. Use `-target=` flags + `-refresh=false` to skip GitHub temporarily if you need an AWS-only emergency apply."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "deploy_workflow" {
   description = "Workflow filename (under `.github/workflows/`) allowed to mint the OIDC token for this stack. Pins the IAM trust policy's `job_workflow_ref` condition so a different (or tampered) workflow on the same branch can't assume the deploy role."
   type        = string
