@@ -253,6 +253,10 @@ resource "aws_sns_topic_subscription" "csp_report_ops_email" {
   endpoint  = local.ct_alert_email
 }
 
+# why: require a sustained problem (two consecutive 5-min windows) rather
+# than a single transient throttle. The Report-Only -> enforce CSP flip
+# is expected to burst past reserved_concurrent_executions briefly, and
+# a single 5-min spike during cutover is not actionable on its own.
 resource "aws_cloudwatch_metric_alarm" "csp_report_throttles" {
   alarm_name          = "${local.csp_report_name}-throttles"
   alarm_description   = "csp_report Lambda was throttled -- bursts beyond reserved_concurrent_executions are silently dropping CSP reports."
@@ -260,7 +264,7 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_throttles" {
   metric_name         = "Throttles"
   statistic           = "Sum"
   period              = 300
-  evaluation_periods  = 1
+  evaluation_periods  = 2
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
@@ -290,6 +294,10 @@ resource "aws_cloudwatch_log_metric_filter" "csp_report_put_failed" {
   }
 }
 
+# why: require a sustained problem (two consecutive 5-min windows) rather
+# than a single transient PutObject failure. S3 has intermittent 5xx
+# noise that resolves on retry; only repeated failures across windows
+# indicate a real IAM/throttle/outage condition worth paging on.
 resource "aws_cloudwatch_metric_alarm" "csp_report_put_failed" {
   alarm_name          = "${local.csp_report_name}-put-failed"
   alarm_description   = "csp_report Lambda failed to PutObject to the reports bucket. Check CloudWatch Logs Insights for errName / errCode -- structured fields preserved by the JSON log line."
@@ -297,8 +305,42 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_put_failed" {
   metric_name         = aws_cloudwatch_log_metric_filter.csp_report_put_failed.metric_transformation[0].name
   statistic           = "Sum"
   period              = 300
-  evaluation_periods  = 1
+  evaluation_periods  = 2
   threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+}
+
+# Metric filter + alarm on body-cap rejections (413). `csp_report.mjs`
+# emits a structured warn log line when a payload exceeds MAX_BODY_BYTES.
+# A handful of 413s a day is benign (a misconfigured browser, a fuzzer);
+# sustained volume is a DoS signal worth investigating. Tuned high
+# (3 windows, >=5 events per window) so it doesn't page on noise.
+resource "aws_cloudwatch_log_metric_filter" "csp_report_body_cap_exceeded" {
+  name           = "${local.csp_report_name}-body-cap-exceeded"
+  log_group_name = aws_cloudwatch_log_group.csp_report.name
+  pattern        = "{ $.msg = \"csp-report body cap exceeded\" }"
+
+  metric_transformation {
+    name          = "${local.csp_report_name}-body-cap-exceeded"
+    namespace     = "MillsymillsCom/CspReport"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "csp_report_body_cap_exceeded" {
+  alarm_name          = "${local.csp_report_name}-body-cap-exceeded"
+  alarm_description   = "csp_report Lambda rejected oversize payloads (>16 KiB) at a sustained rate. Likely abuse or a misbehaving client; investigate CloudFront access logs for the originating viewer."
+  namespace           = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded.metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded.metric_transformation[0].name
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 3
+  threshold           = 5
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
