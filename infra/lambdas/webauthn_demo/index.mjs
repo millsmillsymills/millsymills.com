@@ -34,7 +34,7 @@
 //   * Credential IDs are NOT logged. Only opaque session IDs appear in
 //     CloudWatch.
 
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 import {
 	DynamoDBClient,
@@ -102,6 +102,27 @@ function newUserHandle() {
 
 function nowEpochSeconds() {
 	return Math.floor(Date.now() / 1000);
+}
+
+// Non-reversible discriminator for logs: the file header bans logging
+// the raw credentialId, but operators still need *some* per-credential
+// key to correlate alarms in Logs Insights. The first 8 hex chars of
+// SHA-256 give 32 bits of collision space -- plenty to tell apart
+// "one user's hardware key is misbehaving" from "fleet-wide bug".
+function credentialDiscriminator(credentialId) {
+	return createHash('sha256').update(credentialId).digest('hex').slice(0, 8);
+}
+
+// Structured error fields for `console.error` calls. The outer log
+// destination (CloudWatch) is JSON-aware, so emitting these as fields
+// (not interpolated strings) keeps Logs Insights queries on
+// `err.stack` / `err.cause` working.
+function errFields(err) {
+	return {
+		err: err?.message,
+		stack: err?.stack,
+		cause: err?.cause,
+	};
 }
 
 function parseBody(event) {
@@ -249,7 +270,10 @@ async function updateCredentialCounter(credentialId, newCounter) {
 		);
 	} catch (err) {
 		if (err?.name === 'ConditionalCheckFailedException') {
-			console.warn('webauthn-demo counter regression rejected', { newCounter });
+			console.warn('webauthn-demo counter regression rejected', {
+				newCounter,
+				credentialIdHash: credentialDiscriminator(credentialId),
+			});
 			return;
 		}
 		throw err;
@@ -307,7 +331,7 @@ async function registrationVerifyHandler(body) {
 			requireUserVerification: false,
 		});
 	} catch (err) {
-		console.error('registration verify failed', { sessionId, err: err?.message });
+		console.error('registration verify failed', { sessionId, ...errFields(err) });
 		return errorResponse(400, 'registration verification failed');
 	}
 
@@ -381,7 +405,7 @@ async function authenticationVerifyHandler(body) {
 			},
 		});
 	} catch (err) {
-		console.error('authentication verify failed', { sessionId, err: err?.message });
+		console.error('authentication verify failed', { sessionId, ...errFields(err) });
 		return errorResponse(400, 'authentication verification failed');
 	}
 
@@ -418,7 +442,8 @@ function originMatches(response) {
 		const decoded = Buffer.from(clientDataJSON, 'base64url').toString('utf8');
 		const parsed = JSON.parse(decoded);
 		return parsed?.origin === EXPECTED_ORIGIN;
-	} catch {
+	} catch (err) {
+		console.warn('webauthn-demo originMatches parse failed', errFields(err));
 		return false;
 	}
 }
@@ -452,7 +477,7 @@ export const handler = async (event) => {
 	try {
 		return await route(body);
 	} catch (err) {
-		console.error('handler error', { path, err: err?.message });
+		console.error('handler error', { path, ...errFields(err) });
 		return errorResponse(500, 'internal error');
 	}
 };
@@ -471,4 +496,6 @@ export const __test = {
 	normalizePath,
 	ROUTES,
 	updateCredentialCounter,
+	credentialDiscriminator,
+	errFields,
 };
