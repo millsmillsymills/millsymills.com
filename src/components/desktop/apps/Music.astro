@@ -78,6 +78,10 @@ import { playlist } from '../../../data/playlist';
 	}
 
 	.winamp__label {
+		/* min-width:0 lets this grid track actually honor 1fr — without it,
+		   long unicode artist names blow out column 2 and push the right
+		   reel + time readout past the card edge on narrow viewports. */
+		min-width: 0;
 		text-align: center;
 		font-family: var(--font-pixel);
 		color: var(--neon-cyan);
@@ -103,15 +107,26 @@ import { playlist } from '../../../data/playlist';
 		font-size: 16px;
 		color: var(--neon-lilac);
 		margin-top: 2px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.winamp__time {
 		display: flex;
 		justify-content: space-between;
+		gap: 6px;
 		font-family: var(--font-mono);
 		font-size: 11px;
 		color: var(--ink-dim);
 		margin-top: 4px;
+	}
+
+	.winamp__time > span {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.winamp__vu {
@@ -247,6 +262,51 @@ import { playlist } from '../../../data/playlist';
 		flex-shrink: 0;
 	}
 
+	.winamp__track__title {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.winamp__track__artist {
+		flex-shrink: 1;
+		min-width: 0;
+		max-width: 40%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: 13px;
+		color: var(--ink-muted);
+	}
+
+	@media (max-width: 480px) {
+		/* On narrow viewports, shrink the reels + gaps so the centre column
+		   has enough room for ellipsis to do its job before the title cell
+		   collapses past readability. Hide the playlist artist (each row's
+		   artist is identical to the now-playing artist anyway) so the
+		   title gets the full row width. */
+		.winamp__cassette {
+			grid-template-columns: 40px 1fr 40px;
+			gap: 8px;
+			padding: 12px 12px;
+		}
+		.winamp__reel {
+			width: 36px;
+			height: 36px;
+		}
+		.winamp__nowplay {
+			width: 40px;
+		}
+		.winamp__time {
+			font-size: 10px;
+		}
+		.winamp__track__artist {
+			display: none;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.winamp__reel,
 		.winamp__vu span,
@@ -324,12 +384,11 @@ import { playlist } from '../../../data/playlist';
 					data-music-src={t.src}
 					data-music-track-title={t.title}
 					data-music-track-artist={t.artist}
+					title={`${t.title} — ${t.artist}`}
 				>
 					<span class="winamp__track__num">{String(i + 1).padStart(2, '0')}</span>
-					<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-						{t.title}
-					</span>
-					<span style="font-size:13px;color:var(--ink-muted)">{t.artist}</span>
+					<span class="winamp__track__title">{t.title}</span>
+					<span class="winamp__track__artist">{t.artist}</span>
 				</li>
 			))
 		}
