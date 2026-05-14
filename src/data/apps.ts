@@ -239,6 +239,17 @@ const _APPS_DATA = [
 		height: 620,
 	},
 	{
+		id: 'minesweeper',
+		label: 'minesweeper',
+		glyph: '💣',
+		title: 'minesweeper.exe',
+		ogDescription: 'easter-egg homage to the winxp minesweeper screenshot. no game logic — just the picture.',
+		x: 260,
+		y: 160,
+		width: 360,
+		height: 460,
+	},
+	{
 		id: 'display',
 		label: 'display',
 		glyph: '🖼️',
