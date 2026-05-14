@@ -6,6 +6,7 @@ import Mail from './apps/Mail.astro';
 import Flags from './apps/Flags.astro';
 import Music from './apps/Music.astro';
 import Memes from './apps/Memes.astro';
+import Minesweeper from './apps/Minesweeper.astro';
 import Trash from './apps/Trash.astro';
 import Projects from './apps/Projects.astro';
 import Uses from './apps/Uses.astro';
@@ -34,6 +35,8 @@ const contentFor = (id: string) => {
 			return Music;
 		case 'memes':
 			return Memes;
+		case 'minesweeper':
+			return Minesweeper;
 		case 'trash':
 			return Trash;
 		case 'projects':
