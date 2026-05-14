@@ -1,19 +1,12 @@
 /*
- * Client-side WebAuthn demo. Exercises the real `navigator.credentials`
- * API against a mock backend (challenges generated in-browser, credential
- * IDs persisted to localStorage in lieu of DynamoDB). The shape matches a
- * real RP flow; only the server-side verification is omitted — that ships
- * in the #140 logic slice.
- *
  * External module so the production CSP `script-src 'self'` allows it.
  * See #129/#231 for the pattern.
  *
- * Note: Permissions-Policy in production ships
- * `publickey-credentials-create=()` and `publickey-credentials-get=()`,
- * which blocks both calls at the browser level. The demo only operates
- * end-to-end in dev or once the CloudFront slice extends those directives
- * to `=(self)` for this page. See `infra/cloudfront.tf` and
- * `src/data/security-controls.ts`.
+ * Permissions-Policy in production ships `publickey-credentials-create=()`
+ * and `publickey-credentials-get=()`, which blocks both calls at the
+ * browser level. The demo only operates end-to-end in dev or once the
+ * CloudFront slice extends those directives to `=(self)` for this page.
+ * See `infra/cloudfront.tf` and `src/data/security-controls.ts`.
  */
 
 const STORAGE_KEY = 'mills.passkey-demo.v1';
@@ -34,7 +27,11 @@ function base64UrlEncode(bytes: ArrayBuffer | Uint8Array): string {
 }
 
 function base64UrlDecode(s: string): Uint8Array<ArrayBuffer> {
-	const pad = s.length % 4 === 0 ? '' : '='.repeat(4 - (s.length % 4));
+	// A base64 string never has length 4k+1 (every 3 input bytes -> 4 chars);
+	// only 4k+2 and 4k+3 need padding. atob throws on malformed input, which
+	// the caller's try/catch surfaces as a status error.
+	const rem = s.length % 4;
+	const pad = rem === 2 ? '==' : rem === 3 ? '=' : '';
 	const b64 = (s + pad).replace(/-/g, '+').replace(/_/g, '/');
 	const raw = atob(b64);
 	const out = new Uint8Array(new ArrayBuffer(raw.length));
@@ -62,8 +59,17 @@ function loadStored(): StoredCredential | null {
 	}
 }
 
-function persistStored(cred: StoredCredential): void {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(cred));
+function persistStored(cred: StoredCredential): boolean {
+	// Safari private-mode and some locked-down WebViews throw QuotaExceededError
+	// even on first write — surface the failure rather than letting it bubble
+	// through navigator.credentials' catch path and produce a misleading
+	// "register failed" message.
+	try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(cred));
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 function clearStored(): void {
@@ -126,7 +132,10 @@ async function handleRegister(displayName: string, status: HTMLElement): Promise
 			displayName,
 			createdAt: new Date().toISOString(),
 		};
-		persistStored(stored);
+		if (!persistStored(stored)) {
+			writeStatus(status, 'err', 'registered but localStorage is blocked (private mode?). cannot persist.');
+			return;
+		}
 		writeStatus(status, 'ok', `registered. credential id ${stored.id.slice(0, 12)}…`);
 	} catch (err) {
 		writeStatus(status, 'err', `register failed: ${err instanceof Error ? err.message : String(err)}`);

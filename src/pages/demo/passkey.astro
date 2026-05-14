@@ -30,7 +30,8 @@ const canonical = new URL('/demo/passkey/', Astro.site).toString();
 		</aside>
 
 		<section class="passkey__demo" data-passkey-demo>
-			<div class="passkey__stored" data-stored-view data-state="empty">
+			<div class="passkey__stored" data-stored-view data-state="empty"
+				role="status" aria-live="polite">
 				no credential registered yet.
 			</div>
 
