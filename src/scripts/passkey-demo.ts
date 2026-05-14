@@ -16,7 +16,7 @@
  * `src/data/security-controls.ts`.
  */
 
-const STORAGE_KEY = 'passkey-demo.credential.v1';
+const STORAGE_KEY = 'mills.passkey-demo.v1';
 const RP_NAME = 'mills passkey demo';
 const TIMEOUT_MS = 60_000;
 
