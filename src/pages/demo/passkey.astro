@@ -1,0 +1,396 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const canonical = new URL('/demo/passkey/', Astro.site).toString();
+---
+
+<BaseLayout
+	title="passkey demo — millsymills.com"
+	description="webauthn passkey register + authenticate demo with a mock backend. sandbox; no real account."
+	canonical={canonical}
+	noindex
+>
+	<div class="passkey">
+		<header class="passkey__head">
+			<p class="passkey__eyebrow" aria-hidden="true">/ DEMO / PASSKEY</p>
+			<h1 class="passkey__title">passkey demo</h1>
+			<p class="passkey__lede">
+				exercise <code>navigator.credentials.create()</code> and
+				<code>navigator.credentials.get()</code> against a mock backend.
+				the real lambda lands in the #140 logic slice.
+			</p>
+		</header>
+
+		<aside class="passkey__notice" role="note" aria-label="sandbox notice">
+			<strong>sandbox.</strong> no real account is created. credentials live in
+			<code>localStorage</code> only and can be cleared at any time. authenticator
+			challenges are generated client-side; nothing is sent to a server in this
+			demo. credentials expire automatically when you clear browser storage for
+			this origin.
+		</aside>
+
+		<section class="passkey__demo" data-passkey-demo>
+			<div class="passkey__stored" data-stored-view data-state="empty">
+				no credential registered yet.
+			</div>
+
+			<div class="passkey__row">
+				<h2 class="passkey__h2">register</h2>
+				<p class="passkey__copy">
+					create a new credential bound to this origin. supply a synthetic
+					display name — no email, no PII.
+				</p>
+				<label class="passkey__field">
+					<span>display name</span>
+					<input
+						type="text"
+						maxlength="40"
+						placeholder="demo user"
+						autocomplete="off"
+						spellcheck="false"
+						data-passkey-name
+					/>
+				</label>
+				<div class="passkey__actions">
+					<button type="button" class="passkey__btn" data-action="register">
+						register credential
+					</button>
+				</div>
+				<p class="passkey__status" data-status="register" data-state="idle"
+					role="status" aria-live="polite"></p>
+			</div>
+
+			<div class="passkey__row">
+				<h2 class="passkey__h2">authenticate</h2>
+				<p class="passkey__copy">
+					assert with the credential you just registered. the mock backend
+					checks that the returned credential id matches the stored one.
+				</p>
+				<div class="passkey__actions">
+					<button type="button" class="passkey__btn" data-action="authenticate">
+						authenticate
+					</button>
+					<button type="button" class="passkey__btn passkey__btn--ghost"
+						data-action="clear">
+						clear credential
+					</button>
+				</div>
+				<p class="passkey__status" data-status="authenticate" data-state="idle"
+					role="status" aria-live="polite"></p>
+			</div>
+		</section>
+
+		<section class="passkey__writeup">
+			<h2 class="passkey__h2">what's going on under the hood</h2>
+
+			<h3 class="passkey__h3">origin binding (rpID)</h3>
+			<p>
+				the relying party id (<code>rpID</code>) is set to the page's hostname.
+				webauthn refuses to use a credential against any origin that doesn't
+				match the rpID, so a credential registered at <code>millsymills.com</code>
+				cannot be replayed against a phishing site at <code>m1llsymills.com</code>
+				— the browser enforces the binding before the credential is ever
+				retrieved. this is the load-bearing property that makes passkeys
+				phishing-resistant. server-side rpID validation is a backstop, not
+				the primary control.
+			</p>
+
+			<h3 class="passkey__h3">attestation: <code>none</code></h3>
+			<p>
+				the spec defines four attestation conveyance preferences:
+			</p>
+			<ul>
+				<li><code>none</code> — no attestation statement; the rp accepts the
+					credential without knowing the authenticator model.</li>
+				<li><code>indirect</code> — the rp accepts anonymized attestation;
+					some browsers issue an enterprise-friendly batch attestation.</li>
+				<li><code>direct</code> — the rp wants the raw attestation statement,
+					including the manufacturer's certificate chain.</li>
+				<li><code>enterprise</code> — direct, plus identifying info about the
+					specific authenticator (only available in enterprise deployments).</li>
+			</ul>
+			<p>
+				this demo uses <code>none</code>. the demo isn't an enterprise rp; it
+				doesn't need to attest to which authenticator vendor signed the
+				credential. for a high-assurance flow (a corporate enrollment portal,
+				say) <code>direct</code> + a vetted aaguid allowlist is the usual call.
+			</p>
+
+			<h3 class="passkey__h3">user verification vs user presence (UV / UP)</h3>
+			<p>
+				every assertion sets two bits in the authenticator data:
+			</p>
+			<ul>
+				<li><strong>UP</strong> (user presence) — a human poked the authenticator
+					(touched the key, tapped the screen). almost always required.</li>
+				<li><strong>UV</strong> (user verification) — the human proved who they
+					are (biometric, pin). this demo requests
+					<code>userVerification: "preferred"</code>; the authenticator fires
+					UV if it can, otherwise just UP.</li>
+			</ul>
+			<p>
+				a "passwordless" flow demands UV; a "second factor" flow only needs
+				UP because a password already covered identity. the rp inspects the
+				bits server-side to confirm the policy actually fired.
+			</p>
+
+			<h3 class="passkey__h3">discoverable credentials (resident keys)</h3>
+			<p>
+				a discoverable credential is stored on the authenticator itself, keyed
+				by rpID, so the browser can offer it at the lock screen with no
+				username typed. the trade-off:
+			</p>
+			<ul>
+				<li><strong>discoverable</strong> — better UX, slot-limited on hardware
+					keys (a yubikey holds ~25), and the rp does not need to know who
+					the user is before issuing the challenge.</li>
+				<li><strong>server-side allowList</strong> — the rp sends
+					<code>allowCredentials</code> with the user's known credential ids;
+					the authenticator picks one. unlimited count, but requires a
+					username first.</li>
+			</ul>
+			<p>
+				this demo requests <code>residentKey: "preferred"</code> on register,
+				then on authenticate sends an explicit <code>allowCredentials</code>
+				list — that's the belt-and-suspenders posture most rps actually
+				ship. platform authenticators (touch id, windows hello, face id)
+				virtually always store the credential as discoverable regardless.
+			</p>
+		</section>
+	</div>
+
+	<script>
+		import '../../scripts/passkey-demo';
+	</script>
+</BaseLayout>
+
+<style is:global>
+	body:has(.passkey) {
+		background: #0a0320;
+		color: #ffd6ec;
+	}
+</style>
+
+<style>
+	.passkey {
+		max-width: 760px;
+		width: 100%;
+		margin: 0 auto;
+		padding: 32px 24px 80px;
+		font-family: 'VT323', 'Courier New', monospace;
+	}
+
+	.passkey__head {
+		margin-bottom: 24px;
+	}
+
+	.passkey__eyebrow {
+		margin: 0 0 4px;
+		font-family: 'Press Start 2P', 'VT323', monospace;
+		font-size: 11px;
+		letter-spacing: 0.3em;
+		color: #00e5ff;
+	}
+
+	.passkey__title {
+		margin: 0 0 12px;
+		font-size: clamp(28px, 5vw, 40px);
+		color: #ff7ec0;
+		letter-spacing: 0.04em;
+		text-shadow: 2px 2px 0 #321a44;
+	}
+
+	.passkey__lede {
+		margin: 0;
+		font-size: 18px;
+		color: #ffd6ec;
+	}
+
+	.passkey__lede code,
+	.passkey__copy code,
+	.passkey__writeup code,
+	.passkey__notice code {
+		font-family: 'VT323', 'Courier New', monospace;
+		background: rgba(255, 79, 168, 0.12);
+		color: #ffb8e0;
+		padding: 0 4px;
+		border-radius: 3px;
+	}
+
+	.passkey__notice {
+		margin: 0 0 32px;
+		padding: 12px 16px;
+		background: rgba(255, 215, 0, 0.06);
+		border: 1px solid rgba(255, 215, 0, 0.4);
+		border-radius: 4px;
+		color: #ffefb8;
+		font-size: 16px;
+		line-height: 1.5;
+	}
+
+	.passkey__notice strong {
+		color: #ffd700;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		font-family: 'Press Start 2P', 'VT323', monospace;
+		font-size: 12px;
+		margin-right: 6px;
+	}
+
+	.passkey__demo {
+		display: grid;
+		gap: 24px;
+		padding: 20px;
+		background: rgba(255, 255, 255, 0.02);
+		border: 1px solid rgba(0, 229, 255, 0.25);
+		border-radius: 6px;
+		margin-bottom: 40px;
+	}
+
+	.passkey__stored {
+		padding: 10px 12px;
+		background: rgba(0, 0, 0, 0.4);
+		border-left: 3px solid #00e5ff;
+		font-size: 16px;
+		color: #b8e6ff;
+	}
+
+	.passkey__stored[data-state="empty"] {
+		border-left-color: #6e5a8a;
+		color: #b8a0d8;
+	}
+
+	.passkey__row {
+		display: grid;
+		gap: 8px;
+	}
+
+	.passkey__h2 {
+		margin: 0;
+		font-size: 20px;
+		color: #ff7ec0;
+		letter-spacing: 0.06em;
+		text-transform: lowercase;
+	}
+
+	.passkey__h3 {
+		margin: 20px 0 6px;
+		font-size: 17px;
+		color: #00e5ff;
+		letter-spacing: 0.04em;
+		text-transform: lowercase;
+	}
+
+	.passkey__copy {
+		margin: 0;
+		font-size: 16px;
+		line-height: 1.45;
+	}
+
+	.passkey__field {
+		display: grid;
+		gap: 4px;
+		font-size: 15px;
+	}
+
+	.passkey__field span {
+		color: #b8a0d8;
+		text-transform: lowercase;
+		letter-spacing: 0.08em;
+		font-size: 13px;
+	}
+
+	.passkey__field input {
+		padding: 8px 10px;
+		background: #1a0e23;
+		border: 1px solid #6e5a8a;
+		border-radius: 3px;
+		color: #ffd6ec;
+		font-family: inherit;
+		font-size: 16px;
+	}
+
+	.passkey__field input:focus-visible {
+		outline: 2px solid #00e5ff;
+		outline-offset: 1px;
+	}
+
+	.passkey__actions {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+
+	.passkey__btn {
+		padding: 8px 16px;
+		background: #ff7ec0;
+		color: #1a0e23;
+		border: 2px solid #321a44;
+		border-radius: 4px;
+		box-shadow: 2px 2px 0 0 #321a44;
+		font-family: 'Press Start 2P', 'VT323', monospace;
+		font-size: 12px;
+		cursor: pointer;
+		transition: transform 80ms ease, background 80ms ease;
+		text-transform: lowercase;
+	}
+
+	.passkey__btn:hover:not(:disabled),
+	.passkey__btn:focus-visible:not(:disabled) {
+		background: #ff4fa8;
+		color: #fff9f3;
+	}
+
+	.passkey__btn:active:not(:disabled) {
+		transform: translate(1px, 1px);
+	}
+
+	.passkey__btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.passkey__btn--ghost {
+		background: transparent;
+		color: #b8a0d8;
+		border-color: #6e5a8a;
+		box-shadow: 2px 2px 0 0 #6e5a8a;
+	}
+
+	.passkey__btn--ghost:hover:not(:disabled),
+	.passkey__btn--ghost:focus-visible:not(:disabled) {
+		background: rgba(184, 160, 216, 0.1);
+		color: #ffd6ec;
+	}
+
+	.passkey__status {
+		margin: 0;
+		min-height: 1.4em;
+		font-size: 15px;
+		font-family: 'VT323', 'Courier New', monospace;
+	}
+
+	.passkey__status[data-state="ok"] { color: #5fffaf; }
+	.passkey__status[data-state="err"] { color: #ff6b8a; }
+	.passkey__status[data-state="busy"] { color: #ffd700; }
+	.passkey__status[data-state="idle"] { color: transparent; }
+
+	.passkey__writeup p,
+	.passkey__writeup ul {
+		font-size: 16px;
+		line-height: 1.5;
+	}
+
+	.passkey__writeup ul {
+		padding-left: 20px;
+		margin: 6px 0 10px;
+	}
+
+	.passkey__writeup li {
+		margin-bottom: 4px;
+	}
+
+	.passkey__writeup strong {
+		color: #ffd6ec;
+	}
+</style>
