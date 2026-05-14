@@ -13,7 +13,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 			height="320"
 		/>
 		<p class="not-found__msg">the page you're looking for doesn't exist.</p>
-		<p><a class="not-found__home" href="/">← go home</a></p>
+		<p><a class="not-found__home motif-chrom" href="/">← go home</a></p>
 	</div>
 </BaseLayout>
 
@@ -139,6 +139,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 	.not-found__home:active {
 		transform: translate(1px, 1px);
+	}
+
+	/* Canonical .motif-chrom utility, inlined here because the 404 page renders
+	 * via BaseLayout (not DesktopLayout), so desktop.css is not loaded. Mirrors
+	 * the rule in src/styles/desktop.css; neon-pink and neon-cyan hex values
+	 * match --neon-pink / --neon-cyan tokens. */
+	.motif-chrom:hover,
+	.motif-chrom:focus-visible {
+		text-shadow:
+			-1.5px 0 0 #ff4fa8,
+			1.5px 0 0 #00e5ff;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
