@@ -129,7 +129,7 @@ const _APPS_DATA = [
 		id: 'music',
 		label: 'music',
 		glyph: '💿',
-		iconUrl: '/images/icons/vaporwave/cassette-tape.png',
+		iconUrl: '/images/icons/web10/midi-music.png',
 		title: 'winamp.exe',
 		ogDescription: 'a tiny y2k winamp for whatever track mills is spinning this week.',
 		x: 220,
