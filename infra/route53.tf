@@ -51,6 +51,22 @@ resource "aws_route53_record" "www_aaaa" {
   }
 }
 
+# Google Workspace site-verification CNAMEs salvaged from the old DNS
+# provider on cutover. Each entry is a `<label>.<domain>` CNAME →
+# `gv-*.dv.googlehosted.com.` target Google issues when adding a domain
+# to the Workspace admin console. Populate `var.google_workspace_verifications`
+# per-stack only for domains that actually use Workspace. Empty default
+# means no records are created.
+resource "aws_route53_record" "google_workspace_verification" {
+  for_each = var.google_workspace_verifications
+
+  zone_id = data.aws_route53_zone.site.zone_id
+  name    = "${each.key}.${var.domain}"
+  type    = "CNAME"
+  records = [each.value]
+  ttl     = 3600
+}
+
 resource "aws_route53_record" "cert_validation" {
   for_each = {
     for dvo in aws_acm_certificate.site.domain_validation_options : dvo.domain_name => {
