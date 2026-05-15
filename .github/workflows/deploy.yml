@@ -101,16 +101,14 @@ jobs:
       # `Require signed commits` on `main` fails the deploy loudly
       # BEFORE any S3 mutation. Closes #434.
       #
-      # GITHUB_TOKEN scope: the default token has `contents: read` at the
-      # job level above, which is sufficient for
-      # `GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures`
-      # on a repo it's running in. If this ever returns 403 in CI, swap
-      # `GH_TOKEN` for a fine-grained PAT secret (the
-      # `TF_VAR_github_token` secret used by the github_terraform_provider
-      # would work, scoped read-only).
+      # Token scope: the default `GITHUB_TOKEN` cannot read branch
+      # protection — `GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures`
+      # requires admin permission on the repo, which `GITHUB_TOKEN` never
+      # has regardless of `permissions:` block. Uses `TF_VAR_GITHUB_TOKEN`,
+      # the read-scoped PAT already configured for the github_terraform_provider.
       - name: Verify signed-commits enforcement on main
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.TF_VAR_GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
