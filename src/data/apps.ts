@@ -244,6 +244,9 @@ const _APPS_DATA = [
 		glyph: '💣',
 		title: 'minesweeper.exe',
 		ogDescription: 'easter-egg homage to the winxp minesweeper screenshot. no game logic — just the picture.',
+		// Easter egg — intentionally not surfaced from the launcher;
+		// reward for poking at /minesweeper/ directly.
+		hidden: true,
 		x: 260,
 		y: 160,
 		width: 360,
