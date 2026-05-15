@@ -93,6 +93,12 @@ variable "ct_monitor_extra_issuers" {
   default     = []
 }
 
+variable "google_workspace_verifications" {
+  description = "Google Workspace domain-verification CNAMEs to publish in Route53. Map of host-label (left of the apex) to the `gv-*.dv.googlehosted.com.` target Google issues when you add a domain in the Workspace admin console. Each entry produces `<key>.<domain>` CNAME → `<value>`. Empty by default; populate per-stack only for domains that use Workspace services (Drive/Calendar/etc.). Migration salvage: pre-cutover this was managed at the old DNS provider; carry-over via this variable preserves verification across the NS flip."
+  type        = map(string)
+  default     = {}
+}
+
 variable "enable_mta_sts" {
   description = "Publish the `_mta-sts.<domain>` TXT record so SMTP senders discover the MTA-STS policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt`. Default false because MTA-STS only makes sense once Proton (or another mail provider) is live AND the policy file has been observed by senders -- enable per-stack via `<stack>.tfvars`. The `mta-sts.<domain>` ACM SAN + CloudFront alias + A/AAAA records are provisioned regardless (they're cheap and harmless), so flipping this on later costs only a Route53 TXT publish + the policy ID bump."
   type        = bool
