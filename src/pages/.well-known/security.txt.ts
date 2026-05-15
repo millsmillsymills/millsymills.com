@@ -19,7 +19,7 @@ export const GET: APIRoute = ({ site }) => {
 	);
 
 	const body = [
-		`Contact: mailto:mills@${hostname}`,
+		`Contact: mailto:security@${hostname}`,
 		`Encryption: ${origin}${pgp.downloadPath}`,
 		`Policy: ${origin}/security/`,
 		`Expires: ${expiresUtc.toISOString()}`,
