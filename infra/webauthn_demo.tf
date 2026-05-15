@@ -233,7 +233,7 @@ resource "aws_lambda_function_url" "webauthn_demo" {
 
   cors {
     allow_origins = ["https://${var.domain}"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_methods = ["GET", "POST"]
     allow_headers = ["content-type"]
     max_age       = 86400
   }
