@@ -11,3 +11,14 @@ deploy_environment = "production"
 # See CLAUDE.md "Email (ProtonMail)" runbook for the sequence.
 # protonmail_verification_token = ""
 # protonmail_dkim_selectors     = {}
+
+# Google Workspace site-verification CNAME salvaged from the old DNS
+# provider (Squarespace-managed zone) on the 2026-05 cutover (step 8).
+# Google reads this at `<label>.millsymills.com` to prove control of
+# the domain for Workspace services (Drive/Calendar/etc.). Other
+# Squarespace-managed records (mailgun MX, Squarespace A/CNAME, Google
+# Search Console TXT, `krs._domainkey` DKIM for an unused outbound
+# sender) are intentionally dropped.
+google_workspace_verifications = {
+  uc5aa7cfxzqa = "gv-b5afe5qh2bo46y.dv.googlehosted.com."
+}
