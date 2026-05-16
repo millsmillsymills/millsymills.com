@@ -1815,6 +1815,47 @@ body:not([data-flags-unlocked='true']) [data-flags-gated] {
 }
 
 /* ------------------------------------------------------------------ */
+/* system-sounds taskbar toggle (issue #464)                          */
+/* ------------------------------------------------------------------ */
+
+.taskbar__sound {
+	all: unset;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 6px;
+	padding: 0 6px;
+	height: 28px;
+	cursor: var(--c-pointer);
+	border-radius: var(--chrome-radius-button);
+	transition: background 120ms ease;
+}
+
+.taskbar__sound:hover,
+.taskbar__sound:focus-visible {
+	background: var(--bg-raised);
+	outline: none;
+}
+
+.taskbar__sound img {
+	height: 18px;
+	width: auto;
+	image-rendering: pixelated;
+	transition:
+		filter 200ms ease,
+		opacity 200ms ease;
+}
+
+.taskbar__sound[data-sound-enabled='true'] img {
+	filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.55));
+}
+
+.taskbar__sound[data-sound-enabled='false'] img {
+	filter: grayscale(1) brightness(0.55);
+	opacity: 0.6;
+}
+
+/* ------------------------------------------------------------------ */
 /* reset-confirm modal                                                */
 /* ------------------------------------------------------------------ */
 

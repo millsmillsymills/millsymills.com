@@ -13,7 +13,7 @@
  */
 
 import { isAppId } from '../data/apps';
-import { dispatchClippyTrigger } from './util/events';
+import { dispatchClippyTrigger, dispatchPlaySound } from './util/events';
 
 const STORAGE_KEY = 'mills.desktop.v1';
 const Z_BASE = 100;
@@ -341,6 +341,7 @@ class WindowManager {
 
 		if (!opts.silent && !wasOpen) {
 			dispatchClippyTrigger('open', isAppId(id) ? id : undefined);
+			dispatchPlaySound('open');
 		}
 	}
 
@@ -358,6 +359,7 @@ class WindowManager {
 
 		if (wasOpen) {
 			dispatchClippyTrigger('close', isAppId(id) ? id : undefined);
+			dispatchPlaySound('close');
 		}
 	}
 
