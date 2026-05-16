@@ -2,38 +2,33 @@ aws_region    = "us-west-2"
 domain        = "p41m0n.com"
 github_repo   = "millsmillsymills/millsymills.com"
 deploy_branch = "main"
-# Rehearsal stack uses its own workflow; override the default (deploy.yml)
-# so the OIDC trust policy pins the right job_workflow_ref.
-deploy_workflow    = "deploy-rehearsal.yml"
-deploy_environment = "rehearsal" # matches `environment: name:` in deploy-rehearsal.yml
+# deploy_workflow / deploy_environment removed — no GH deploy workflow
+# for the slimmed stack (see enable_github_deploy_role = false). The CI
+# gate in ci.yml that asserts per-stack deploy_workflow files exist
+# falls back to deploy.yml when the var is absent (which exists for
+# millsymills), so the assertion still passes.
 
-# Routes CT-monitor SNS alerts off-domain. The endpoint sits outside
-# the Proton catchall on purpose — if the mail-flow path is ever the
-# subject of the alert (DNS hijack, MX takeover, mis-issued cert
-# affecting Proton's MX hosts), an alert routed through that same
-# path could be silently swallowed. Originally needed because the
-# subscription was stuck PendingConfirmation against a null-MX endpoint
-# (2026-05-01 pre-flight); kept off-domain for the redundancy property.
-ct_monitor_alert_address = "andyandymillsmills@gmail.com"
+# All heavyweight features off — see
+# docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md.
+enable_inspector_tls      = false
+enable_csp_report         = false
+enable_webauthn_demo      = false
+enable_ct_monitor         = false
+enable_access_logging     = false
+enable_github_deploy_role = false
+enable_index_rewrite      = false
+enable_mta_sts_alias      = false
+enable_bimi               = false
 
-# ProtonMail activated 2026-05-01 per
-# docs/superpowers/specs/2026-05-01-p41m0n-proton-mail-migration-design.md.
-# Verification token is supplied at apply time via
+# Headers profile: minimal — single-image static site.
+cloudfront_headers_profile = "minimal"
+
+# Mail: Proton catchall stays. Verification token at apply time via
 # TF_VAR_protonmail_verification_token (not committed). DKIM CNAME
-# targets come from Proton's domain page after verification.
-# Selectors must be exactly `protonmail`, `protonmail2`, `protonmail3`
-# — Proton uses fixed selector names, and infra/email.tf builds
-# <selector>._domainkey.<domain> from the map keys.
+# targets are exactly as today — Proton uses fixed selector names and
+# infra/email.tf builds <selector>._domainkey.<domain> from the keys.
 protonmail_dkim_selectors = {
   protonmail  = "protonmail.domainkey.dcj2miv2gaceelgnmv3mwo6jisec66bvrpgjnocazioc4ngrydcua.domains.proton.ch."
   protonmail2 = "protonmail2.domainkey.dcj2miv2gaceelgnmv3mwo6jisec66bvrpgjnocazioc4ngrydcua.domains.proton.ch."
   protonmail3 = "protonmail3.domainkey.dcj2miv2gaceelgnmv3mwo6jisec66bvrpgjnocazioc4ngrydcua.domains.proton.ch."
 }
-
-# Phase 1 MTA-STS rehearsal per #134. Publishes the discovery TXT so
-# senders look up the policy at https://mta-sts.p41m0n.com/.well-known/
-# mta-sts.txt. The policy file ships `mode: testing` initially -- bump
-# `mta_sts_id` and flip the policy file to `mode: enforce` after 2-4
-# weeks of clean TLS-RPT reports show `policy-type: sts`.
-enable_mta_sts = true
-mta_sts_id     = "20260507000000"
