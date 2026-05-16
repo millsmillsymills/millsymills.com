@@ -69,6 +69,8 @@ data "aws_iam_policy_document" "github_deploy_trust" {
 }
 
 resource "aws_iam_role" "github_deploy" {
+  count = var.enable_github_deploy_role ? 1 : 0
+
   name               = "${replace(var.domain, ".", "-")}-github-deploy"
   assume_role_policy = data.aws_iam_policy_document.github_deploy_trust.json
   description        = "Assumed by GitHub Actions for ${var.github_repo} (${var.deploy_branch}) to deploy ${var.domain}."
@@ -108,12 +110,28 @@ data "aws_iam_policy_document" "github_deploy" {
 }
 
 resource "aws_iam_role_policy" "github_deploy" {
+  count = var.enable_github_deploy_role ? 1 : 0
+
   name   = "deploy"
-  role   = aws_iam_role.github_deploy.id
+  role   = aws_iam_role.github_deploy[0].id
   policy = data.aws_iam_policy_document.github_deploy.json
 }
 
 output "github_deploy_role_arn" {
-  description = "Pass this to the GitHub Actions deploy workflow as the AWS_DEPLOY_ROLE_ARN env-scoped variable on the matching GitHub Environment (production for deploy.yml, rehearsal for deploy-rehearsal.yml)."
-  value       = aws_iam_role.github_deploy.arn
+  description = "Pass this to the GitHub Actions deploy workflow as the AWS_DEPLOY_ROLE_ARN env-scoped variable on the matching GitHub Environment (production for deploy.yml). Null on stacks with enable_github_deploy_role=false."
+  value       = var.enable_github_deploy_role ? aws_iam_role.github_deploy[0].arn : null
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+# aws_iam_openid_connect_provider.github is intentionally NOT moved —
+# it stays unconditional (account-wide resource shared with millsymills).
+
+moved {
+  from = aws_iam_role.github_deploy
+  to   = aws_iam_role.github_deploy[0]
+}
+
+moved {
+  from = aws_iam_role_policy.github_deploy
+  to   = aws_iam_role_policy.github_deploy[0]
 }

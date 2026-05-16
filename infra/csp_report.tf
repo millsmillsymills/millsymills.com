@@ -32,11 +32,15 @@ locals {
 # --------------------------------------------------------------------
 
 resource "aws_s3_bucket" "csp_report" {
+  count = var.enable_csp_report ? 1 : 0
+
   bucket = local.csp_report_bucket_name
 }
 
 resource "aws_s3_bucket_public_access_block" "csp_report" {
-  bucket = aws_s3_bucket.csp_report.id
+  count = var.enable_csp_report ? 1 : 0
+
+  bucket = aws_s3_bucket.csp_report[0].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -45,14 +49,18 @@ resource "aws_s3_bucket_public_access_block" "csp_report" {
 }
 
 resource "aws_s3_bucket_ownership_controls" "csp_report" {
-  bucket = aws_s3_bucket.csp_report.id
+  count = var.enable_csp_report ? 1 : 0
+
+  bucket = aws_s3_bucket.csp_report[0].id
   rule {
     object_ownership = "BucketOwnerEnforced"
   }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "csp_report" {
-  bucket = aws_s3_bucket.csp_report.id
+  count = var.enable_csp_report ? 1 : 0
+
+  bucket = aws_s3_bucket.csp_report[0].id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -61,7 +69,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "csp_report" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "csp_report" {
-  bucket = aws_s3_bucket.csp_report.id
+  count = var.enable_csp_report ? 1 : 0
+
+  bucket = aws_s3_bucket.csp_report[0].id
 
   rule {
     id     = "expire-csp-reports"
@@ -80,7 +90,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "csp_report" {
 }
 
 resource "aws_s3_bucket_policy" "csp_report" {
-  bucket = aws_s3_bucket.csp_report.id
+  count = var.enable_csp_report ? 1 : 0
+
+  bucket = aws_s3_bucket.csp_report[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -94,8 +106,8 @@ resource "aws_s3_bucket_policy" "csp_report" {
         Principal = "*"
         Action    = "s3:*"
         Resource = [
-          aws_s3_bucket.csp_report.arn,
-          "${aws_s3_bucket.csp_report.arn}/*",
+          aws_s3_bucket.csp_report[0].arn,
+          "${aws_s3_bucket.csp_report[0].arn}/*",
         ]
         Condition = {
           Bool = {
@@ -118,6 +130,8 @@ data "archive_file" "csp_report" {
 }
 
 resource "aws_iam_role" "csp_report" {
+  count = var.enable_csp_report ? 1 : 0
+
   name = "${local.csp_report_name}-lambda"
 
   assume_role_policy = jsonencode({
@@ -131,32 +145,40 @@ resource "aws_iam_role" "csp_report" {
 }
 
 resource "aws_iam_role_policy_attachment" "csp_report_basic" {
-  role       = aws_iam_role.csp_report.name
+  count = var.enable_csp_report ? 1 : 0
+
+  role       = aws_iam_role.csp_report[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_role_policy" "csp_report_put" {
+  count = var.enable_csp_report ? 1 : 0
+
   name = "put-reports"
-  role = aws_iam_role.csp_report.id
+  role = aws_iam_role.csp_report[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = "s3:PutObject"
-      Resource = "${aws_s3_bucket.csp_report.arn}/reports/*"
+      Resource = "${aws_s3_bucket.csp_report[0].arn}/reports/*"
     }]
   })
 }
 
 resource "aws_cloudwatch_log_group" "csp_report" {
+  count = var.enable_csp_report ? 1 : 0
+
   name              = "/aws/lambda/${local.csp_report_name}"
   retention_in_days = 30
 }
 
 resource "aws_lambda_function" "csp_report" {
+  count = var.enable_csp_report ? 1 : 0
+
   function_name    = local.csp_report_name
-  role             = aws_iam_role.csp_report.arn
+  role             = aws_iam_role.csp_report[0].arn
   filename         = data.archive_file.csp_report.output_path
   source_code_hash = data.archive_file.csp_report.output_base64sha256
   handler          = "csp_report.handler"
@@ -173,19 +195,23 @@ resource "aws_lambda_function" "csp_report" {
 
   environment {
     variables = {
-      REPORT_BUCKET = aws_s3_bucket.csp_report.id
+      REPORT_BUCKET = aws_s3_bucket.csp_report[0].id
     }
   }
 
-  depends_on = [aws_cloudwatch_log_group.csp_report]
+  depends_on = [aws_cloudwatch_log_group.csp_report[0]]
 }
 
 resource "aws_lambda_function_url" "csp_report" {
-  function_name      = aws_lambda_function.csp_report.function_name
+  count = var.enable_csp_report ? 1 : 0
+
+  function_name      = aws_lambda_function.csp_report[0].function_name
   authorization_type = "AWS_IAM"
 }
 
 resource "aws_cloudfront_origin_access_control" "csp_report" {
+  count = var.enable_csp_report ? 1 : 0
+
   name                              = local.csp_report_name
   origin_access_control_origin_type = "lambda"
   signing_behavior                  = "always"
@@ -199,9 +225,11 @@ resource "aws_cloudfront_origin_access_control" "csp_report" {
 # the OAC change before the permission lands and CloudFront-signed
 # requests get 403 from Lambda for a brief window.
 resource "aws_lambda_permission" "csp_report_cloudfront" {
+  count = var.enable_csp_report ? 1 : 0
+
   statement_id           = "AllowCloudFrontServicePrincipal"
   action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.csp_report.function_name
+  function_name          = aws_lambda_function.csp_report[0].function_name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.site.arn
   function_url_auth_type = "AWS_IAM"
@@ -214,10 +242,10 @@ resource "aws_lambda_permission" "csp_report_cloudfront" {
 }
 
 locals {
-  csp_report_origin_host = trimsuffix(
-    replace(aws_lambda_function_url.csp_report.function_url, "https://", ""),
+  csp_report_origin_host = var.enable_csp_report ? trimsuffix(
+    replace(aws_lambda_function_url.csp_report[0].function_url, "https://", ""),
     "/",
-  )
+  ) : null
 }
 
 # --------------------------------------------------------------------
@@ -244,11 +272,15 @@ locals {
 # --------------------------------------------------------------------
 
 resource "aws_sns_topic" "csp_report_ops" {
+  count = var.enable_csp_report ? 1 : 0
+
   name = "${local.csp_report_name}-ops"
 }
 
 resource "aws_sns_topic_subscription" "csp_report_ops_email" {
-  topic_arn = aws_sns_topic.csp_report_ops.arn
+  count = var.enable_csp_report ? 1 : 0
+
+  topic_arn = aws_sns_topic.csp_report_ops[0].arn
   protocol  = "email"
   endpoint  = local.ct_alert_email
 }
@@ -258,6 +290,8 @@ resource "aws_sns_topic_subscription" "csp_report_ops_email" {
 # is expected to burst past reserved_concurrent_executions briefly, and
 # a single 5-min spike during cutover is not actionable on its own.
 resource "aws_cloudwatch_metric_alarm" "csp_report_throttles" {
+  count = var.enable_csp_report ? 1 : 0
+
   alarm_name          = "${local.csp_report_name}-throttles"
   alarm_description   = "csp_report Lambda was throttled -- bursts beyond reserved_concurrent_executions are silently dropping CSP reports."
   namespace           = "AWS/Lambda"
@@ -268,11 +302,11 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_throttles" {
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
-  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 
   dimensions = {
-    FunctionName = aws_lambda_function.csp_report.function_name
+    FunctionName = aws_lambda_function.csp_report[0].function_name
   }
 }
 
@@ -281,8 +315,10 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_throttles" {
 # field exactly so unrelated structured logs (or future log lines)
 # don't trip the alarm.
 resource "aws_cloudwatch_log_metric_filter" "csp_report_put_failed" {
+  count = var.enable_csp_report ? 1 : 0
+
   name           = "${local.csp_report_name}-put-failed"
-  log_group_name = aws_cloudwatch_log_group.csp_report.name
+  log_group_name = aws_cloudwatch_log_group.csp_report[0].name
   pattern        = "{ $.msg = \"csp-report s3 put failed\" }"
 
   metric_transformation {
@@ -299,18 +335,20 @@ resource "aws_cloudwatch_log_metric_filter" "csp_report_put_failed" {
 # noise that resolves on retry; only repeated failures across windows
 # indicate a real IAM/throttle/outage condition worth paging on.
 resource "aws_cloudwatch_metric_alarm" "csp_report_put_failed" {
+  count = var.enable_csp_report ? 1 : 0
+
   alarm_name          = "${local.csp_report_name}-put-failed"
   alarm_description   = "csp_report Lambda failed to PutObject to the reports bucket. Check CloudWatch Logs Insights for errName / errCode -- structured fields preserved by the JSON log line."
-  namespace           = aws_cloudwatch_log_metric_filter.csp_report_put_failed.metric_transformation[0].namespace
-  metric_name         = aws_cloudwatch_log_metric_filter.csp_report_put_failed.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.csp_report_put_failed[0].metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.csp_report_put_failed[0].metric_transformation[0].name
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 2
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
-  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
 # Metric filter + alarm on body-cap rejections (413). `csp_report.mjs`
@@ -319,8 +357,10 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_put_failed" {
 # sustained volume is a DoS signal worth investigating. Tuned high
 # (3 windows, >=5 events per window) so it doesn't page on noise.
 resource "aws_cloudwatch_log_metric_filter" "csp_report_body_cap_exceeded" {
+  count = var.enable_csp_report ? 1 : 0
+
   name           = "${local.csp_report_name}-body-cap-exceeded"
-  log_group_name = aws_cloudwatch_log_group.csp_report.name
+  log_group_name = aws_cloudwatch_log_group.csp_report[0].name
   pattern        = "{ $.msg = \"csp-report body cap exceeded\" }"
 
   metric_transformation {
@@ -333,16 +373,125 @@ resource "aws_cloudwatch_log_metric_filter" "csp_report_body_cap_exceeded" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "csp_report_body_cap_exceeded" {
+  count = var.enable_csp_report ? 1 : 0
+
   alarm_name          = "${local.csp_report_name}-body-cap-exceeded"
   alarm_description   = "csp_report Lambda rejected oversize payloads (>16 KiB) at a sustained rate. Likely abuse or a misbehaving client; investigate CloudFront access logs for the originating viewer."
-  namespace           = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded.metric_transformation[0].namespace
-  metric_name         = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded[0].metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded[0].metric_transformation[0].name
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 3
   threshold           = 5
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
-  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+
+moved {
+  from = aws_s3_bucket.csp_report
+  to   = aws_s3_bucket.csp_report[0]
+}
+
+moved {
+  from = aws_s3_bucket_public_access_block.csp_report
+  to   = aws_s3_bucket_public_access_block.csp_report[0]
+}
+
+moved {
+  from = aws_s3_bucket_ownership_controls.csp_report
+  to   = aws_s3_bucket_ownership_controls.csp_report[0]
+}
+
+moved {
+  from = aws_s3_bucket_server_side_encryption_configuration.csp_report
+  to   = aws_s3_bucket_server_side_encryption_configuration.csp_report[0]
+}
+
+moved {
+  from = aws_s3_bucket_lifecycle_configuration.csp_report
+  to   = aws_s3_bucket_lifecycle_configuration.csp_report[0]
+}
+
+moved {
+  from = aws_s3_bucket_policy.csp_report
+  to   = aws_s3_bucket_policy.csp_report[0]
+}
+
+moved {
+  from = aws_iam_role.csp_report
+  to   = aws_iam_role.csp_report[0]
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.csp_report_basic
+  to   = aws_iam_role_policy_attachment.csp_report_basic[0]
+}
+
+moved {
+  from = aws_iam_role_policy.csp_report_put
+  to   = aws_iam_role_policy.csp_report_put[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_group.csp_report
+  to   = aws_cloudwatch_log_group.csp_report[0]
+}
+
+moved {
+  from = aws_lambda_function.csp_report
+  to   = aws_lambda_function.csp_report[0]
+}
+
+moved {
+  from = aws_lambda_function_url.csp_report
+  to   = aws_lambda_function_url.csp_report[0]
+}
+
+moved {
+  from = aws_cloudfront_origin_access_control.csp_report
+  to   = aws_cloudfront_origin_access_control.csp_report[0]
+}
+
+moved {
+  from = aws_lambda_permission.csp_report_cloudfront
+  to   = aws_lambda_permission.csp_report_cloudfront[0]
+}
+
+moved {
+  from = aws_sns_topic.csp_report_ops
+  to   = aws_sns_topic.csp_report_ops[0]
+}
+
+moved {
+  from = aws_sns_topic_subscription.csp_report_ops_email
+  to   = aws_sns_topic_subscription.csp_report_ops_email[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.csp_report_throttles
+  to   = aws_cloudwatch_metric_alarm.csp_report_throttles[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_metric_filter.csp_report_put_failed
+  to   = aws_cloudwatch_log_metric_filter.csp_report_put_failed[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.csp_report_put_failed
+  to   = aws_cloudwatch_metric_alarm.csp_report_put_failed[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded
+  to   = aws_cloudwatch_log_metric_filter.csp_report_body_cap_exceeded[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.csp_report_body_cap_exceeded
+  to   = aws_cloudwatch_metric_alarm.csp_report_body_cap_exceeded[0]
 }

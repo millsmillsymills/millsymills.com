@@ -124,6 +124,8 @@ resource "aws_route53_record" "tlsrpt" {
 # without a VMC, so the record still earns its keep on supporting clients.
 # Documented on /security via securityControls.bimi.tradeoffs.
 resource "aws_route53_record" "bimi" {
+  count = var.enable_bimi ? 1 : 0
+
   zone_id = data.aws_route53_zone.site.zone_id
   name    = "default._bimi.${var.domain}"
   type    = "TXT"
@@ -131,4 +133,11 @@ resource "aws_route53_record" "bimi" {
   records = [
     "v=BIMI1; l=https://${var.domain}/bimi/logo.svg",
   ]
+}
+
+# moved block for the count-gating refactor (2026-05-15).
+
+moved {
+  from = aws_route53_record.bimi
+  to   = aws_route53_record.bimi[0]
 }

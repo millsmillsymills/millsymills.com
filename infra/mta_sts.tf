@@ -10,14 +10,20 @@
 #     query this first; the `id` field changes whenever the policy
 #     contents change so caches refresh.
 #
-# Provisioning split between always-on and gated:
+# Two-gate provisioning model:
 #
-#   * The ACM SAN, the CloudFront alias, and the A/AAAA records
-#     are unconditional (cheap, harmless, lets you flip the policy
-#     on later without a cert-replacement round-trip). See
-#     `infra/acm.tf` + `infra/cloudfront.tf` + the records below.
-#   * The `_mta-sts.<domain>` TXT record is gated on
-#     `var.enable_mta_sts`. Without it senders fall back to
+#   * `var.enable_mta_sts_alias` gates the cert SAN (`infra/acm.tf`),
+#     the CloudFront alias (`infra/cloudfront.tf`), and the A + AAAA
+#     records below as one unit. Default true so the host is always
+#     reachable on stacks that intend to serve mail; flip to false on
+#     stacks that don't (e.g. static-image rehearsal targets) to shrink
+#     the cert and free the alias slot.
+#   * `var.enable_mta_sts` gates ONLY the `_mta-sts.<domain>` TXT
+#     discovery record. Default false because MTA-STS only makes sense
+#     once the policy file has been observed in production. The TXT
+#     toggle requires the alias toggle (enforced via variable
+#     validation) so the discovery record can't advertise a hostname
+#     that doesn't resolve. Without TXT, senders fall back to
 #     opportunistic STARTTLS -- equivalent to MTA-STS being off.
 #
 # Pairs with the SMTP TLS Reporting (`_smtp._tls`) record already
@@ -29,6 +35,8 @@
 # Closes Phase 1 of #134 for any stack with `enable_mta_sts = true`.
 
 resource "aws_route53_record" "mta_sts_a" {
+  count = var.enable_mta_sts_alias ? 1 : 0
+
   zone_id = data.aws_route53_zone.site.zone_id
   name    = "mta-sts.${var.domain}"
   type    = "A"
@@ -41,6 +49,8 @@ resource "aws_route53_record" "mta_sts_a" {
 }
 
 resource "aws_route53_record" "mta_sts_aaaa" {
+  count = var.enable_mta_sts_alias ? 1 : 0
+
   zone_id = data.aws_route53_zone.site.zone_id
   name    = "mta-sts.${var.domain}"
   type    = "AAAA"
@@ -60,4 +70,17 @@ resource "aws_route53_record" "mta_sts_txt" {
   type    = "TXT"
   ttl     = 3600
   records = ["v=STSv1; id=${var.mta_sts_id}"]
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+# aws_route53_record.mta_sts_txt was already count-gated via enable_mta_sts; no move needed.
+
+moved {
+  from = aws_route53_record.mta_sts_a
+  to   = aws_route53_record.mta_sts_a[0]
+}
+
+moved {
+  from = aws_route53_record.mta_sts_aaaa
+  to   = aws_route53_record.mta_sts_aaaa[0]
 }
