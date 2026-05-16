@@ -1,6 +1,6 @@
 # p41m0n.com teardown of rehearsal stack + static-image hosting
 
-**Status:** approved design, 2026-05-15
+**Status:** implemented, 2026-05-16
 **Goal:** retire the elaborate parallel AWS stack that backed `p41m0n.com` as a `millsymills.com` rehearsal target, and replace it with the minimum infrastructure needed to serve a single static image (the "face of mercy" meme) plus the existing Proton catchall mail. Shared resources (Terraform state bucket, Route53 hosted zone, account-wide IAM OIDC provider) are not touched.
 
 ## Why
