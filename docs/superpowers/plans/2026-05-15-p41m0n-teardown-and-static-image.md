@@ -108,7 +108,9 @@ If anything other than "no changes" appears, STOP — the move broke something. 
 ./scripts/tf.sh p41m0n plan
 ```
 
-Expected: `No changes. Your infrastructure matches the configuration.`
+**Expected:** the same ~43 add / 8 change / 4 destroy *pre-existing drift* baseline as before the move. This step is the data-source-move impact check, NOT a drift-resolution check. p41m0n carries pre-existing drift because csp_report/webauthn/MTA-STS were added to shared TF code over time but only millsymills was re-applied — that drift is resolved later in Phase 4 by the tfvars flip, not here.
+
+The data-source move itself should add zero new plan delta. Verify by stash-comparing if uncertain: `git stash && tf.sh p41m0n plan > /tmp/pre.txt && git stash pop && tf.sh p41m0n plan > /tmp/post.txt && diff /tmp/pre.txt /tmp/post.txt` — expected empty diff.
 
 - [ ] **Step 7: Commit**
 
@@ -137,13 +139,13 @@ gh pr create --base main --title "docs(specs) + refactor(infra): p41m0n teardown
 
 - Adds `docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md` — the design spec for tearing down most of the parallel p41m0n AWS stack and replacing it with a single static image, kept behind nine new `enable_*` toggles.
 - Moves `data "aws_caller_identity" "current" {}` from `infra/cloudfront_logging.tf` to `infra/main.tf` so the data source survives the upcoming conditional gating of the cloudfront-logging resources (referenced from `dnssec.tf` and `s3.tf`).
-- Pure refactor; both `tf.sh millsymills plan` and `tf.sh p41m0n plan` come back empty.
+- Pure refactor; `tf.sh millsymills plan` is empty. `tf.sh p41m0n plan` is unchanged from its pre-move baseline (p41m0n carries pre-existing drift from csp_report/webauthn/MTA-STS that gets resolved later in Phase 4 by the tfvars flip — not by this PR).
 
 ## Test plan
 - [x] `terraform fmt` clean
 - [x] `terraform validate` passes
 - [x] `tf.sh millsymills plan` empty
-- [x] `tf.sh p41m0n plan` empty
+- [x] `tf.sh p41m0n plan` shows only pre-existing drift (zero new delta from this move; stash-compare verified)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -1103,33 +1105,71 @@ git add infra/cloudfront.tf
 git commit -m "infra(toggles): reshape cloudfront.tf for per-feature gating + minimal headers profile"
 ```
 
-### Task 1.13: Verify both stack plans are empty
+### Task 1.13: Verify the toggle PR introduces no new drift
 
 **Files:** none (verification only).
 
 **Important:** `scripts/tf.sh`'s stale-state guard refuses to plan against a stack other than the most recently inited one (it tracks the active stack via `infra/.terraform/.stack`). Always interleave init + plan per stack rather than batching them.
 
-- [ ] **Step 1: Init + plan millsymills**
+**Critical context (per 2026-05-15 amendment):** millsymills's state matches the TF code today, so its plan must come back empty. p41m0n's state DOES NOT match — it has ~43 add / 8 change / 4 destroy of pre-existing drift because csp_report/webauthn/MTA-STS were added to shared TF code but only millsymills was re-applied. The toggle PR's defaults are all `true`/`"strict"`, so for p41m0n the toggle PR alone (no tfvars change) preserves the exact same drift baseline. The acceptance gate for p41m0n is therefore "no NEW resources appear in the plan that weren't there pre-toggle" — a diff-of-plans, not a plan-empty assertion.
+
+- [ ] **Step 1: Capture the pre-toggle baseline plans (run BEFORE the toggle PR's local commits land in your working tree — i.e., from latest `origin/main`)**
+
+If you've been working in a feature branch with toggle changes already committed locally, stash or switch to `origin/main` first:
+
+```bash
+git fetch origin main
+git stash --include-untracked || true  # if WIP present
+git switch --detach origin/main
+./scripts/tf.sh millsymills init && ./scripts/tf.sh millsymills plan -no-color > /tmp/mills-pre-toggle.plan 2>&1
+./scripts/tf.sh p41m0n init && ./scripts/tf.sh p41m0n plan -no-color > /tmp/p41m0n-pre-toggle.plan 2>&1
+git switch -  # back to your toggle branch
+git stash pop || true
+```
+
+Save those two baseline plans — they're the diff reference.
+
+- [ ] **Step 2: Init + plan millsymills (with toggle changes applied)**
 
 ```bash
 ./scripts/tf.sh millsymills init
-./scripts/tf.sh millsymills plan
+./scripts/tf.sh millsymills plan -no-color > /tmp/mills-post-toggle.plan
 ```
 
-Expected: `No changes. Your infrastructure matches the configuration.`
+**Expected:** `No changes. Your infrastructure matches the configuration.` (Plus possibly the pre-existing webauthn `source_code_hash` drift if that wasn't cleaned earlier — those resources are unchanged by the toggle.)
 
-If anything other than "no changes" appears: STOP. The most likely cause is a missing `moved` block or a missed reference rewrite. Cross-check the resource address Terraform wants to destroy/create against the lists in Tasks 1.2-1.12.
+If anything other than "no changes" appears beyond pre-existing drift: STOP. Most likely cause is a missing `moved` block or a missed reference rewrite. Cross-check the resource address Terraform wants to destroy/create against the lists in Tasks 1.2-1.12.
 
-- [ ] **Step 2: Init + plan p41m0n**
+- [ ] **Step 3: Init + plan p41m0n (with toggle changes applied)**
 
 ```bash
 ./scripts/tf.sh p41m0n init
-./scripts/tf.sh p41m0n plan
+./scripts/tf.sh p41m0n plan -no-color > /tmp/p41m0n-post-toggle.plan
 ```
 
-Expected: `No changes. Your infrastructure matches the configuration.` (Same reason — defaults are unchanged.)
+**Expected:** identical resource-set to `/tmp/p41m0n-pre-toggle.plan`. The plan output will still show the ~43 add / 8 change / 4 destroy baseline — that's the pre-existing drift, NOT something this PR introduced.
 
-- [ ] **Step 3: Push and open PR**
+- [ ] **Step 4: Diff the pre/post plans**
+
+```bash
+diff <(sed -n '/Terraform will perform/,/^Plan:/p' /tmp/p41m0n-pre-toggle.plan | rg "^  # " | sort -u) \
+     <(sed -n '/Terraform will perform/,/^Plan:/p' /tmp/p41m0n-post-toggle.plan | rg "^  # " | sort -u)
+```
+
+**Expected:** empty output (the set of resources Terraform wants to operate on is identical).
+
+If the diff shows any added or removed resource line: STOP. The toggle PR introduced (or removed) a resource from p41m0n's plan, which means a `count` gate is wrong or a `moved` block is missing/misdirected. Investigate before opening the PR.
+
+- [ ] **Step 5: Same diff for millsymills (sanity check)**
+
+```bash
+diff <(sed -n '/Terraform will perform/,/^Plan:/p' /tmp/mills-pre-toggle.plan | rg "^  # " | sort -u) \
+     <(sed -n '/Terraform will perform/,/^Plan:/p' /tmp/mills-post-toggle.plan | rg "^  # " | sort -u)
+```
+
+**Expected:** empty output. Millsymills had a clean pre-toggle plan; the post-toggle plan should also be clean.
+
+- [ ] **Step 6: Push and open PR**
 
 ```bash
 git push -u origin infra/p41m0n-teardown-toggles
@@ -1145,8 +1185,8 @@ gh pr create --base main --title "infra(toggles): add per-feature enable_* toggl
 ## Test plan
 - [x] `terraform fmt` clean
 - [x] `terraform validate` passes
-- [x] `tf.sh millsymills plan` empty
-- [x] `tf.sh p41m0n plan` empty
+- [x] `tf.sh millsymills plan` empty (matches pre-toggle baseline)
+- [x] `tf.sh p41m0n plan` resource-set identical to pre-toggle baseline (p41m0n carries ~43/8/4 pre-existing drift unrelated to this PR — diff-of-plans confirms no new delta introduced; cleared by tfvars flip in Phase 4)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -1705,9 +1745,11 @@ git add infra/cloudfront.tf
 git commit -m "chore(cloudfront): reword p41m0n-naming CORP comments"
 ```
 
-### Task 2.11: Verify the cleanup PR plans empty + CI passes
+### Task 2.11: Verify the cleanup PR introduces no new drift + CI passes
 
 **Files:** none (verification only).
+
+The cleanup PR is source-only (deleting workflows, scripts, reverting Astro plumbing) — it touches no Terraform code. So both stacks should diff identically pre/post cleanup. Same caveat as Task 1.13: p41m0n carries pre-existing drift that's NOT this PR's responsibility.
 
 - [ ] **Step 1: Plan both stacks (interleave init+plan per stack — the tf.sh stale-state guard refuses cross-stack plans)**
 
@@ -1716,7 +1758,9 @@ git commit -m "chore(cloudfront): reword p41m0n-naming CORP comments"
 ./scripts/tf.sh p41m0n init && ./scripts/tf.sh p41m0n plan
 ```
 
-Both expected: `No changes.`
+**Expected:** identical resource-set as before the cleanup PR. Millsymills: `No changes` (matches pre-cleanup baseline). p41m0n: still ~43 add / 8 change / 4 destroy (the same pre-existing drift carried through; resolved later when Phase 4's tfvars flip happens).
+
+If the cleanup PR introduced any Terraform plan delta in either stack, that's a bug — the cleanup is supposed to be source-only. Investigate before continuing.
 
 - [ ] **Step 2: Run the local CI mirror**
 
@@ -1749,8 +1793,8 @@ gh api -X DELETE repos/millsmillsymills/millsymills.com/environments/rehearsal
 ```
 
 ## Test plan
-- [x] `tf.sh millsymills plan` empty
-- [x] `tf.sh p41m0n plan` empty
+- [x] `tf.sh millsymills plan` empty (matches pre-cleanup baseline)
+- [x] `tf.sh p41m0n plan` resource-set identical to pre-cleanup baseline (this PR is source-only; no Terraform impact expected. p41m0n's pre-existing ~43/8/4 drift carries through and is resolved in Phase 4 by the tfvars flip.)
 - [x] `./scripts/ci-local.sh` clean (including `assert-security-controls-paths.sh`)
 - [x] `npm run build` produces a `dist/` with no `p41m0n.com` references and a permissive `dist/robots.txt`
 

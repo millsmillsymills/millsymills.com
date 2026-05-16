@@ -48,7 +48,7 @@ One Terraform codebase, two stacks separated only by state — same pattern esta
 
 `infra/cloudfront_logging.tf:8` defines `data "aws_caller_identity" "current" {}`, but the data source is referenced from `infra/dnssec.tf:177`, `infra/s3.tf:240`, and `infra/s3.tf:243`. If a later toggle removes or conditionally evaluates `cloudfront_logging.tf`, those references break.
 
-Move the `data "aws_caller_identity" "current" {}` block into `infra/main.tf` (a file no toggle gates). Pure refactor; both stacks plan empty after. Lands as its own small PR before the toggle work begins, isolating the move from the larger change.
+Move the `data "aws_caller_identity" "current" {}` block into `infra/main.tf` (a file no toggle gates). Pure refactor; millsymills plans empty after, p41m0n plan is unchanged from its pre-move baseline (p41m0n carries pre-existing ~43/8/4 drift that's resolved later in Phase 4, not by this move). Lands as its own small PR before the toggle work begins, isolating the move from the larger change.
 
 ### Toggle variables
 
@@ -226,7 +226,7 @@ magick ~/Downloads/IMG_0220_Original.jpg -auto-orient -strip -quality 85 face-of
 
 1. Move `data "aws_caller_identity" "current" {}` from `infra/cloudfront_logging.tf:8` to `infra/main.tf`.
 2. Verify `./scripts/tf.sh millsymills plan` empty.
-3. Verify `./scripts/tf.sh p41m0n plan` empty.
+3. Verify `./scripts/tf.sh p41m0n plan` shows only the pre-existing ~43/8/4 drift baseline (this move adds zero new delta — stash-compare to confirm). The drift itself stays unresolved until Phase 4's tfvars flip; this step is the move-impact check, not a drift-resolution gate.
 4. Merge.
 
 ### Toggle PR (millsymills.com)
@@ -237,8 +237,8 @@ magick ~/Downloads/IMG_0220_Original.jpg -auto-orient -strip -quality 85 face-of
 4. In `infra/acm.tf`: convert `subject_alternative_names` to `compact(["www.${var.domain}", var.enable_mta_sts_alias ? "mta-sts.${var.domain}" : ""])`.
 5. Add `aws_cloudfront_response_headers_policy.site_minimal` (a new resource gated by `count = var.cloudfront_headers_profile == "minimal" ? 1 : 0`) with HSTS + nosniff + X-Frame-Options + Referrer-Policy only.
 6. Gate `aws_cloudfront_response_headers_policy.site` itself with `count = var.cloudfront_headers_profile == "strict" ? 1 : 0`.
-7. Verify `./scripts/tf.sh millsymills plan` empty (every default is `true` / `"strict"`).
-8. Verify `./scripts/tf.sh p41m0n plan` empty (no tfvars changes yet).
+7. Verify `./scripts/tf.sh millsymills plan` empty (every default is `true` / `"strict"`; `moved` blocks preserve all existing addresses).
+8. Verify `./scripts/tf.sh p41m0n plan` resource-set is identical to its pre-toggle baseline (the ~43/8/4 pre-existing drift carries through unchanged — no tfvars change means defaults stay true means TF still wants the same resources). Use a diff-of-plans against a fresh `origin/main` checkout to confirm zero new resource lines added or removed.
 9. Merge.
 
 ### Cleanup PR (millsymills.com), single coordinated commit
@@ -260,7 +260,7 @@ magick ~/Downloads/IMG_0220_Original.jpg -auto-orient -strip -quality 85 face-of
 10. In `infra/cloudfront.tf`, reword the comments around `aws_cloudfront_response_headers_policy.api` (lines ~174-182) and `aws_cloudfront_origin_request_policy.csp_report` and `aws_lambda_permission.csp_report_cloudfront` (lines ~209-216) that name `p41m0n.com` as the CORP `cross-origin` consumer. The CORP `cross-origin` value stays (architecturally correct for any future cross-origin caller); only the comment changes — e.g., "future cross-origin caller (none currently)."
 11. Delete the `rehearsal` GitHub Environment: `gh api -X DELETE repos/millsmillsymills/millsymills.com/environments/rehearsal`. Run this command from the operator's terminal after merge; do not script it into the workflow file (it requires elevated `gh` auth).
 12. Verify `./scripts/tf.sh millsymills plan` empty after merge.
-13. Verify `./scripts/tf.sh p41m0n plan` still empty (cleanup PR is source-only; no Terraform impact).
+13. Verify `./scripts/tf.sh p41m0n plan` resource-set is identical to its pre-cleanup baseline (cleanup PR is source-only; the pre-existing ~43/8/4 drift carries through unchanged — no Terraform impact expected).
 14. Verify CI green on the cleanup PR — specifically `assert-security-controls-paths.sh` (proves the `security-controls.ts` edits caught all stale references).
 
 ### Content PR (p41m0n.com)
