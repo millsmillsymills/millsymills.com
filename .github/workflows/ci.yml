@@ -90,8 +90,6 @@ jobs:
         # Deep-link suite drives the prebuilt dist/ via `astro preview`,
         # so it runs after Build. Playwright's webServer block boots
         # preview on 127.0.0.1:4321 for the duration of the run.
-        # astro preview reloads astro.config.mjs, whose CI=true guard
-        # demands SITE_URL — same hardcoded value as Typecheck/Build.
         run: npm run test:e2e
 
       # ---- post-build asserts (consume dist/) ----
