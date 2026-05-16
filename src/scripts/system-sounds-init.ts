@@ -37,7 +37,12 @@ function bindToggle(): void {
 function init(): void {
 	window.addEventListener('mills:play-sound', (e) => play(e.detail.kind));
 	window.addEventListener('mills:boot-done', () => play('startup'));
-	window.addEventListener('error', () => play('error'));
+	// Gate on `e.error != null` so resource-load failures (broken <img>,
+	// <script>, etc., which can also surface as ErrorEvent in some flows)
+	// don't chime — only real uncaught runtime errors do.
+	window.addEventListener('error', (e) => {
+		if (e.error != null) play('error');
+	});
 
 	window.addEventListener('pointerdown', markGesture, { once: true, capture: true });
 	window.addEventListener('keydown', markGesture, { once: true, capture: true });

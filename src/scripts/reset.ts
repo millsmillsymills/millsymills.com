@@ -84,6 +84,12 @@ function performReset(opts: ResetOptions): void {
 	// Purge has already committed; the overlay+hold is a cosmetic farewell.
 	// If the user closes the tab mid-animation, state is already gone.
 	if (showShutdownOverlay()) {
+		// Recycle chime is gated on the overlay path because the
+		// reduced-motion / no-overlay branch reloads synchronously below
+		// and would tear the page down before the audio engine could
+		// start playback. Trading a chime for honesty about reduced-
+		// motion preference is the right call.
+		dispatchPlaySound('reset');
 		window.setTimeout(() => {
 			window.location.href = target;
 		}, SHUTDOWN_HOLD_MS);
@@ -110,7 +116,6 @@ let triggerWasFocusable = false;
 function onYesClick(): void {
 	const opts = activeOpts;
 	closeModal();
-	dispatchPlaySound('reset');
 	performReset(opts);
 }
 
