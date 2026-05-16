@@ -117,28 +117,6 @@ const mailPow = buildMailPowManifest('mills@millsymills.com', 'mills.mail.v1', 1
  */
 const vscodeHighlights = await prerenderHighlights();
 
-const siteUrl = process.env.SITE_URL ?? 'https://millsymills.com';
-const noIndex = process.env.NO_INDEX === 'true';
-
-// Footgun guards — fail the build rather than deploy wrong.
-try {
-	new URL(siteUrl);
-} catch {
-	throw new Error(`astro.config: SITE_URL is not a valid URL: ${siteUrl}`);
-}
-
-if (noIndex && siteUrl.includes('millsymills.com')) {
-	throw new Error(
-		`astro.config: refusing to build with NO_INDEX=true and SITE_URL pointing at millsymills.com (${siteUrl}). This combination would ship a noindexed build to the production domain.`,
-	);
-}
-
-if (process.env.CI === 'true' && !process.env.SITE_URL) {
-	throw new Error(
-		'astro.config: SITE_URL must be set in CI builds. Local dev defaults to https://millsymills.com.',
-	);
-}
-
 /**
  * Vite plugin: when a source file is loaded via `?raw` into the vscode
  * file-tree snippet bundler, strip any hardcoded production URL from the
@@ -167,10 +145,9 @@ function scrubVscodeSnippets() {
 
 export default defineConfig({
 	output: 'static',
-	site: siteUrl,
+	site: 'https://millsymills.com',
 	vite: {
 		define: {
-			'import.meta.env.NO_INDEX': JSON.stringify(noIndex ? 'true' : 'false'),
 			'import.meta.env.PUBLIC_GIT_SHA': JSON.stringify(gitSha),
 			// Single JSON.stringify: Vite substitutes the literal `[{...}, ...]`
 			// at build time, so consumers get a real array (no JSON.parse needed).
