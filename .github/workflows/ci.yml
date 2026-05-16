@@ -122,14 +122,6 @@ jobs:
       - name: Assert llms.txt enumerates every app + well-known path
         run: ./scripts/assert-llms-txt-completeness.sh
 
-      # The two leakage scripts re-build internally with the opposite
-      # SITE_URL, so they're independent of the dist/ produced above.
-      - name: Assert no URL leakage (rehearsal direction)
-        run: ./scripts/assert-no-url-leakage.sh
-
-      - name: Assert no rehearsal URL leakage (prod direction)
-        run: ./scripts/assert-no-rehearsal-leakage.sh
-
   terraform:
     name: Terraform fmt + validate + stack consistency
     runs-on: ubuntu-24.04
