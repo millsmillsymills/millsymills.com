@@ -131,6 +131,7 @@
 	--c-grab: url('/cursors/3dsmove.png') 16 16, grab;
 	--c-grabbing: url('/cursors/3dsmove.png') 16 16, grabbing;
 	--c-not-allowed: url('/cursors/3dsno.png') 16 16, not-allowed;
+	--c-resize-nwse: url('/cursors/3dsnwse.png') 16 16, nwse-resize;
 }
 
 :root[data-theme='bimbows'] {
@@ -342,13 +343,10 @@ select,
 	cursor: var(--c-text);
 }
 
-/* Bare anchors get the XP link cursor without requiring component-level
- * styling — most launchers already set --c-pointer explicitly. */
 a {
 	cursor: var(--c-pointer);
 }
 
-/* Disabled controls get the not-allowed variant. */
 button[disabled],
 input[disabled],
 select[disabled],
@@ -661,7 +659,7 @@ a {
 	bottom: 0;
 	width: 14px;
 	height: 14px;
-	cursor: nwse-resize;
+	cursor: var(--c-resize-nwse);
 	/* Block the browser's default touch-scroll/pan claim so the first
 	 * pointermove during a resize gesture isn't converted into a scroll
 	 * (which fires pointercancel and tears down the gesture mid-stroke
@@ -1303,7 +1301,7 @@ body.mshell-app-open {
 	height: 22px;
 	font-size: 13px;
 	line-height: 1;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 }
 .flag-toast__dismiss:hover {
 	color: var(--neon-pink);
