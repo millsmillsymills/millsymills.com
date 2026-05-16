@@ -1,12 +1,62 @@
 // Canonical app metadata. Used by Desktop, MobileFallback, and the
 // per-app dynamic route for OG-tag / shareable-URL rendering.
 
+/**
+ * Sheet name (under `public/images/winicons/<sheet>.png`) plus the
+ * 0-indexed grid cell to render. The sprite sheets are the XP WinIcons
+ * pack at three native cell sizes; pick whichever matches the target
+ * render size best. The cell math lives in `iconSpriteStyle` below so
+ * adding a second sprite-sourced icon is a one-liner in this file.
+ *
+ * Sheet grids (col x row):
+ *   WinIcons_16: 23 x 23 (cell = 16px)
+ *   WinIcons_32: 23 x 22 (cell = 32px)
+ *   WinIcons_48: 20 x 20 (cell = 48px)
+ */
+export interface IconSpriteRef {
+	readonly sheet: 'WinIcons_16' | 'WinIcons_32' | 'WinIcons_48';
+	readonly col: number;
+	readonly row: number;
+}
+
+interface SpriteGrid {
+	readonly cols: number;
+	readonly rows: number;
+}
+
+const SPRITE_GRID: Record<IconSpriteRef['sheet'], SpriteGrid> = {
+	WinIcons_16: { cols: 23, rows: 23 },
+	WinIcons_32: { cols: 23, rows: 22 },
+	WinIcons_48: { cols: 20, rows: 20 },
+};
+
+/**
+ * Build the inline style for a sprite-sourced icon at `renderSize` px.
+ * The background-size is the full sheet scaled so each cell renders at
+ * `renderSize`, so the same sprite ref renders correctly at any target
+ * size (72px desktop, 56px mobile, etc.).
+ */
+export function iconSpriteStyle(ref: IconSpriteRef, renderSize: number): string {
+	const grid = SPRITE_GRID[ref.sheet];
+	const url = `/images/winicons/${ref.sheet}.png`;
+	const sheetW = grid.cols * renderSize;
+	const sheetH = grid.rows * renderSize;
+	const posX = -ref.col * renderSize;
+	const posY = -ref.row * renderSize;
+	return `background-image:url('${url}');background-position:${posX}px ${posY}px;background-size:${sheetW}px ${sheetH}px`;
+}
+
 export interface AppDef {
 	readonly id: string;
 	readonly label: string;
 	readonly glyph: string;
 	/** Path under public/ to a PNG icon. When set, replaces glyph in the UI. */
 	readonly iconUrl?: string;
+	/**
+	 * Sprite-sourced icon from the XP WinIcons pack. Wins over `iconUrl`
+	 * and `glyph` when present. See `IconSpriteRef` for sheet/cell math.
+	 */
+	readonly iconSprite?: IconSpriteRef;
 	readonly title: string;
 	/** Hint copy for the per-app OG description. Keep under ~150 chars. */
 	readonly ogDescription: string;
@@ -219,7 +269,11 @@ const _APPS_DATA = [
 		id: 'trash',
 		label: 'trash',
 		glyph: '🗑️',
-		iconUrl: '/images/icons/vaporwave/dixie-cup.png',
+		// XP-native Recycle Bin from the WinIcons sprite pack. Replaces the
+		// vaporwave `dixie-cup.png` placeholder with the canonical aqua-glass
+		// XP Recycle Bin (row 9, col 10 of WinIcons_48.png) -- the strongest
+		// "this is literally the XP icon for this app" match in the pack.
+		iconSprite: { sheet: 'WinIcons_48', col: 10, row: 9 },
 		title: 'recycle.bin',
 		ogDescription: 'deleted files. mostly garbage.',
 		x: 280,
