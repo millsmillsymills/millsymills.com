@@ -46,7 +46,7 @@ const RAW_BY_PATH: Record<string, string> = {
  * the byte content matches what highlight-build.mjs prerenders for the
  * same path. Production-URL scrubbing applies here for the same reason
  * astro.config.mjs's scrubVscodeSnippets plugin scrubs at build time:
- * `assert-no-url-leakage.sh` rejects literal hardcodes in dist/.
+ * keep literal production URLs from leaking into the editor demo content.
  */
 const projectFiles: Record<string, { content: string; language: string }> = Object.fromEntries(
 	PROJECT_SNIPPETS.map((entry) => {
