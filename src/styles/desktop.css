@@ -123,13 +123,14 @@
 	--font-xp-ui: 'Tahoma', 'Geneva', system-ui, sans-serif;
 	--font-xp-display: 'Franklin Gothic ITC', 'Georgia', serif;
 
-	/* Cursors — unchanged */
-	--c-default: url('/cursors/3dwarro.png') 0 0, default;
+	/* Cursors — Silver XP set (3ds*). Silver pack ships no link/hand cursor,
+	 * so --c-pointer keeps the generic default_link.png. */
+	--c-default: url('/cursors/3dsarro.png') 0 0, default;
 	--c-pointer: url('/cursors/default_link.png') 6 2, pointer;
-	--c-text: url('/cursors/3dwbeam.png') 16 16, text;
-	--c-grab: url('/cursors/3dwmove.png') 16 16, grab;
-	--c-grabbing: url('/cursors/3dwmove.png') 16 16, grabbing;
-	--c-not-allowed: url('/cursors/3dwno.png') 16 16, not-allowed;
+	--c-text: url('/cursors/3dsbeam.png') 16 16, text;
+	--c-grab: url('/cursors/3dsmove.png') 16 16, grab;
+	--c-grabbing: url('/cursors/3dsmove.png') 16 16, grabbing;
+	--c-not-allowed: url('/cursors/3dsno.png') 16 16, not-allowed;
 }
 
 :root[data-theme='bimbows'] {
