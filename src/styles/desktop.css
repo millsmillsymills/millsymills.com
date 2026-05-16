@@ -581,10 +581,10 @@ a {
 	padding: 8px 10px;
 	background: var(--titlebar-bg);
 	color: var(--titlebar-fg);
-	font-family: var(--font-pixel);
-	font-size: 10px;
+	font-family: var(--font-xp-ui);
+	font-size: 11px;
 	font-weight: 700;
-	letter-spacing: 0.3px;
+	letter-spacing: 0.2px;
 	text-transform: lowercase;
 	cursor: var(--c-grab);
 	user-select: none;
