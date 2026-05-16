@@ -342,6 +342,21 @@ select,
 	cursor: var(--c-text);
 }
 
+/* Bare anchors get the XP link cursor without requiring component-level
+ * styling — most launchers already set --c-pointer explicitly. */
+a {
+	cursor: var(--c-pointer);
+}
+
+/* Disabled controls get the not-allowed variant. */
+button[disabled],
+input[disabled],
+select[disabled],
+textarea[disabled],
+[aria-disabled='true'] {
+	cursor: var(--c-not-allowed);
+}
+
 /* ------------------------------------------------------------------ */
 /* base reset                                                         */
 /* ------------------------------------------------------------------ */
