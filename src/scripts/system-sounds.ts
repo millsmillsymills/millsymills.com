@@ -84,3 +84,16 @@ export function markGesture(): void {
 		play('startup');
 	}
 }
+
+/**
+ * Test-only: clear module-scope state so each spec starts from a
+ * known fresh-tab baseline. Underscored to make the not-for-prod
+ * intent loud. Mirrors the `__resetInit` pattern used in `reset.ts`.
+ */
+export function __resetForTests(): void {
+	for (const k of Object.keys(pool) as SoundKind[]) {
+		delete pool[k];
+	}
+	userGestureSeen = false;
+	pendingStartup = false;
+}
