@@ -527,6 +527,14 @@ a {
 	filter: drop-shadow(2px 2px 0 var(--bg-void));
 }
 
+.desktop-icon__sprite {
+	display: block;
+	width: 72px;
+	height: 72px;
+	background-repeat: no-repeat;
+	filter: drop-shadow(2px 2px 0 var(--bg-void));
+}
+
 .desktop-icon__label {
 	display: inline-block;
 	max-width: 116px;
@@ -1119,6 +1127,17 @@ a {
 	box-shadow: 2px 2px 0 0 var(--neon-pink);
 	object-fit: contain;
 	padding: 6px;
+}
+
+.mshell-icon__sprite {
+	display: block;
+	width: 56px;
+	height: 56px;
+	border: 2px solid var(--neon-cyan);
+	border-radius: 14px;
+	box-shadow: 2px 2px 0 0 var(--neon-pink);
+	background-color: var(--bg-raised);
+	background-repeat: no-repeat;
 }
 
 .mshell-icon__label {
