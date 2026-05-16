@@ -1,4 +1,6 @@
 resource "aws_cloudfront_function" "index_rewrite" {
+  count = var.enable_index_rewrite ? 1 : 0
+
   name    = "${replace(var.domain, ".", "-")}-index-rewrite"
   runtime = "cloudfront-js-2.0"
   comment = "Rewrite directory URIs to the corresponding index.html"
@@ -21,6 +23,8 @@ resource "aws_cloudfront_function" "index_rewrite" {
 # `CloudFront-Viewer-TLS` (the negotiated TLS state we want to surface)
 # and `Origin` (used for the CORS allow-origin echo).
 resource "aws_cloudfront_origin_request_policy" "inspector_tls" {
+  count = var.enable_inspector_tls ? 1 : 0
+
   name    = "${replace(var.domain, ".", "-")}-inspector-tls-origin-req"
   comment = "Forward CloudFront-Viewer-TLS + Origin to the inspector_tls Lambda; let CloudFront rewrite Host"
 
@@ -54,6 +58,8 @@ resource "aws_cloudfront_origin_request_policy" "inspector_tls" {
 # Host is intentionally omitted so CloudFront rewrites it to the Lambda
 # Function URL hostname.
 resource "aws_cloudfront_origin_request_policy" "csp_report" {
+  count = var.enable_csp_report ? 1 : 0
+
   name    = "${replace(var.domain, ".", "-")}-csp-report-origin-req"
   comment = "Forward whitelisted headers to csp_report Lambda; let CloudFront rewrite Host"
 
@@ -74,6 +80,8 @@ resource "aws_cloudfront_origin_request_policy" "csp_report" {
 }
 
 resource "aws_cloudfront_response_headers_policy" "site" {
+  count = var.cloudfront_headers_profile == "strict" ? 1 : 0
+
   name    = "${replace(var.domain, ".", "-")}-security-headers"
   comment = "Security headers for ${var.domain}"
 
@@ -164,6 +172,41 @@ resource "aws_cloudfront_response_headers_policy" "site" {
   }
 }
 
+# Minimal response-headers policy for stacks that don't ship the strict
+# CSP/COOP/COEP/CORP/Permissions-Policy bundle. Used by the p41m0n
+# static-image stack (no JS, no third-party assets, single image).
+# HSTS + nosniff + frame-options + Referrer-Policy is the floor — every
+# property below is independent of CSP and should ship on every stack.
+resource "aws_cloudfront_response_headers_policy" "site_minimal" {
+  count = var.cloudfront_headers_profile == "minimal" ? 1 : 0
+
+  name    = "${replace(var.domain, ".", "-")}-security-headers-minimal"
+  comment = "Minimal security headers for ${var.domain} (HSTS + nosniff + frame-options + Referrer-Policy)"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 63072000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    frame_options {
+      frame_option = "SAMEORIGIN"
+      override     = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
+}
+
 # Response-headers policy for the /api/tls/* JSON endpoint. Authored
 # separately from the document policy (`site` above) because:
 #
@@ -186,6 +229,8 @@ resource "aws_cloudfront_response_headers_policy" "site" {
 # happens to inherit from it, and shipping it consistently keeps the
 # /security/ promise honest across response classes).
 resource "aws_cloudfront_response_headers_policy" "api" {
+  count = var.enable_inspector_tls ? 1 : 0
+
   name    = "${replace(var.domain, ".", "-")}-api-headers"
   comment = "Security headers for ${var.domain} JSON APIs (CORP cross-origin)"
 
@@ -244,6 +289,8 @@ resource "aws_cloudfront_response_headers_policy" "api" {
 # parity with the rest of the surface; the only delta from `api` is the
 # CORP value flip.
 resource "aws_cloudfront_response_headers_policy" "csp_report" {
+  count = var.enable_csp_report ? 1 : 0
+
   name    = "${replace(var.domain, ".", "-")}-csp-report-headers"
   comment = "Security headers for ${var.domain} /api/csp-report (CORP same-origin)"
 
@@ -284,8 +331,12 @@ resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = [var.domain, "www.${var.domain}", "mta-sts.${var.domain}"]
-  price_class         = "PriceClass_100" # US/EU only — cheapest
+  aliases = compact([
+    var.domain,
+    "www.${var.domain}",
+    var.enable_mta_sts_alias ? "mta-sts.${var.domain}" : "",
+  ])
+  price_class = "PriceClass_100" # US/EU only — cheapest
 
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
@@ -297,32 +348,38 @@ resource "aws_cloudfront_distribution" "site" {
   # `infra/inspector_tls.tf` for the function + URL. The OAC sigv4-signs
   # every origin request so the Function URL can run with
   # authorization_type = AWS_IAM and reject the public bypass path.
-  origin {
-    domain_name              = local.inspector_tls_origin_host
-    origin_id                = "lambda-${local.inspector_tls_name}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.inspector_tls.id
+  dynamic "origin" {
+    for_each = var.enable_inspector_tls ? [1] : []
+    content {
+      domain_name              = local.inspector_tls_origin_host
+      origin_id                = "lambda-${local.inspector_tls_name}"
+      origin_access_control_id = aws_cloudfront_origin_access_control.inspector_tls[0].id
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
     }
   }
 
   # Lambda Function URL origin for the /api/csp-report endpoint. See
   # `infra/csp_report.tf` for the function + URL. Same OAC pattern as
   # inspector_tls — public bypass closed at the AWS_IAM auth boundary.
-  origin {
-    domain_name              = local.csp_report_origin_host
-    origin_id                = "lambda-${local.csp_report_name}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.csp_report.id
+  dynamic "origin" {
+    for_each = var.enable_csp_report ? [1] : []
+    content {
+      domain_name              = local.csp_report_origin_host
+      origin_id                = "lambda-${local.csp_report_name}"
+      origin_access_control_id = aws_cloudfront_origin_access_control.csp_report[0].id
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
     }
   }
 
@@ -335,11 +392,14 @@ resource "aws_cloudfront_distribution" "site" {
 
     # AWS-managed CachingOptimized
     cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.site.id
+    response_headers_policy_id = var.cloudfront_headers_profile == "minimal" ? aws_cloudfront_response_headers_policy.site_minimal[0].id : aws_cloudfront_response_headers_policy.site[0].id
 
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.index_rewrite.arn
+    dynamic "function_association" {
+      for_each = var.enable_index_rewrite ? [1] : []
+      content {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.index_rewrite[0].arn
+      }
     }
   }
 
@@ -350,18 +410,21 @@ resource "aws_cloudfront_distribution" "site" {
   # Host header match against their own URL, and that managed policy forwards
   # the viewer's Host (e.g. millsymills.com) → Lambda 403 → CloudFront's
   # custom_error_response substitutes /404.html.
-  ordered_cache_behavior {
-    path_pattern           = "/api/tls/*"
-    target_origin_id       = "lambda-${local.inspector_tls_name}"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    viewer_protocol_policy = "https-only"
-    compress               = true
+  dynamic "ordered_cache_behavior" {
+    for_each = var.enable_inspector_tls ? [1] : []
+    content {
+      path_pattern           = "/api/tls/*"
+      target_origin_id       = "lambda-${local.inspector_tls_name}"
+      allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+      cached_methods         = ["GET", "HEAD"]
+      viewer_protocol_policy = "https-only"
+      compress               = true
 
-    # AWS-managed CachingDisabled
-    cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    origin_request_policy_id   = aws_cloudfront_origin_request_policy.inspector_tls.id
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.api.id
+      # AWS-managed CachingDisabled
+      cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+      origin_request_policy_id   = aws_cloudfront_origin_request_policy.inspector_tls[0].id
+      response_headers_policy_id = aws_cloudfront_response_headers_policy.api[0].id
+    }
   }
 
   # /api/csp-report → csp_report Lambda. POST is the only meaningful
@@ -372,18 +435,21 @@ resource "aws_cloudfront_distribution" "site" {
   # aren't cacheable anyway, and same-origin host rewrite uses our
   # custom `csp_report` origin-request policy for the same reason as
   # inspector_tls (Lambda Function URLs enforce Host header match).
-  ordered_cache_behavior {
-    path_pattern           = "/api/csp-report"
-    target_origin_id       = "lambda-${local.csp_report_name}"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods         = ["GET", "HEAD"]
-    viewer_protocol_policy = "https-only"
-    compress               = true
+  dynamic "ordered_cache_behavior" {
+    for_each = var.enable_csp_report ? [1] : []
+    content {
+      path_pattern           = "/api/csp-report"
+      target_origin_id       = "lambda-${local.csp_report_name}"
+      allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+      cached_methods         = ["GET", "HEAD"]
+      viewer_protocol_policy = "https-only"
+      compress               = true
 
-    # AWS-managed CachingDisabled
-    cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    origin_request_policy_id   = aws_cloudfront_origin_request_policy.csp_report.id
-    response_headers_policy_id = aws_cloudfront_response_headers_policy.csp_report.id
+      # AWS-managed CachingDisabled
+      cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+      origin_request_policy_id   = aws_cloudfront_origin_request_policy.csp_report[0].id
+      response_headers_policy_id = aws_cloudfront_response_headers_policy.csp_report[0].id
+    }
   }
 
   custom_error_response {
@@ -409,4 +475,36 @@ resource "aws_cloudfront_distribution" "site" {
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.3_2025"
   }
+}
+
+# moved blocks for the count-gating refactor (2026-05-15 p41m0n teardown spec).
+
+moved {
+  from = aws_cloudfront_function.index_rewrite
+  to   = aws_cloudfront_function.index_rewrite[0]
+}
+
+moved {
+  from = aws_cloudfront_origin_request_policy.inspector_tls
+  to   = aws_cloudfront_origin_request_policy.inspector_tls[0]
+}
+
+moved {
+  from = aws_cloudfront_origin_request_policy.csp_report
+  to   = aws_cloudfront_origin_request_policy.csp_report[0]
+}
+
+moved {
+  from = aws_cloudfront_response_headers_policy.api
+  to   = aws_cloudfront_response_headers_policy.api[0]
+}
+
+moved {
+  from = aws_cloudfront_response_headers_policy.csp_report
+  to   = aws_cloudfront_response_headers_policy.csp_report[0]
+}
+
+moved {
+  from = aws_cloudfront_response_headers_policy.site
+  to   = aws_cloudfront_response_headers_policy.site[0]
 }
