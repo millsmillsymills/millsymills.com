@@ -16,11 +16,15 @@ locals {
 }
 
 resource "aws_sns_topic" "ct_monitor" {
+  count = var.enable_ct_monitor ? 1 : 0
+
   name = local.ct_name
 }
 
 resource "aws_sns_topic_subscription" "ct_monitor_email" {
-  topic_arn = aws_sns_topic.ct_monitor.arn
+  count = var.enable_ct_monitor ? 1 : 0
+
+  topic_arn = aws_sns_topic.ct_monitor[0].arn
   protocol  = "email"
   endpoint  = local.ct_alert_email
 }
@@ -32,6 +36,8 @@ data "archive_file" "ct_monitor" {
 }
 
 resource "aws_iam_role" "ct_monitor" {
+  count = var.enable_ct_monitor ? 1 : 0
+
   name = "${local.ct_name}-lambda"
 
   assume_role_policy = jsonencode({
@@ -45,20 +51,24 @@ resource "aws_iam_role" "ct_monitor" {
 }
 
 resource "aws_iam_role_policy_attachment" "ct_monitor_basic" {
-  role       = aws_iam_role.ct_monitor.name
+  count = var.enable_ct_monitor ? 1 : 0
+
+  role       = aws_iam_role.ct_monitor[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_role_policy" "ct_monitor_publish" {
+  count = var.enable_ct_monitor ? 1 : 0
+
   name = "publish"
-  role = aws_iam_role.ct_monitor.id
+  role = aws_iam_role.ct_monitor[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = "sns:Publish"
-      Resource = aws_sns_topic.ct_monitor.arn
+      Resource = aws_sns_topic.ct_monitor[0].arn
     }]
   })
 }
@@ -66,13 +76,17 @@ resource "aws_iam_role_policy" "ct_monitor_publish" {
 # Pre-create the log group so Terraform owns retention; otherwise
 # Lambda creates it on first invoke with retention=Never (forever).
 resource "aws_cloudwatch_log_group" "ct_monitor" {
+  count = var.enable_ct_monitor ? 1 : 0
+
   name              = "/aws/lambda/${local.ct_name}"
   retention_in_days = 30
 }
 
 resource "aws_lambda_function" "ct_monitor" {
+  count = var.enable_ct_monitor ? 1 : 0
+
   function_name    = local.ct_name
-  role             = aws_iam_role.ct_monitor.arn
+  role             = aws_iam_role.ct_monitor[0].arn
   filename         = data.archive_file.ct_monitor.output_path
   source_code_hash = data.archive_file.ct_monitor.output_base64sha256
   handler          = "ct_monitor.lambda_handler"
@@ -84,31 +98,89 @@ resource "aws_lambda_function" "ct_monitor" {
   environment {
     variables = {
       DOMAIN                    = var.domain
-      SNS_TOPIC_ARN             = aws_sns_topic.ct_monitor.arn
+      SNS_TOPIC_ARN             = aws_sns_topic.ct_monitor[0].arn
       ALLOWED_ISSUER_SUBSTRINGS = join(",", concat(["Amazon"], var.ct_monitor_extra_issuers))
       LOOKBACK_HOURS            = "48"
     }
   }
 
-  depends_on = [aws_cloudwatch_log_group.ct_monitor]
+  depends_on = [aws_cloudwatch_log_group.ct_monitor[0]]
 }
 
 resource "aws_cloudwatch_event_rule" "ct_monitor" {
+  count = var.enable_ct_monitor ? 1 : 0
+
   name                = local.ct_name
   description         = "Daily CT log monitor for ${var.domain}"
   schedule_expression = "cron(0 9 * * ? *)" # 09:00 UTC daily
 }
 
 resource "aws_cloudwatch_event_target" "ct_monitor" {
-  rule      = aws_cloudwatch_event_rule.ct_monitor.name
+  count = var.enable_ct_monitor ? 1 : 0
+
+  rule      = aws_cloudwatch_event_rule.ct_monitor[0].name
   target_id = "lambda"
-  arn       = aws_lambda_function.ct_monitor.arn
+  arn       = aws_lambda_function.ct_monitor[0].arn
 }
 
 resource "aws_lambda_permission" "ct_monitor_eventbridge" {
+  count = var.enable_ct_monitor ? 1 : 0
+
   statement_id  = "AllowExecutionFromEventBridge"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ct_monitor.function_name
+  function_name = aws_lambda_function.ct_monitor[0].function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.ct_monitor.arn
+  source_arn    = aws_cloudwatch_event_rule.ct_monitor[0].arn
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+
+moved {
+  from = aws_sns_topic.ct_monitor
+  to   = aws_sns_topic.ct_monitor[0]
+}
+
+moved {
+  from = aws_sns_topic_subscription.ct_monitor_email
+  to   = aws_sns_topic_subscription.ct_monitor_email[0]
+}
+
+moved {
+  from = aws_iam_role.ct_monitor
+  to   = aws_iam_role.ct_monitor[0]
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.ct_monitor_basic
+  to   = aws_iam_role_policy_attachment.ct_monitor_basic[0]
+}
+
+moved {
+  from = aws_iam_role_policy.ct_monitor_publish
+  to   = aws_iam_role_policy.ct_monitor_publish[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_group.ct_monitor
+  to   = aws_cloudwatch_log_group.ct_monitor[0]
+}
+
+moved {
+  from = aws_lambda_function.ct_monitor
+  to   = aws_lambda_function.ct_monitor[0]
+}
+
+moved {
+  from = aws_cloudwatch_event_rule.ct_monitor
+  to   = aws_cloudwatch_event_rule.ct_monitor[0]
+}
+
+moved {
+  from = aws_cloudwatch_event_target.ct_monitor
+  to   = aws_cloudwatch_event_target.ct_monitor[0]
+}
+
+moved {
+  from = aws_lambda_permission.ct_monitor_eventbridge
+  to   = aws_lambda_permission.ct_monitor_eventbridge[0]
 }

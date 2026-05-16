@@ -36,6 +36,8 @@ data "archive_file" "inspector_tls" {
 }
 
 resource "aws_iam_role" "inspector_tls" {
+  count = var.enable_inspector_tls ? 1 : 0
+
   name = "${local.inspector_tls_name}-lambda"
 
   assume_role_policy = jsonencode({
@@ -49,20 +51,26 @@ resource "aws_iam_role" "inspector_tls" {
 }
 
 resource "aws_iam_role_policy_attachment" "inspector_tls_basic" {
-  role       = aws_iam_role.inspector_tls.name
+  count = var.enable_inspector_tls ? 1 : 0
+
+  role       = aws_iam_role.inspector_tls[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 # Pre-create the log group so retention is owned by Terraform; otherwise
 # Lambda creates it on first invoke with retention=Never.
 resource "aws_cloudwatch_log_group" "inspector_tls" {
+  count = var.enable_inspector_tls ? 1 : 0
+
   name              = "/aws/lambda/${local.inspector_tls_name}"
   retention_in_days = 14
 }
 
 resource "aws_lambda_function" "inspector_tls" {
+  count = var.enable_inspector_tls ? 1 : 0
+
   function_name    = local.inspector_tls_name
-  role             = aws_iam_role.inspector_tls.arn
+  role             = aws_iam_role.inspector_tls[0].arn
   filename         = data.archive_file.inspector_tls.output_path
   source_code_hash = data.archive_file.inspector_tls.output_base64sha256
   handler          = "inspector_tls.handler"
@@ -71,7 +79,7 @@ resource "aws_lambda_function" "inspector_tls" {
   timeout          = 5
   memory_size      = 128
 
-  depends_on = [aws_cloudwatch_log_group.inspector_tls]
+  depends_on = [aws_cloudwatch_log_group.inspector_tls[0]]
 }
 
 # Function URL is the origin CloudFront forwards to. Locked to AWS_IAM
@@ -85,7 +93,9 @@ resource "aws_lambda_function" "inspector_tls" {
 # claim is only true for `millsymills.com/api/tls/inspect`, not for the
 # raw Function URL — so we close the bypass at the Lambda boundary.
 resource "aws_lambda_function_url" "inspector_tls" {
-  function_name      = aws_lambda_function.inspector_tls.function_name
+  count = var.enable_inspector_tls ? 1 : 0
+
+  function_name      = aws_lambda_function.inspector_tls[0].function_name
   authorization_type = "AWS_IAM"
 }
 
@@ -104,6 +114,8 @@ resource "aws_lambda_function_url" "inspector_tls" {
 # /404.html. Subsequent applies are unaffected because the permission
 # already exists.
 resource "aws_cloudfront_origin_access_control" "inspector_tls" {
+  count = var.enable_inspector_tls ? 1 : 0
+
   name                              = local.inspector_tls_name
   origin_access_control_origin_type = "lambda"
   signing_behavior                  = "always"
@@ -115,9 +127,11 @@ resource "aws_cloudfront_origin_access_control" "inspector_tls" {
 # direct call from the public internet returns 403, so the bypass path
 # the /security/ page implicitly disclaimed is closed.
 resource "aws_lambda_permission" "inspector_tls_cloudfront" {
+  count = var.enable_inspector_tls ? 1 : 0
+
   statement_id           = "AllowCloudFrontServicePrincipal"
   action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.inspector_tls.function_name
+  function_name          = aws_lambda_function.inspector_tls[0].function_name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.site.arn
   function_url_auth_type = "AWS_IAM"
@@ -128,5 +142,44 @@ resource "aws_lambda_permission" "inspector_tls_cloudfront" {
 # `https://<id>.lambda-url.<region>.on.aws/`, stable across deploys for
 # a given function name.
 locals {
-  inspector_tls_origin_host = replace(replace(aws_lambda_function_url.inspector_tls.function_url, "https://", ""), "/", "")
+  inspector_tls_origin_host = var.enable_inspector_tls ? replace(replace(aws_lambda_function_url.inspector_tls[0].function_url, "https://", ""), "/", "") : null
+}
+
+# moved blocks for the count-gating refactor (2026-05-15 p41m0n teardown spec).
+# Without these, every existing instance on the millsymills stack would re-address
+# from `aws_X.Y` to `aws_X.Y[0]` and Terraform would queue destructive replacements.
+
+moved {
+  from = aws_iam_role.inspector_tls
+  to   = aws_iam_role.inspector_tls[0]
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.inspector_tls_basic
+  to   = aws_iam_role_policy_attachment.inspector_tls_basic[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_group.inspector_tls
+  to   = aws_cloudwatch_log_group.inspector_tls[0]
+}
+
+moved {
+  from = aws_lambda_function.inspector_tls
+  to   = aws_lambda_function.inspector_tls[0]
+}
+
+moved {
+  from = aws_lambda_function_url.inspector_tls
+  to   = aws_lambda_function_url.inspector_tls[0]
+}
+
+moved {
+  from = aws_cloudfront_origin_access_control.inspector_tls
+  to   = aws_cloudfront_origin_access_control.inspector_tls[0]
+}
+
+moved {
+  from = aws_lambda_permission.inspector_tls_cloudfront
+  to   = aws_lambda_permission.inspector_tls_cloudfront[0]
 }

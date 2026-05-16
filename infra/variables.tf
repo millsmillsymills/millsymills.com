@@ -100,9 +100,14 @@ variable "google_workspace_verifications" {
 }
 
 variable "enable_mta_sts" {
-  description = "Publish the `_mta-sts.<domain>` TXT record so SMTP senders discover the MTA-STS policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt`. Default false because MTA-STS only makes sense once Proton (or another mail provider) is live AND the policy file has been observed by senders -- enable per-stack via `<stack>.tfvars`. The `mta-sts.<domain>` ACM SAN + CloudFront alias + A/AAAA records are provisioned regardless (they're cheap and harmless), so flipping this on later costs only a Route53 TXT publish + the policy ID bump."
+  description = "Publish the `_mta-sts.<domain>` TXT record so SMTP senders discover the MTA-STS policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt`. Default false because MTA-STS only makes sense once Proton (or another mail provider) is live AND the policy file has been observed by senders -- enable per-stack via `<stack>.tfvars`. Requires `enable_mta_sts_alias = true` so the cert SAN + CloudFront alias for `mta-sts.<domain>` exist; advertising the TXT without the host would point senders at a nonexistent endpoint."
   type        = bool
   default     = false
+
+  validation {
+    condition     = !var.enable_mta_sts || var.enable_mta_sts_alias
+    error_message = "enable_mta_sts requires enable_mta_sts_alias; the TXT discovery record advertises a hostname that only exists when the alias is provisioned."
+  }
 }
 
 variable "mta_sts_id" {
@@ -113,5 +118,87 @@ variable "mta_sts_id" {
   validation {
     condition     = can(regex("^[A-Za-z0-9]{1,32}$", var.mta_sts_id))
     error_message = "mta_sts_id must be 1-32 alphanumeric chars per RFC 8461 §3.1."
+  }
+}
+
+# ─── per-feature toggles for the p41m0n teardown (2026-05-15) ──────────
+#
+# All defaults are `true` so the millsymills stack is unaffected. The
+# p41m0n stack flips them all to `false` (or `"minimal"` for the headers
+# profile) via infra/stacks/p41m0n.tfvars. Each toggle is paired with
+# `moved` blocks in the gated file so existing state addresses survive
+# the count-gating refactor — see the "moved blocks are mandatory"
+# section in the spec for the full rationale.
+
+variable "enable_inspector_tls" {
+  description = "Provision the inspector_tls Lambda + CloudFront origin/cache-behavior + dedicated /api/tls/* response-headers policy. Drop on stacks without the /inspector/ app."
+  type        = bool
+  default     = true
+}
+
+variable "enable_csp_report" {
+  description = "Provision the csp_report Lambda + reports S3 bucket + CloudFront origin/cache-behavior + alarms + SNS topic. Drop on stacks without strict CSP / Reporting-API endpoints."
+  type        = bool
+  default     = true
+}
+
+variable "enable_webauthn_demo" {
+  description = "Provision the webauthn_demo Lambda + 2 DynamoDB tables + IAM role + log group + Function URL + 4 CloudWatch alarms + output. Requires `enable_csp_report = true` until the alarms migrate to a dedicated SNS topic (they currently publish to the shared `aws_sns_topic.csp_report_ops`). Drop on stacks without /demo/passkey."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = !var.enable_webauthn_demo || var.enable_csp_report
+    error_message = "enable_webauthn_demo requires enable_csp_report; webauthn alarms publish to the shared csp_report_ops SNS topic which only exists when csp_report is enabled."
+  }
+}
+
+variable "enable_ct_monitor" {
+  description = "Provision the ct_monitor Lambda + SNS topic + EventBridge daily schedule. Drop on stacks without CT log monitoring."
+  type        = bool
+  default     = true
+}
+
+variable "enable_access_logging" {
+  description = "Provision the <domain>-logs S3 bucket + S3 server access logging + CloudFront access-log v2 delivery as a coherent unit. Drop on stacks that don't need access logs."
+  type        = bool
+  default     = true
+}
+
+variable "enable_github_deploy_role" {
+  description = "Provision the per-stack GitHub OIDC deploy role + its trust + permissions policies + the github_deploy_role_arn output. The aws_iam_openid_connect_provider.github resource itself is account-wide and is NOT gated by this toggle. Drop on stacks without a CI deploy."
+  type        = bool
+  default     = true
+}
+
+variable "enable_index_rewrite" {
+  description = "Provision the CloudFront Function that rewrites /foo/ to /foo/index.html, plus its function_association. Drop on stacks that serve a single file (default_root_object handles the apex)."
+  type        = bool
+  default     = true
+}
+
+variable "enable_mta_sts_alias" {
+  description = "Provision the mta-sts.<domain> CloudFront alias (A + AAAA) and include the mta-sts SAN on the ACM cert. The discovery TXT is gated independently by enable_mta_sts. Drop on stacks without MTA-STS."
+  type        = bool
+  default     = true
+}
+
+variable "enable_bimi" {
+  description = "Publish the default._bimi.<domain> BIMI TXT record. Requires a real /bimi/logo.svg in the site bucket. Drop on stacks with no brand mark."
+  type        = bool
+  default     = true
+}
+
+variable "cloudfront_headers_profile" {
+  description = "Which CloudFront response-headers policy to attach to the default cache behavior. \"strict\" = full CSP + Permissions-Policy + COOP/COEP/CORP + Reporting-Endpoints (millsymills); \"minimal\" = HSTS + nosniff + frame-options + Referrer-Policy only (single-image static stacks). \"strict\" requires `enable_csp_report = true` because the CSP advertises `report-uri /api/csp-report` and a `Reporting-Endpoints` header pointing at the same path; without csp_report those headers point at a 404."
+  type        = string
+  default     = "strict"
+  validation {
+    condition     = contains(["strict", "minimal"], var.cloudfront_headers_profile)
+    error_message = "cloudfront_headers_profile must be \"strict\" or \"minimal\"."
+  }
+  validation {
+    condition     = var.cloudfront_headers_profile != "strict" || var.enable_csp_report
+    error_message = "cloudfront_headers_profile=\"strict\" requires enable_csp_report; the strict CSP advertises /api/csp-report and Reporting-Endpoints both pointing at the csp_report Lambda."
   }
 }
