@@ -17,7 +17,9 @@ import Inspector from './apps/Inspector.astro';
 import VSCode from './apps/VSCode.astro';
 import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
-import { apps } from '../../data/apps';
+import { apps, iconSpriteStyle } from '../../data/apps';
+
+const MSHELL_ICON_PX = 56;
 
 const contentFor = (id: string) => {
 	switch (id) {
@@ -82,7 +84,13 @@ const contentFor = (id: string) => {
 							data-title={a.title}
 						>
 							{
-								a.iconUrl ? (
+								a.iconSprite ? (
+									<span
+										class="mshell-icon__sprite"
+										style={iconSpriteStyle(a.iconSprite, MSHELL_ICON_PX)}
+										aria-hidden="true"
+									/>
+								) : a.iconUrl ? (
 									<img class="mshell-icon__icon" src={a.iconUrl} alt="" aria-hidden="true" />
 								) : (
 									<span class="mshell-icon__glyph" aria-hidden="true">{a.glyph}</span>

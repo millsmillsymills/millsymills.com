@@ -1,18 +1,28 @@
 ---
+import { iconSpriteStyle, type IconSpriteRef } from '../../data/apps';
+
 interface Props {
 	target: string;
 	label: string;
 	glyph: string;
 	iconUrl?: string;
+	iconSprite?: IconSpriteRef;
 }
 
-const { target, label, glyph, iconUrl } = Astro.props;
+const { target, label, glyph, iconUrl, iconSprite } = Astro.props;
+const DESKTOP_ICON_PX = 72;
 ---
 
 <li>
 	<button type="button" class="desktop-icon" data-open-window={target}>
 		{
-			iconUrl ? (
+			iconSprite ? (
+				<span
+					class="desktop-icon__sprite"
+					style={iconSpriteStyle(iconSprite, DESKTOP_ICON_PX)}
+					aria-hidden="true"
+				/>
+			) : iconUrl ? (
 				<img class="desktop-icon__icon" src={iconUrl} alt="" aria-hidden="true" />
 			) : (
 				<span class="desktop-icon__glyph" aria-hidden="true">{glyph}</span>

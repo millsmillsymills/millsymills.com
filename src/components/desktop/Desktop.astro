@@ -69,7 +69,7 @@ const contentFor = (id: string) => {
 <main class="desktop" id="desktop">
 	<span class="desktop__sparkle-layer" aria-hidden="true"></span>
 	<ul class="desktop__icons">
-		{apps.filter((a) => !a.hidden).map((a) => <DesktopIcon target={a.id} label={a.label} glyph={a.glyph} iconUrl={a.iconUrl} />)}
+		{apps.filter((a) => !a.hidden).map((a) => <DesktopIcon target={a.id} label={a.label} glyph={a.glyph} iconUrl={a.iconUrl} iconSprite={a.iconSprite} />)}
 	</ul>
 
 	{
