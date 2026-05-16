@@ -55,8 +55,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "site" {
 }
 
 resource "aws_s3_bucket_logging" "site" {
+  count = var.enable_access_logging ? 1 : 0
+
   bucket        = aws_s3_bucket.site.id
-  target_bucket = aws_s3_bucket.logs.id
+  target_bucket = aws_s3_bucket.logs[0].id
   target_prefix = "s3-access/"
 }
 
@@ -116,12 +118,16 @@ resource "aws_s3_bucket_policy" "site" {
 # --------------------------------------------------------------------
 
 resource "aws_s3_bucket" "logs" {
+  count = var.enable_access_logging ? 1 : 0
+
   bucket        = "${var.domain}-logs"
   force_destroy = false
 }
 
 resource "aws_s3_bucket_public_access_block" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  count = var.enable_access_logging ? 1 : 0
+
+  bucket = aws_s3_bucket.logs[0].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -130,14 +136,18 @@ resource "aws_s3_bucket_public_access_block" "logs" {
 }
 
 resource "aws_s3_bucket_ownership_controls" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  count = var.enable_access_logging ? 1 : 0
+
+  bucket = aws_s3_bucket.logs[0].id
   rule {
     object_ownership = "BucketOwnerEnforced"
   }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  count = var.enable_access_logging ? 1 : 0
+
+  bucket = aws_s3_bucket.logs[0].id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -153,14 +163,18 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
 # is the low-risk first step per #282; revisit Object Lock if/when
 # the bucket is replaced for another reason.
 resource "aws_s3_bucket_versioning" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  count = var.enable_access_logging ? 1 : 0
+
+  bucket = aws_s3_bucket.logs[0].id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  count = var.enable_access_logging ? 1 : 0
+
+  bucket = aws_s3_bucket.logs[0].id
 
   rule {
     id     = "expire-access-logs"
@@ -208,7 +222,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
 #   - the S3 server access logging service (for the site bucket's own logs)
 #   - the CloudWatch Logs delivery service (for CloudFront standard logs v2)
 resource "aws_s3_bucket_policy" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  count = var.enable_access_logging ? 1 : 0
+
+  bucket = aws_s3_bucket.logs[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -220,7 +236,7 @@ resource "aws_s3_bucket_policy" "logs" {
           Service = "logging.s3.amazonaws.com"
         }
         Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.logs.arn}/s3-access/*"
+        Resource = "${aws_s3_bucket.logs[0].arn}/s3-access/*"
         Condition = {
           ArnLike = {
             "aws:SourceArn" = aws_s3_bucket.site.arn
@@ -234,7 +250,7 @@ resource "aws_s3_bucket_policy" "logs" {
           Service = "delivery.logs.amazonaws.com"
         }
         Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.logs.arn}/cloudfront-access/*"
+        Resource = "${aws_s3_bucket.logs[0].arn}/cloudfront-access/*"
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
@@ -254,8 +270,8 @@ resource "aws_s3_bucket_policy" "logs" {
         Principal = "*"
         Action    = "s3:*"
         Resource = [
-          aws_s3_bucket.logs.arn,
-          "${aws_s3_bucket.logs.arn}/*",
+          aws_s3_bucket.logs[0].arn,
+          "${aws_s3_bucket.logs[0].arn}/*",
         ]
         Condition = {
           Bool = {
@@ -265,4 +281,46 @@ resource "aws_s3_bucket_policy" "logs" {
       },
     ]
   })
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+
+moved {
+  from = aws_s3_bucket_logging.site
+  to   = aws_s3_bucket_logging.site[0]
+}
+
+moved {
+  from = aws_s3_bucket.logs
+  to   = aws_s3_bucket.logs[0]
+}
+
+moved {
+  from = aws_s3_bucket_public_access_block.logs
+  to   = aws_s3_bucket_public_access_block.logs[0]
+}
+
+moved {
+  from = aws_s3_bucket_ownership_controls.logs
+  to   = aws_s3_bucket_ownership_controls.logs[0]
+}
+
+moved {
+  from = aws_s3_bucket_server_side_encryption_configuration.logs
+  to   = aws_s3_bucket_server_side_encryption_configuration.logs[0]
+}
+
+moved {
+  from = aws_s3_bucket_versioning.logs
+  to   = aws_s3_bucket_versioning.logs[0]
+}
+
+moved {
+  from = aws_s3_bucket_lifecycle_configuration.logs
+  to   = aws_s3_bucket_lifecycle_configuration.logs[0]
+}
+
+moved {
+  from = aws_s3_bucket_policy.logs
+  to   = aws_s3_bucket_policy.logs[0]
 }

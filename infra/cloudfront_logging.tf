@@ -6,6 +6,8 @@
 # us-east-1 service.
 
 resource "aws_cloudwatch_log_delivery_source" "cloudfront_access" {
+  count = var.enable_access_logging ? 1 : 0
+
   provider     = aws.us_east_1
   name         = "${replace(var.domain, ".", "-")}-cloudfront-access"
   log_type     = "ACCESS_LOGS"
@@ -13,19 +15,23 @@ resource "aws_cloudwatch_log_delivery_source" "cloudfront_access" {
 }
 
 resource "aws_cloudwatch_log_delivery_destination" "cloudfront_access_s3" {
+  count = var.enable_access_logging ? 1 : 0
+
   provider      = aws.us_east_1
   name          = "${replace(var.domain, ".", "-")}-cloudfront-access-s3"
   output_format = "parquet"
 
   delivery_destination_configuration {
-    destination_resource_arn = aws_s3_bucket.logs.arn
+    destination_resource_arn = aws_s3_bucket.logs[0].arn
   }
 }
 
 resource "aws_cloudwatch_log_delivery" "cloudfront_access" {
+  count = var.enable_access_logging ? 1 : 0
+
   provider                 = aws.us_east_1
-  delivery_source_name     = aws_cloudwatch_log_delivery_source.cloudfront_access.name
-  delivery_destination_arn = aws_cloudwatch_log_delivery_destination.cloudfront_access_s3.arn
+  delivery_source_name     = aws_cloudwatch_log_delivery_source.cloudfront_access[0].name
+  delivery_destination_arn = aws_cloudwatch_log_delivery_destination.cloudfront_access_s3[0].arn
 
   s3_delivery_configuration {
     suffix_path                 = "cloudfront-access"
@@ -33,5 +39,22 @@ resource "aws_cloudwatch_log_delivery" "cloudfront_access" {
   }
 
   # The bucket policy in s3.tf must exist before deliveries can land.
-  depends_on = [aws_s3_bucket_policy.logs]
+  depends_on = [aws_s3_bucket_policy.logs[0]]
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+
+moved {
+  from = aws_cloudwatch_log_delivery_source.cloudfront_access
+  to   = aws_cloudwatch_log_delivery_source.cloudfront_access[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_delivery_destination.cloudfront_access_s3
+  to   = aws_cloudwatch_log_delivery_destination.cloudfront_access_s3[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_delivery.cloudfront_access
+  to   = aws_cloudwatch_log_delivery.cloudfront_access[0]
 }

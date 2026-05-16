@@ -21,12 +21,16 @@ if [ ! -s "$CF_TF" ]; then
 	lint::refuse_blind "$CF_TF missing or empty"
 fi
 
-# Walk every `ordered_cache_behavior { ... }` block in cloudfront.tf,
-# tracking brace depth so HCL `${var}` interpolation inside attribute
-# values (e.g. `target_origin_id = "lambda-${local.x}"`) doesn't close
-# the block early. Sibling asserts use a simpler `/\}/` matcher because
-# their target items blocks contain only literal strings; this block
-# contains interpolations, so depth tracking is load-bearing here.
+# Walk every `ordered_cache_behavior { ... }` block in cloudfront.tf —
+# both the static form and the `dynamic "ordered_cache_behavior" { ... }`
+# wrapper introduced by the p41m0n teardown toggle PR. Brace-depth
+# tracking handles either shape: the dynamic wrapper closes at the same
+# depth the static block would, so its inner `content { ... }` attrs
+# (path_pattern, response_headers_policy_id) are visible during the scan.
+# HCL `${var}` interpolation inside attribute values (e.g.
+# `target_origin_id = "lambda-${local.x}"`) is preserved by depth
+# tracking; sibling asserts use a simpler `/\}/` matcher because their
+# items blocks contain only literal strings.
 #
 # Skip lines whose first non-space character is `#` so a commented-out
 # attribute can't masquerade as the live attachment.
@@ -37,7 +41,8 @@ fi
 #   2 — block not found at all (refuse-blind: data shape changed)
 rc=0
 awk '
-	/^[[:space:]]*ordered_cache_behavior[[:space:]]*\{/ {
+	/^[[:space:]]*ordered_cache_behavior[[:space:]]*\{/ ||
+	/^[[:space:]]*dynamic[[:space:]]+"ordered_cache_behavior"[[:space:]]*\{/ {
 		in_block = 1
 		depth = 1
 		is_tls = 0
