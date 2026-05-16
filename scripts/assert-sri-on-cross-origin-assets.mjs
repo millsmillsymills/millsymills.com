@@ -11,7 +11,7 @@
 // What "cross-origin" means here:
 //   - any URL with an explicit scheme (https:, http:, //) whose host is
 //     NOT in the allowlist of known site origins (millsymills.com,
-//     www.millsymills.com, p41m0n.com, www.p41m0n.com).
+//     www.millsymills.com).
 //   - bare-relative URLs (`/foo.js`, `foo.js`, `./foo.js`) are same-origin.
 //   - data:, blob:, filesystem: URIs are local content — exempt.
 //
@@ -51,8 +51,6 @@ const DIST = join(ROOT, 'dist');
 const ALLOWED_ORIGINS = new Set([
 	'millsymills.com',
 	'www.millsymills.com',
-	'p41m0n.com',
-	'www.p41m0n.com',
 ]);
 
 const RED = '\x1b[1;31m';
