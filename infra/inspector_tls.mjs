@@ -18,8 +18,6 @@
 const ALLOWED_ORIGINS = new Set([
 	'https://millsymills.com',
 	'https://www.millsymills.com',
-	'https://p41m0n.com',
-	'https://www.p41m0n.com',
 ]);
 
 // Cap the raw header at a length the CloudFront-injected value never
