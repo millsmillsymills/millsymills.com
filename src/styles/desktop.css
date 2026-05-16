@@ -123,13 +123,15 @@
 	--font-xp-ui: 'Tahoma', 'Geneva', system-ui, sans-serif;
 	--font-xp-display: 'Franklin Gothic ITC', 'Georgia', serif;
 
-	/* Cursors — unchanged */
-	--c-default: url('/cursors/3dwarro.png') 0 0, default;
+	/* Cursors — Silver XP set (3ds*). Silver pack ships no link/hand cursor,
+	 * so --c-pointer keeps the generic default_link.png. */
+	--c-default: url('/cursors/3dsarro.png') 0 0, default;
 	--c-pointer: url('/cursors/default_link.png') 6 2, pointer;
-	--c-text: url('/cursors/3dwbeam.png') 16 16, text;
-	--c-grab: url('/cursors/3dwmove.png') 16 16, grab;
-	--c-grabbing: url('/cursors/3dwmove.png') 16 16, grabbing;
-	--c-not-allowed: url('/cursors/3dwno.png') 16 16, not-allowed;
+	--c-text: url('/cursors/3dsbeam.png') 16 16, text;
+	--c-grab: url('/cursors/3dsmove.png') 16 16, grab;
+	--c-grabbing: url('/cursors/3dsmove.png') 16 16, grabbing;
+	--c-not-allowed: url('/cursors/3dsno.png') 16 16, not-allowed;
+	--c-resize-nwse: url('/cursors/3dsnwse.png') 16 16, nwse-resize;
 }
 
 :root[data-theme='bimbows'] {
@@ -339,6 +341,18 @@ textarea,
 select,
 [contenteditable] {
 	cursor: var(--c-text);
+}
+
+a {
+	cursor: var(--c-pointer);
+}
+
+button[disabled],
+input[disabled],
+select[disabled],
+textarea[disabled],
+[aria-disabled='true'] {
+	cursor: var(--c-not-allowed);
 }
 
 /* ------------------------------------------------------------------ */
@@ -645,7 +659,7 @@ a {
 	bottom: 0;
 	width: 14px;
 	height: 14px;
-	cursor: nwse-resize;
+	cursor: var(--c-resize-nwse);
 	/* Block the browser's default touch-scroll/pan claim so the first
 	 * pointermove during a resize gesture isn't converted into a scroll
 	 * (which fires pointercancel and tears down the gesture mid-stroke
@@ -1287,7 +1301,7 @@ body.mshell-app-open {
 	height: 22px;
 	font-size: 13px;
 	line-height: 1;
-	cursor: pointer;
+	cursor: var(--c-pointer);
 }
 .flag-toast__dismiss:hover {
 	color: var(--neon-pink);
