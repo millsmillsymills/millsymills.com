@@ -147,13 +147,6 @@ section "infra: per-stack deploy_workflow files exist"
 # (and then OIDC trust would be wrong). Catch it locally.
 for tfv in infra/stacks/*.tfvars; do
 	stack=$(basename "$tfv" .tfvars)
-	# p41m0n.tfvars still references the deleted deploy-rehearsal.yml
-	# because the tfvars flip is Phase 4's job — see
-	# docs/superpowers/plans/2026-05-15-p41m0n-teardown-and-static-image.md
-	# §Phase 4. Re-enable this gate for p41m0n once Phase 4 lands.
-	if [ "$stack" = "p41m0n" ]; then
-		continue
-	fi
 	# `|| true` because grep returns 1 when no `deploy_workflow` is set
 	# (tfvars relies on the variable's default in that case); under
 	# `pipefail` an unmatched grep would otherwise abort the loop.
@@ -173,12 +166,6 @@ section "infra: per-stack deploy_environment matches workflow's environment bloc
 # as `Not authorized to perform sts:AssumeRoleWithWebIdentity`. Catch it locally.
 for tfv in infra/stacks/*.tfvars; do
 	stack=$(basename "$tfv" .tfvars)
-	# Same Phase-4-bridge as the gate above — p41m0n.tfvars's
-	# deploy_environment="rehearsal" matches the deleted workflow's
-	# environment block. Phase 4 flips both at once.
-	if [ "$stack" = "p41m0n" ]; then
-		continue
-	fi
 	wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
 	wf=${wf:-deploy.yml}
 	tfv_env=$(grep -E '^deploy_environment' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
