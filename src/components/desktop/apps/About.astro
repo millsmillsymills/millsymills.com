@@ -51,6 +51,18 @@ import { pgp } from '../../../data/pgp';
 		display: none;
 	}
 
+	.about__name {
+		font-family: var(--font-xp-display);
+		font-style: italic;
+		font-size: 28px;
+		font-weight: 400;
+		text-transform: lowercase;
+		letter-spacing: 0.3px;
+		color: var(--ink-primary);
+		text-shadow: 0 0 6px rgba(255, 79, 168, 0.25);
+		margin: 0 0 6px;
+	}
+
 	.about__meta {
 		display: flex;
 		flex-wrap: wrap;
@@ -129,7 +141,7 @@ import { pgp } from '../../../data/pgp';
 		/>
 	</div>
 	<div>
-		<h1>{profile.name}</h1>
+		<h1 class="about__name">{profile.name}</h1>
 		<p class="about__meta">
 			{profile.certifications.map((c) => <span>{c}</span>)}
 		</p>
