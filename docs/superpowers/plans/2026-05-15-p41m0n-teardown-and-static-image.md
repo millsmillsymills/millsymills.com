@@ -6,7 +6,7 @@
 
 **Architecture:** One Terraform codebase, two stacks separated by state — the existing pattern. Slim p41m0n via per-feature `enable_*` toggle variables (defaulting to `true` so millsymills is unchanged), plus a `cloudfront_headers_profile` selector for `strict` (millsymills) vs `minimal` (p41m0n) response headers. `moved` blocks accompany every newly-`count`-gated resource to prevent destructive re-addressing. Cleanup of rehearsal-only Astro/script/CI surface (`NO_INDEX`/`SITE_URL` plumbing, `deploy-rehearsal.yml`, leakage-assert scripts, the `rehearsal` GH Environment, `p41m0n.com` references in `inspector_tls.mjs`/`security-controls.ts`) lands in the same coordinated cleanup PR.
 
-**Tech Stack:** Terraform 1.10+ (HCL, AWS provider 6.41), AWS (S3, CloudFront, ACM, Route53, IAM, Lambda, DynamoDB, SNS, KMS), Astro 4 (TypeScript), Bash, GitHub Actions, ImageMagick (`magick`), `exiftool`, `gh` CLI.
+**Tech Stack:** Terraform 1.10+ (HCL, AWS provider 6.41), AWS (S3, CloudFront, ACM, Route53, IAM, Lambda, DynamoDB, SNS, KMS), Astro 6 (TypeScript), Bash, GitHub Actions, ImageMagick (`magick`), `exiftool`, `gh` CLI.
 
 **Spec:** `docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md`.
 
@@ -2006,6 +2006,8 @@ protonmail_dkim_selectors = {
 ```
 
 Removed lines vs. previous: `deploy_workflow`, `deploy_environment`, `ct_monitor_alert_address`, `enable_mta_sts`, `mta_sts_id`. Added: nine `enable_*` lines and `cloudfront_headers_profile`.
+
+> **MTA-STS reversal note.** Dropping `enable_mta_sts` straight to `false` is only safe here because p41m0n is currently in `mode: testing` — senders that cached the policy will log a TLS-RPT mismatch but still deliver. A `mode: enforce` reversal would require the two-step described in CLAUDE.md: publish `mode: none` in `src/pages/.well-known/mta-sts.txt.ts`, bump `mta_sts_id`, deploy, **wait `max_age`**, and only THEN flip `enable_mta_sts` to `false`. Future-you reading this for a different stack: don't copy this skip without checking the current mode.
 
 - [ ] **Step 2: `terraform fmt`**
 
