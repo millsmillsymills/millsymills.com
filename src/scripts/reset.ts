@@ -18,7 +18,7 @@
  * native confirms or auto-purges.
  */
 
-import { dispatchClippyTrigger } from './util/events';
+import { dispatchClippyTrigger, dispatchPlaySound } from './util/events';
 
 const STORAGE_PREFIX = 'mills.';
 const SHUTDOWN_HOLD_MS = 2400;
@@ -110,6 +110,7 @@ let triggerWasFocusable = false;
 function onYesClick(): void {
 	const opts = activeOpts;
 	closeModal();
+	dispatchPlaySound('reset');
 	performReset(opts);
 }
 

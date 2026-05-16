@@ -44,12 +44,22 @@ const { menu } = Astro.props;
 			loading="lazy"
 		/>
 	</span>
+	<button
+		type="button"
+		class="taskbar__sound"
+		data-sound-toggle
+		aria-pressed="false"
+		aria-label="system sounds: off — click to unmute"
+	>
+		<img src="/images/vaporwave-ui/buttons/mute.png" alt="sound: off" decoding="async" />
+	</button>
 	<span class="taskbar__clock motif-chrom" aria-label="current time">--:--</span>
 </nav>
 
 <script>
 	import '../../scripts/taskbar-now-playing';
 	import '../../scripts/taskbar-online';
+	import '../../scripts/system-sounds-init';
 </script>
 
 <div class="start-menu" hidden role="menu" aria-label="start menu">
