@@ -331,7 +331,7 @@ const canonical = new URL('/demo/passkey/', Astro.site).toString();
 		box-shadow: 2px 2px 0 0 #321a44;
 		font-family: 'Press Start 2P', 'VT323', monospace;
 		font-size: 12px;
-		cursor: pointer;
+		cursor: url('/cursors/default_link.png') 6 2, pointer;
 		transition: transform 80ms ease, background 80ms ease;
 		text-transform: lowercase;
 	}
@@ -348,7 +348,7 @@ const canonical = new URL('/demo/passkey/', Astro.site).toString();
 
 	.passkey__btn:disabled {
 		opacity: 0.5;
-		cursor: not-allowed;
+		cursor: url('/cursors/3dsno.png') 16 16, not-allowed;
 	}
 
 	.passkey__btn--ghost {
