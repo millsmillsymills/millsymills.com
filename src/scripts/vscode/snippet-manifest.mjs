@@ -10,9 +10,9 @@
  *   3. astro.config.mjs's scrubVscodeSnippets Vite plugin (URL scrub registry)
  *
  * Pre-2026-04-26 each consumer carried its own copy of SNIPPET_LINES, the
- * suffix strings, and the path/source mapping. Drift was caught only when
- * `assert-no-url-leakage.sh` happened to fire — silent UX bugs (highlighted
- * source one suffix wording, displayed source another) could land green.
+ * suffix strings, and the path/source mapping. Drift produced silent UX bugs
+ * (highlighted source one suffix wording, displayed source another) that
+ * could land green.
  *
  * Note on scrubbing: applySnippet runs the URL scrub on every `scrubUrl`
  * entry. For file-tree.ts's `?raw` imports the Vite plugin has already

@@ -256,8 +256,8 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Publishes `_mta-sts.<domain> TXT "v=STSv1; id=…"` and serves a policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt` listing the Proton MX hosts as the only valid SMTP endpoints. Sending MTAs that respect MTA-STS upgrade opportunistic TLS to enforced TLS for inbound mail.',
 		why: 'MTA-STS blocks passive downgrade attacks on inbound SMTP that DNSSEC + DANE alone don\'t cover for senders that don\'t implement DANE (most large providers ship MTA-STS; DANE adoption is narrower). Visible control that peer MTAs can observe via HTTPS, complementing the DNSSEC-rooted DANE chain.',
-		tradeoffs: 'Currently in `mode: testing` (`max_age: 86400`) on both stacks: senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Promotion to `mode: enforce` follows 2-4 weeks of clean TLS-RPT reports showing `policy-type: sts` — see `docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md` § Future. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
-		code: ['infra/mta_sts.tf', 'infra/stacks/millsymills.tfvars', 'infra/stacks/p41m0n.tfvars', 'src/pages/.well-known/mta-sts.txt.ts'],
+		tradeoffs: 'Currently in `mode: testing` (`max_age: 86400`) on millsymills.com (the only stack with MTA-STS enabled after the p41m0n teardown): senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Promotion to `mode: enforce` follows 2-4 weeks of clean TLS-RPT reports showing `policy-type: sts` — see `docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md` § Future. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
+		code: ['infra/mta_sts.tf', 'infra/stacks/millsymills.tfvars', 'src/pages/.well-known/mta-sts.txt.ts'],
 	},
 	{
 		id: 'dane-smtp',
@@ -276,7 +276,7 @@ export const securityControls: readonly SecurityControl[] = [
 		title: 'OIDC-only deploy (no long-lived AWS keys)',
 		category: 'supply-chain',
 		status: 'shipped',
-		what: 'GitHub Actions assumes a per-stack IAM role via `AssumeRoleWithWebIdentity`. The trust policy pins `repo:owner/name`, branch (`main`), and the specific workflow file (`deploy.yml` / `deploy-rehearsal.yml`) via `job_workflow_ref`.',
+		what: 'GitHub Actions assumes a per-stack IAM role via `AssumeRoleWithWebIdentity`. The trust policy pins `repo:owner/name`, branch (`main`), and the specific workflow file (`deploy.yml`) via `job_workflow_ref`.',
 		why: 'No long-lived AWS access keys ever touch GitHub. A different (or tampered) workflow on the same branch can\'t mint the deploy token; a different repo can\'t either.',
 		tradeoffs: 'Adding a new deploy workflow requires a Terraform var bump + apply BEFORE pushing the workflow — `ci-local.sh` checks the referenced file exists so a typo fails locally rather than at AssumeRole time.',
 		code: ['infra/github_oidc.tf', '.github/workflows/deploy.yml'],
@@ -302,7 +302,6 @@ export const securityControls: readonly SecurityControl[] = [
 		tradeoffs: 'Verification command is documented in the workflow file, but visitors have to know the OIDC identity (the workflow file path on `refs/heads/main`) to run `cosign verify-blob` correctly. Reusable-workflow version is pinned to a tag (`@v2.1.0`), not a SHA — consistent with the rest of the workflow but worth a hardening sweep alongside the SBOM action pin.',
 		code: [
 			'.github/workflows/deploy.yml',
-			'.github/workflows/deploy-rehearsal.yml',
 		],
 		prs: [],
 	},
@@ -313,7 +312,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Both `aws_s3_bucket_policy.site` and `aws_s3_bucket_policy.logs` carry an explicit `Deny` on `aws:SecureTransport = false`, alongside the existing CloudFront-OAC and log-delivery allows.',
 		why: 'CloudFront OAC, S3 server access logging, and CloudFront log delivery already use TLS, so the realistic failure mode this guards against is a future IAM principal — compromised or overbroad — reaching the buckets over plain HTTP. Industry-baseline finding flagged by most AWS scanners.',
-		tradeoffs: 'Same posture applies to the rehearsal stack — both `tf.sh millsymills` and `tf.sh p41m0n` plans must show the bucket-policy update before merging changes here.',
+		tradeoffs: 'Same posture applies to both stacks — `tf.sh millsymills` and `tf.sh p41m0n` plans must both show the bucket-policy update before merging changes here.',
 		code: ['infra/s3.tf'],
 	},
 
