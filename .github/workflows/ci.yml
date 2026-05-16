@@ -75,23 +75,10 @@ jobs:
       - name: Test (vitest)
         run: npm test
 
-      # `astro check` loads astro.config.mjs, which exits 1 when CI=true
-      # without SITE_URL. GitHub sets CI=true on every step, so the
-      # typecheck step needs SITE_URL too — not just the build step.
       - name: Typecheck (astro check)
-        env:
-          # Hardcoded rather than ${{ vars.SITE_URL }} — ci.yml only
-          # typechecks + builds (artifacts are never deployed), the
-          # site domain is public, and a missing repo variable would
-          # silently fail astro.config.mjs's CI=true SITE_URL guard.
-          # Real deploys still resolve SITE_URL per-environment via
-          # deploy.yml / deploy-rehearsal.yml.
-          SITE_URL: https://millsymills.com
         run: npm run check
 
       - name: Build
-        env:
-          SITE_URL: https://millsymills.com
         run: npm run build
 
       - name: Install Playwright browsers (chromium)
@@ -103,10 +90,6 @@ jobs:
         # Deep-link suite drives the prebuilt dist/ via `astro preview`,
         # so it runs after Build. Playwright's webServer block boots
         # preview on 127.0.0.1:4321 for the duration of the run.
-        # astro preview reloads astro.config.mjs, whose CI=true guard
-        # demands SITE_URL — same hardcoded value as Typecheck/Build.
-        env:
-          SITE_URL: https://millsymills.com
         run: npm run test:e2e
 
       # ---- post-build asserts (consume dist/) ----
@@ -121,14 +104,6 @@ jobs:
 
       - name: Assert llms.txt enumerates every app + well-known path
         run: ./scripts/assert-llms-txt-completeness.sh
-
-      # The two leakage scripts re-build internally with the opposite
-      # SITE_URL, so they're independent of the dist/ produced above.
-      - name: Assert no URL leakage (rehearsal direction)
-        run: ./scripts/assert-no-url-leakage.sh
-
-      - name: Assert no rehearsal URL leakage (prod direction)
-        run: ./scripts/assert-no-rehearsal-leakage.sh
 
   terraform:
     name: Terraform fmt + validate + stack consistency
@@ -202,6 +177,13 @@ jobs:
           set -euo pipefail
           for tfv in infra/stacks/*.tfvars; do
             stack=$(basename "$tfv" .tfvars)
+            # The p41m0n stack still references deploy-rehearsal.yml (deleted
+            # in this PR) because the tfvars flip is Phase 4's job — see
+            # docs/superpowers/plans/2026-05-15-p41m0n-teardown-and-static-image.md
+            # §Phase 4. Re-enable this gate for p41m0n once Phase 4 lands.
+            if [ "$stack" = "p41m0n" ]; then
+              continue
+            fi
             wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
             wf=${wf:-deploy.yml}
             if [ ! -f ".github/workflows/$wf" ]; then
@@ -215,6 +197,11 @@ jobs:
           set -euo pipefail
           for tfv in infra/stacks/*.tfvars; do
             stack=$(basename "$tfv" .tfvars)
+            # Same Phase-4 bridge as the previous gate — skip p41m0n until
+            # its tfvars points at a live workflow again.
+            if [ "$stack" = "p41m0n" ]; then
+              continue
+            fi
             wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
             wf=${wf:-deploy.yml}
             tfv_env=$(grep -E '^deploy_environment' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)

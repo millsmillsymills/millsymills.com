@@ -19,7 +19,7 @@ if (!app) throw new Error(`Unknown app: ${appId}`);
 
 const pageTitle = `${app.title} — ${profile.handle}`;
 const description = app.ogDescription;
-const siteHref = Astro.site?.href ?? 'https://millsymills.com/';
+const siteHref = 'https://millsymills.com/';
 const canonical = `${siteHref}${app.id}/`;
 const ogImage = app.hidden ? undefined : `${siteHref}og/${app.id}.png`;
 ---

@@ -173,8 +173,8 @@ resource "aws_cloudfront_response_headers_policy" "site" {
 }
 
 # Minimal response-headers policy for stacks that don't ship the strict
-# CSP/COOP/COEP/CORP/Permissions-Policy bundle. Used by the p41m0n
-# static-image stack (no JS, no third-party assets, single image).
+# CSP/COOP/COEP/CORP/Permissions-Policy bundle. Suitable for static-image
+# stacks (no JS, no third-party assets, single image).
 # HSTS + nosniff + frame-options + Referrer-Policy is the floor — every
 # property below is independent of CSP and should ship on every stack.
 resource "aws_cloudfront_response_headers_policy" "site_minimal" {
@@ -213,7 +213,7 @@ resource "aws_cloudfront_response_headers_policy" "site_minimal" {
 #   1. The site policy ships `Cross-Origin-Resource-Policy: same-origin`
 #      and `Cross-Origin-Embedder-Policy: require-corp`. With those on
 #      a JSON response, an allowlisted cross-origin caller (e.g.
-#      `p41m0n.com` — see ALLOWED_ORIGINS in inspector_tls.mjs) gets
+#      none currently — see ALLOWED_ORIGINS in inspector_tls.mjs for the live allowlist) gets
 #      blocked at the browser layer even after CORS preflight succeeds,
 #      because COEP-isolated pages can only embed `cross-origin` CORP
 #      resources or pre-flighted CORS resources marked compatible.
@@ -253,12 +253,12 @@ resource "aws_cloudfront_response_headers_policy" "api" {
   }
 
   custom_headers_config {
-    # CORP `cross-origin` so allowlisted cross-origin pages (currently the
-    # `p41m0n.com` rehearsal stack) can fetch /api/tls/inspect from a
-    # COEP-isolated document. The CORS allowlist in inspector_tls.mjs
-    # remains the actual access boundary — CORP `cross-origin` only
-    # opens the browser-side embedding gate; the Lambda still echoes
-    # `access-control-allow-origin` for allowlisted origins only.
+    # CORP `cross-origin` so any future allowlisted cross-origin caller
+    # (none currently) can fetch /api/tls/inspect from a COEP-isolated
+    # document. The CORS allowlist in inspector_tls.mjs remains the actual
+    # access boundary — CORP `cross-origin` only opens the browser-side
+    # embedding gate; the Lambda still echoes `access-control-allow-origin`
+    # for allowlisted origins only.
     items {
       header   = "Cross-Origin-Resource-Policy"
       value    = "cross-origin"
@@ -277,8 +277,8 @@ resource "aws_cloudfront_response_headers_policy" "api" {
 # `api` (above) because the CSP endpoint's contract is same-origin POSTs
 # only -- it has no cross-origin embed requirement, unlike /api/tls/*
 # which legitimately needs `Cross-Origin-Resource-Policy: cross-origin`
-# so the p41m0n.com rehearsal stack can fetch /api/tls/inspect from a
-# COEP-isolated document.
+# for any future allowlisted cross-origin caller (none currently) fetching
+# /api/tls/inspect from a COEP-isolated document.
 #
 # Latent today (every csp_report response body is empty: 204/400/405/
 # 413/415/500), but becomes a real cross-origin reflection risk the
@@ -477,7 +477,7 @@ resource "aws_cloudfront_distribution" "site" {
   }
 }
 
-# moved blocks for the count-gating refactor (2026-05-15 p41m0n teardown spec).
+# moved blocks for the count-gating refactor (2026-05-15 rehearsal teardown).
 
 moved {
   from = aws_cloudfront_function.index_rewrite

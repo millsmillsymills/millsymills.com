@@ -175,13 +175,6 @@ jobs:
           output-file: dist/.well-known/sbom.spdx.json
           artifact-name: sbom.spdx.json
 
-      # Symmetric to deploy-rehearsal.yml's leakage check — catches a hardcoded
-      # rehearsal URL accidentally shipping to prod. No untrusted github.event
-      # context used. Run after SBOM generation so the SBOM is included in the
-      # grep — a future dep referencing https://millsymills.com would surface here.
-      - name: Assert no rehearsal URL leakage
-        run: ./scripts/assert-no-rehearsal-leakage.sh
-
       # Tar the dist/ tree so we can sign + attest a single artifact and
       # (in the deploy job) extract it back to sync. Hash the tarball
       # in the form the SLSA generator expects (`base64(sha256+name+nl)`).
@@ -219,9 +212,9 @@ jobs:
   # Blocks on upstream slsa-framework/slsa-github-generator#4490; tracked
   # locally as #389. GitHub flips the runner default to Node 24 on
   # 2026-06-02 and removes Node 20 entirely on 2026-09-16. Bump this pin
-  # (and the matching one in deploy-rehearsal.yml) once upstream releases
-  # a Node-24-ready tag — see scripts/assert-slsa-pin-fresh.sh, which
-  # turns the deadline into a CI failure if the pin doesn't move.
+  # once upstream releases a Node-24-ready tag — see
+  # scripts/assert-slsa-pin-fresh.sh, which turns the deadline into a
+  # CI failure if the pin doesn't move.
   provenance:
     needs: build
     permissions:
