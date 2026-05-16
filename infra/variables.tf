@@ -100,9 +100,14 @@ variable "google_workspace_verifications" {
 }
 
 variable "enable_mta_sts" {
-  description = "Publish the `_mta-sts.<domain>` TXT record so SMTP senders discover the MTA-STS policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt`. Default false because MTA-STS only makes sense once Proton (or another mail provider) is live AND the policy file has been observed by senders -- enable per-stack via `<stack>.tfvars`. The `mta-sts.<domain>` ACM SAN + CloudFront alias + A/AAAA records are provisioned regardless (they're cheap and harmless), so flipping this on later costs only a Route53 TXT publish + the policy ID bump."
+  description = "Publish the `_mta-sts.<domain>` TXT record so SMTP senders discover the MTA-STS policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt`. Default false because MTA-STS only makes sense once Proton (or another mail provider) is live AND the policy file has been observed by senders -- enable per-stack via `<stack>.tfvars`. Requires `enable_mta_sts_alias = true` so the cert SAN + CloudFront alias for `mta-sts.<domain>` exist; advertising the TXT without the host would point senders at a nonexistent endpoint."
   type        = bool
   default     = false
+
+  validation {
+    condition     = !var.enable_mta_sts || var.enable_mta_sts_alias
+    error_message = "enable_mta_sts requires enable_mta_sts_alias; the TXT discovery record advertises a hostname that only exists when the alias is provisioned."
+  }
 }
 
 variable "mta_sts_id" {
@@ -138,9 +143,14 @@ variable "enable_csp_report" {
 }
 
 variable "enable_webauthn_demo" {
-  description = "Provision the webauthn_demo Lambda + 2 DynamoDB tables + alarms. Drop on stacks without /demo/passkey."
+  description = "Provision the webauthn_demo Lambda + 2 DynamoDB tables + IAM role + log group + Function URL + 4 CloudWatch alarms + output. Requires `enable_csp_report = true` until the alarms migrate to a dedicated SNS topic (they currently publish to the shared `aws_sns_topic.csp_report_ops`). Drop on stacks without /demo/passkey."
   type        = bool
   default     = true
+
+  validation {
+    condition     = !var.enable_webauthn_demo || var.enable_csp_report
+    error_message = "enable_webauthn_demo requires enable_csp_report; webauthn alarms publish to the shared csp_report_ops SNS topic which only exists when csp_report is enabled."
+  }
 }
 
 variable "enable_ct_monitor" {
@@ -180,11 +190,15 @@ variable "enable_bimi" {
 }
 
 variable "cloudfront_headers_profile" {
-  description = "Which CloudFront response-headers policy to attach to the default cache behavior. \"strict\" = full CSP + Permissions-Policy + COOP/COEP/CORP + Reporting-Endpoints (millsymills); \"minimal\" = HSTS + nosniff + frame-options + Referrer-Policy only (single-image static stacks)."
+  description = "Which CloudFront response-headers policy to attach to the default cache behavior. \"strict\" = full CSP + Permissions-Policy + COOP/COEP/CORP + Reporting-Endpoints (millsymills); \"minimal\" = HSTS + nosniff + frame-options + Referrer-Policy only (single-image static stacks). \"strict\" requires `enable_csp_report = true` because the CSP advertises `report-uri /api/csp-report` and a `Reporting-Endpoints` header pointing at the same path; without csp_report those headers point at a 404."
   type        = string
   default     = "strict"
   validation {
     condition     = contains(["strict", "minimal"], var.cloudfront_headers_profile)
     error_message = "cloudfront_headers_profile must be \"strict\" or \"minimal\"."
+  }
+  validation {
+    condition     = var.cloudfront_headers_profile != "strict" || var.enable_csp_report
+    error_message = "cloudfront_headers_profile=\"strict\" requires enable_csp_report; the strict CSP advertises /api/csp-report and Reporting-Endpoints both pointing at the csp_report Lambda."
   }
 }
