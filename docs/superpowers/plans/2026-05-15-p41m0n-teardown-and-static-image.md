@@ -12,6 +12,8 @@
 
 **Repos:** Most work lands in `millsymills.com` (the Terraform stack + the rehearsal source surface). Content (the meme JPEG + index.html) lands in `p41m0n.com`. Apply phase + verification runs from a `millsymills.com` checkout against AWS using local operator credentials.
 
+> **Amended 2026-05-15 (post-PR-#493):** Phase 4's expected-plan checklist was rewritten after a `state list` audit confirmed p41m0n's deployed state never tracked csp_report/webauthn_demo/MTA-STS — so the teardown destroys ~36 resources (not the originally-anticipated ~70+), there's no ACM cert replacement, and several Phase 5 verification checks now confirm "never existed" rather than "destroyed." Phases 0-3 and the toggle/cleanup mechanics are unchanged. See spec § Domain and stack state at time of writing for the full state inventory.
+
 ---
 
 ## File structure
@@ -2035,21 +2037,44 @@ Expected: `Terraform has been successfully initialized!`
 ./scripts/tf.sh p41m0n plan -out=p41m0n-teardown.plan
 ```
 
-- [ ] **Step 2: Review the plan against the expected destroys / replaces / updates / creates**
+- [ ] **Step 2: Review the plan against the expected destroys / creates / updates**
 
-Use the Spec § Apply phase step 3 list (in `docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md`) as the contract. Cross-check each line of plan output against:
+Use the Spec § Apply phase step 3 list (in `docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md`) as the contract. **Note:** the spec was amended on 2026-05-15 after a `state list` audit revealed that csp_report, webauthn_demo, and MTA-STS were never deployed to p41m0n — so they're NOT in the destroy list. There is also NO cert replacement (deployed cert already has the 2 SANs the toggle PR wants).
 
-- **Destroys (no-replacement):** all 7 inspector_tls resources; all 21 csp_report resources (Lambda + reports bucket + 4 supporting + role + policies + log group + Function URL + OAC + permission + SNS + sub + 3 alarms + 2 metric filters); all 12 webauthn_demo resources (Lambda + 2 DynamoDB + null_resource + role + policy + log group + Function URL + 4 alarms); all 10 ct_monitor resources; `aws_route53_record.mta_sts_a` + `mta_sts_aaaa`; `aws_route53_record.bimi`; `aws_cloudfront_function.index_rewrite`; `aws_iam_role.github_deploy` + `aws_iam_role_policy.github_deploy` (NOT `aws_iam_openid_connect_provider.github`); `aws_s3_bucket.logs` + 7 supporting + `aws_s3_bucket_logging.site` + 3 cloudfront_logging resources; `aws_cloudfront_origin_access_control.inspector_tls` + `csp_report`; `aws_cloudfront_origin_request_policy.inspector_tls` + `csp_report`; `aws_cloudfront_response_headers_policy.api` + `csp_report` + `site` (replaced by `site_minimal`).
-- **Replace (create_before_destroy):** `aws_acm_certificate.site` (SAN list shrinks 3→2).
-- **Create:** `aws_cloudfront_response_headers_policy.site_minimal`.
-- **Update:** `aws_cloudfront_distribution.site` (origins 4→1, ordered cache behaviors 2→0, `aliases` 3→2, `response_headers_policy_id` swaps to `site_minimal`, `function_association` removed). `aws_acm_certificate_validation.site` updates to reference the new cert ARN.
-- **No change:** all email DNS records (`mx`, `apex_txt`, three DKIM CNAMEs, `dmarc`, `tlsrpt`); `aws_route53_record.root_a` / `root_aaaa` / `www_a` / `www_aaaa`; `aws_route53_record.caa`; DNSSEC resources (KMS key + alias + KSK + zone DNSSEC); `aws_iam_openid_connect_provider.github`; `aws_s3_bucket.site` and its 8 supporting resources; `aws_cloudfront_origin_access_control.site`.
+Cross-check each line of plan output against:
+
+- **Destroys (~36 resources, all currently in p41m0n state):**
+  - **inspector_tls (9):** `aws_lambda_function.inspector_tls`, `aws_iam_role.inspector_tls`, `aws_iam_role_policy_attachment.inspector_tls_basic`, `aws_cloudwatch_log_group.inspector_tls`, `aws_lambda_function_url.inspector_tls`, `aws_lambda_permission.inspector_tls_cloudfront`, `aws_cloudfront_origin_access_control.inspector_tls`, `aws_cloudfront_origin_request_policy.inspector_tls`, `aws_cloudfront_response_headers_policy.api`.
+  - **ct_monitor (10):** `aws_lambda_function.ct_monitor`, `aws_iam_role.ct_monitor`, `aws_iam_role_policy_attachment.ct_monitor_basic`, `aws_iam_role_policy.ct_monitor_publish`, `aws_cloudwatch_log_group.ct_monitor`, `aws_sns_topic.ct_monitor`, `aws_sns_topic_subscription.ct_monitor_email`, `aws_cloudwatch_event_rule.ct_monitor`, `aws_cloudwatch_event_target.ct_monitor`, `aws_lambda_permission.ct_monitor_eventbridge`.
+  - **github_deploy role (2):** `aws_iam_role.github_deploy`, `aws_iam_role_policy.github_deploy`. **NOT** `aws_iam_openid_connect_provider.github`.
+  - **index rewrite (1):** `aws_cloudfront_function.index_rewrite`.
+  - **BIMI (1):** `aws_route53_record.bimi`.
+  - **Access logging (12):** `aws_s3_bucket.logs` + 7 supporting (`public_access_block`, `ownership_controls`, `server_side_encryption_configuration`, `versioning`, `lifecycle_configuration`, `policy`), `aws_s3_bucket_logging.site`, plus 3 `cloudfront_logging` resources (`source`, `destination`, `delivery`).
+  - **Strict response-headers policy (1):** `aws_cloudfront_response_headers_policy.site` (count goes 1→0 because `cloudfront_headers_profile=minimal`; replaced by `site_minimal` per Create below).
+
+- **Create (1):** `aws_cloudfront_response_headers_policy.site_minimal`.
+
+- **Update in-place (1):** `aws_cloudfront_distribution.site` (Lambda origins removed, `/api/*` cache behaviors removed, `function_association` removed, `response_headers_policy_id` swaps to `site_minimal`). The `aliases` attribute already matches the deployed set (apex + www; mta-sts never made it onto the cert/distribution), so no aliases diff.
+
+- **No change (deployed, untouched by this work):**
+  - **Cert:** `aws_acm_certificate.site` (already at apex + www; toggle PR's `enable_mta_sts_alias=false` matches deployed state, so no replacement).
+  - **Cert validation:** `aws_acm_certificate_validation.site`, `aws_route53_record.cert_validation["p41m0n.com"]`, `aws_route53_record.cert_validation["www.p41m0n.com"]`.
+  - **DNS (site):** `aws_route53_record.root_a`/`root_aaaa`/`www_a`/`www_aaaa`.
+  - **DNS (email):** `aws_route53_record.mx`, `apex_txt`, `dkim["protonmail"]` + `["protonmail2"]` + `["protonmail3"]`, `dmarc`, `tlsrpt`.
+  - **DNS (other):** `aws_route53_record.caa`.
+  - **DNSSEC:** `aws_kms_key.dnssec`, `aws_kms_alias.dnssec`, `aws_route53_key_signing_key.ksk`, `aws_route53_hosted_zone_dnssec.site`.
+  - **IAM:** `aws_iam_openid_connect_provider.github` (account-wide; **MUST** survive).
+  - **Site delivery:** `aws_s3_bucket.site` + 8 supporting; `aws_cloudfront_origin_access_control.site`.
+
+- **No-op (NOT in state today; toggle PR makes TF not want them either — they disappear from the plan entirely):** csp_report suite (22 resources), webauthn_demo suite (12 resources), MTA-STS A/AAAA/TXT records, `aws_route53_record.cert_validation["mta-sts.p41m0n.com"]`.
 
 **Stop conditions** — if the plan shows ANY of these, do not apply:
 - A destroy of `aws_iam_openid_connect_provider.github`. (Means the toggle PR's gating in github_oidc.tf was wrong.)
-- A destroy of `aws_s3_bucket.site`. (Means a toggle was wrongly applied to the site bucket — only the logs bucket should be gated.)
-- A destroy of `aws_kms_key.dnssec` or `aws_route53_key_signing_key.ksk`. (Their `prevent_destroy = true` would also block this, but seeing it in the plan is itself a signal something is wrong.)
-- Any creates other than `aws_cloudfront_response_headers_policy.site_minimal` and the cert-replacement-driven new `aws_acm_certificate.site` + new validation records.
+- A destroy of `aws_s3_bucket.site` or any of its 8 supporting resources. (Means a toggle was wrongly applied to the site bucket.)
+- A destroy of `aws_kms_key.dnssec`, `aws_kms_alias.dnssec`, `aws_route53_key_signing_key.ksk`, or `aws_route53_hosted_zone_dnssec.site`. (`prevent_destroy = true` would also block, but seeing it in the plan signals a TF code mistake.)
+- Any *create* of csp_report / webauthn_demo / MTA-STS resources. (Means the toggle didn't take effect — re-check `p41m0n.tfvars`.)
+- A cert REPLACEMENT (`aws_acm_certificate.site` "must be replaced"). (Means `enable_mta_sts_alias` is still effectively true or the cert's SAN list has drifted.)
+- Any create other than `aws_cloudfront_response_headers_policy.site_minimal`.
 
 If the plan looks right: continue to apply. If anything is off, do NOT apply — re-investigate.
 
@@ -2061,10 +2086,7 @@ If the plan looks right: continue to apply. If anything is off, do NOT apply —
 ./scripts/tf.sh p41m0n apply p41m0n-teardown.plan
 ```
 
-Wall-clock expectation: ~15-25 minutes. The longest steps:
-- ACM cert validation (new SAN list) — typically 30 sec to 5 min.
-- CloudFront distribution update propagation — 10-15 min.
-- Cert and CloudFront updates run in parallel where possible; the cert must validate before CloudFront's `viewer_certificate.acm_certificate_arn` updates.
+Wall-clock expectation: ~10-15 minutes. Dominated entirely by CloudFront distribution propagation (~10-15 min). No ACM cert validation race (cert unchanged), no Lambda cold-start delays (no new Lambdas).
 
 - [ ] **Step 2: Confirm apply complete**
 
@@ -2074,7 +2096,7 @@ Expected final lines roughly:
 Apply complete! Resources: <N> added, <N> changed, <N> destroyed.
 ```
 
-The exact counts will reflect: ~1 added (`site_minimal`), ~1 changed (CloudFront distro + its dependents), ~70+ destroyed (all the gated resources across the 7+ files).
+The exact counts will reflect: 1 added (`site_minimal`), 1 changed (CloudFront distro), ~36 destroyed (inspector_tls suite + ct_monitor suite + github_deploy role + index_rewrite + BIMI + logs bucket + supporting + cloudfront_logging + strict response-headers policy). Significantly fewer destroys than originally anticipated because csp_report/webauthn_demo/MTA-STS were never deployed to p41m0n.
 
 - [ ] **Step 3: Capture the CloudFront distribution ID for the upload step**
 
@@ -2253,29 +2275,29 @@ aws s3 ls s3://p41m0n.com-logs 2>&1 | head -2
 
 Expected: `NoSuchBucket` or similar 404 message.
 
-- [ ] **Step 4: p41m0n CSP reports bucket is gone**
+- [ ] **Step 4: p41m0n CSP reports bucket absent (never existed; confirm still absent)**
 
 ```bash
 aws s3 ls s3://p41m0n.com-csp-reports 2>&1 | head -2
 ```
 
-Expected: `NoSuchBucket`.
+Expected: `NoSuchBucket`. (csp_report was never deployed to p41m0n — see spec § Domain and stack state at time of writing. This check confirms the absence; nothing was destroyed in this work.)
 
-- [ ] **Step 5: All four p41m0n Lambdas are gone**
+- [ ] **Step 5: All p41m0n Lambdas are gone**
 
 ```bash
 aws lambda list-functions --query "Functions[?starts_with(FunctionName, 'p41m0n-com-')].FunctionName" --output text
 ```
 
-Expected: empty output (all four — inspector_tls, csp_report, webauthn_demo, ct_monitor — are gone).
+Expected: empty output. The two deployed Lambdas (`p41m0n-com-inspector-tls`, `p41m0n-com-ct-monitor`) are destroyed by this work; `p41m0n-com-csp-report` and `p41m0n-com-webauthn-demo` never existed.
 
-- [ ] **Step 6: Both webauthn DynamoDB tables are gone**
+- [ ] **Step 6: webauthn DynamoDB tables absent (never existed)**
 
 ```bash
 aws dynamodb list-tables --query "TableNames[?starts_with(@, 'p41m0n-com-')]" --output text
 ```
 
-Expected: empty output.
+Expected: empty output. (`p41m0n-com-webauthn-demo` and `-webauthn-demo-sessions` were never deployed; confirm still absent.)
 
 - [ ] **Step 7: Site bucket is intact**
 
@@ -2289,14 +2311,14 @@ Expected:
 ... face-of-mercy.jpg
 ```
 
-- [ ] **Step 8: ACM cert SAN list is correct**
+- [ ] **Step 8: ACM cert SAN list is unchanged at apex + www only**
 
 ```bash
-CERT_ARN=$(./scripts/tf.sh p41m0n output -raw cloudfront_distribution_id >/dev/null 2>&1 || true; aws acm list-certificates --region us-east-1 --query "CertificateSummaryList[?DomainName=='p41m0n.com'].CertificateArn | [0]" --output text)
+CERT_ARN=$(aws acm list-certificates --region us-east-1 --query "CertificateSummaryList[?DomainName=='p41m0n.com'].CertificateArn | [0]" --output text)
 aws acm describe-certificate --region us-east-1 --certificate-arn "$CERT_ARN" --query 'Certificate.SubjectAlternativeNames'
 ```
 
-Expected: `["p41m0n.com", "www.p41m0n.com"]` (no `mta-sts.p41m0n.com`).
+Expected: `["p41m0n.com", "www.p41m0n.com"]` (no `mta-sts.p41m0n.com`). Note: the deployed cert already had this SAN list before the teardown — the toggle PR doesn't change it (the TF code's previous "want 3 SANs" matched nothing in state; the toggle PR's "want 2 SANs" matches what's deployed).
 
 ### Task 5.3: Final acceptance check against spec
 

@@ -22,9 +22,23 @@ The new content for `p41m0n.com` is a single static image plus a tiny HTML wrapp
 
 ## Domain and stack state at time of writing
 
-- **`p41m0n.com`** registered at Gandi, NS pointed at Route53 (hosted zone `Z08582353GK05ITZ9SORO`), DNSSEC chained via DS at Gandi. CloudFront distribution + S3 site bucket + ACM cert (apex + www + mta-sts SANs) live. Proton catchall active per the 2026-05-01 spec. MTA-STS Phase 1 active (discovery TXT `id=20260507000000`, policy file served from CloudFront alias).
-- **Heavyweight per-stack resources currently deployed against p41m0n** that come down in this work: `inspector_tls` Lambda + Function URL + OAC + origin-request policy + `/api/tls/*` cache behavior; `csp_report` Lambda + reports S3 bucket + Function URL + OAC + origin-request policy + `/api/csp-report` cache behavior + dedicated response-headers policy + SNS topic + email subscription + three CloudWatch alarms + two metric filters; `webauthn_demo` Lambda + two DynamoDB tables + Function URL (public, no OAC) + four alarms; `ct_monitor` Lambda + SNS topic + email subscription + EventBridge schedule + IAM; CloudFront access-log v2 delivery (source + destination + delivery) + the `p41m0n.com-logs` S3 bucket + its policy + lifecycle; the index-rewrite CloudFront Function and its `function_association`; the GitHub OIDC deploy role `p41m0n-com-github-deploy` (and its trust + permissions policies); the MTA-STS subdomain alias (A + AAAA) and discovery TXT; the BIMI TXT record.
-- **Resources kept on the slimmed p41m0n stack:** S3 site bucket (`p41m0n.com`); CloudFront distribution (single S3 origin, no Lambda origins, no `/api/*` cache behaviors); ACM cert (apex + www SANs only); Route53 ALIAS records (apex + www); email DNS (MX, apex SPF TXT, three DKIM CNAMEs, DMARC, TLSRPT) — Proton catchall stays live; DNSSEC (KMS KSK + Route53 zone-signing config + DS at Gandi); CAA records; a NEW minimal CloudFront response-headers policy (HSTS + nosniff + X-Frame-Options + Referrer-Policy).
+> **Important correction (2026-05-15, post-PR-#493):** the original write-up of this section assumed p41m0n's deployed state mirrored millsymills's. A `terraform state list` on the p41m0n stack after the spec landed revealed that **p41m0n's deployed state never tracked csp_report, webauthn_demo, MTA-STS, or BIMI** — those features were added to the shared TF code over time but only millsymills was re-applied. p41m0n still carries the slimmer state from the original rehearsal apply. Net result: the teardown destroys a smaller surface than the original spec described, and **no ACM cert replacement happens** (the deployed cert already has 2 SANs — apex + www — matching what the toggle PR wants). The "Apply phase" and "Acceptance criteria" sections below have been amended to reflect the actual state inventory.
+
+- **`p41m0n.com`** registered at Gandi, NS pointed at Route53 (hosted zone `Z08582353GK05ITZ9SORO`), DNSSEC chained via DS at Gandi. CloudFront distribution + S3 site bucket + ACM cert (apex + www SANs — NOT mta-sts) live. Proton catchall active per the 2026-05-01 spec. **MTA-STS NOT deployed on p41m0n** (despite `enable_mta_sts = true` in `infra/stacks/p41m0n.tfvars` — the TF code wants MTA-STS records but p41m0n was never re-applied after the MTA-STS feature landed).
+- **Resources actually in p41m0n's Terraform state today** (per `tf.sh p41m0n state list`, sorted by category):
+  - **Site delivery:** `aws_s3_bucket.site` + 8 supporting; `aws_cloudfront_origin_access_control.site`; `aws_cloudfront_distribution.site`; `aws_cloudfront_function.index_rewrite`; `aws_cloudfront_response_headers_policy.site`.
+  - **inspector_tls (full suite):** Lambda + role + log group + Function URL + OAC + permission + origin-request policy + `aws_cloudfront_response_headers_policy.api`.
+  - **ct_monitor (full suite):** Lambda + role + 2 policies + log group + SNS topic + email subscription + EventBridge rule + target + permission.
+  - **Access logging:** `aws_s3_bucket.logs` + 7 supporting; `aws_s3_bucket_logging.site`; three `cloudfront_logging` delivery resources.
+  - **IAM (deploy):** `aws_iam_role.github_deploy` + policy; `aws_iam_openid_connect_provider.github` (shared with millsymills).
+  - **Cert + Route53:** `aws_acm_certificate.site` (apex + www SANs); `aws_acm_certificate_validation.site`; `aws_route53_record.cert_validation["p41m0n.com"]` + `["www.p41m0n.com"]`; `aws_route53_record.root_a`/`root_aaaa`/`www_a`/`www_aaaa`.
+  - **Email + DNS:** `aws_route53_record.mx`/`apex_txt`/`dkim` (×3)/`dmarc`/`tlsrpt`/`bimi`/`caa`.
+  - **DNSSEC:** `aws_kms_key.dnssec` + alias; `aws_route53_key_signing_key.ksk`; `aws_route53_hosted_zone_dnssec.site`.
+- **Resources expected by the TF code today but NOT in p41m0n state** (the toggle PR's `enable_*=false` flips simply prevent these from being created — there's nothing to destroy):
+  - **csp_report:** entire suite (Lambda + role + 3 policies + log group + Function URL + OAC + permission + reports S3 bucket + 5 supporting + SNS topic + sub + 3 alarms + 2 metric filters + response-headers policy + origin-request policy) — ~22 resources.
+  - **webauthn_demo:** entire suite (Lambda + role + policy + log group + Function URL + 2 DynamoDB tables + 4 alarms + null_resource install + archive) — ~12 resources.
+  - **MTA-STS:** `aws_route53_record.mta_sts_a` + `mta_sts_aaaa` + `mta_sts_txt[0]` + `cert_validation["mta-sts.p41m0n.com"]`.
+- **Resources kept on the slimmed p41m0n stack:** S3 site bucket (`p41m0n.com`); CloudFront distribution (single S3 origin, no Lambda origins, no `/api/*` cache behaviors); ACM cert (unchanged — already at apex + www only); Route53 ALIAS records (apex + www); email DNS (MX, apex SPF TXT, three DKIM CNAMEs, DMARC, TLSRPT) — Proton catchall stays live; DNSSEC (KMS KSK + Route53 zone-signing config + DS at Gandi); CAA records; a NEW minimal CloudFront response-headers policy (HSTS + nosniff + X-Frame-Options + Referrer-Policy).
 
 ## Architecture
 
@@ -260,14 +274,27 @@ magick ~/Downloads/IMG_0220_Original.jpg -auto-orient -strip -quality 85 face-of
 
 1. Edit `infra/stacks/p41m0n.tfvars` to the final shape shown earlier.
 2. `./scripts/tf.sh p41m0n init -reconfigure`.
-3. `./scripts/tf.sh p41m0n plan`. Expect:
-   - **Destroys:** `aws_lambda_function.inspector_tls` + role + log group + Function URL + OAC + permission; `aws_lambda_function.csp_report` + role + policies + log group + Function URL + OAC + permission + reports bucket and 7 supporting resources + SNS topic + sub + 3 alarms + 2 metric filters; `aws_lambda_function.webauthn_demo` + role + policy + log group + Function URL + 2 DynamoDB tables + 4 alarms + null_resource + archive; `aws_lambda_function.ct_monitor` + role + 2 policies + log group + SNS topic + sub + EventBridge rule + target + permission; `aws_route53_record.mta_sts_a` + `mta_sts_aaaa`; `aws_route53_record.bimi`; `aws_cloudfront_function.index_rewrite`; `aws_iam_role.github_deploy` + policy (NOT the OIDC provider); `aws_s3_bucket.logs` + 7 supporting resources + `aws_s3_bucket_logging.site` + 3 cloudfront_logging delivery resources; `aws_cloudfront_origin_access_control.inspector_tls` + `csp_report`; `aws_cloudfront_origin_request_policy.inspector_tls` + `csp_report`; `aws_cloudfront_response_headers_policy.api` + `csp_report` + `site` (replaced by `site_minimal`).
-   - **Replace:** `aws_acm_certificate.site` (SAN list shrinks 3→2 — `create_before_destroy` mints the new cert and validates via Route53 before old destruction).
-   - **Create:** `aws_cloudfront_response_headers_policy.site_minimal`.
-   - **Update:** `aws_cloudfront_distribution.site` (origins 4→1, ordered cache behaviors 2→0 — only default remains, response-headers policy swap, aliases 3→2 once the cert validates).
-   - **No change:** `aws_route53_record.root_a`/`root_aaaa`/`www_a`/`www_aaaa`/`mx`/`apex_txt`/`dkim` (×3)/`dmarc`/`tlsrpt`/`caa`; `aws_acm_certificate_validation.site` updates as a side effect of cert replacement; DNSSEC resources untouched; `aws_iam_openid_connect_provider.github` untouched; `aws_s3_bucket.site` and its 8 supporting resources untouched; `aws_cloudfront_origin_access_control.site` untouched.
-4. Review the plan against the expected list. Any extra `create` or any destroy of `aws_iam_openid_connect_provider.github` is a stop-the-line bug.
-5. `./scripts/tf.sh p41m0n apply`. Wall-clock ~15-20 minutes — dominated by ACM cert validation (~5 min) and CloudFront distribution propagation (~10-15 min).
+3. `./scripts/tf.sh p41m0n plan`. Expect (based on the actual `state list` inventory above — csp_report, webauthn_demo, and MTA-STS are absent from state, so they're no-ops, not destroys):
+   - **Destroys (~36 resources, all currently in p41m0n state):**
+     - `aws_lambda_function.inspector_tls` + role + role_policy_attachment + log group + Function URL + OAC + permission + origin-request policy + response-headers policy `api` (9 resources).
+     - `aws_lambda_function.ct_monitor` + role + role_policy_attachment + role_policy + log group + SNS topic + email subscription + EventBridge rule + target + permission (10 resources).
+     - `aws_route53_record.bimi` (BIMI TXT).
+     - `aws_cloudfront_function.index_rewrite`.
+     - `aws_iam_role.github_deploy` + `aws_iam_role_policy.github_deploy` (deploy role + policy — NOT the OIDC provider).
+     - `aws_s3_bucket.logs` + 7 supporting (`public_access_block`, `ownership_controls`, `server_side_encryption_configuration`, `versioning`, `lifecycle_configuration`, `policy`) + `aws_s3_bucket_logging.site` (9 resources).
+     - 3 `cloudfront_logging` delivery resources (`source`, `destination`, `delivery`).
+     - `aws_cloudfront_response_headers_policy.site` (replaced by `site_minimal` — see Create below).
+   - **Create:** `aws_cloudfront_response_headers_policy.site_minimal` (1 resource — driven by `cloudfront_headers_profile=minimal`).
+   - **Update in-place:** `aws_cloudfront_distribution.site` (origins shrink, ordered cache behaviors removed, response-headers policy swaps to `site_minimal`, `function_association` removed).
+   - **No change (deployed but untouched by toggles):** `aws_acm_certificate.site` (cert SAN list is already apex + www — toggle PR's `enable_mta_sts_alias=false` matches deployed state, so no replacement); `aws_acm_certificate_validation.site`; `aws_route53_record.cert_validation["p41m0n.com"]` + `["www.p41m0n.com"]`; `aws_route53_record.root_a`/`root_aaaa`/`www_a`/`www_aaaa`/`mx`/`apex_txt`/`dkim` (×3)/`dmarc`/`tlsrpt`/`caa`; DNSSEC resources (KMS key + alias + KSK + zone DNSSEC); `aws_iam_openid_connect_provider.github`; `aws_s3_bucket.site` and its 8 supporting resources; `aws_cloudfront_origin_access_control.site`.
+   - **No-op (NOT in state, won't be created because toggle is false):** csp_report suite (22 resources), webauthn_demo suite (12 resources), MTA-STS A/AAAA/TXT records, `aws_route53_record.cert_validation["mta-sts.p41m0n.com"]`. These appear in the current pre-toggle-PR plan as "to create" — after the toggle PR + the tfvars flip, they vanish entirely from the plan.
+4. Review the plan against the expected list. Stop-the-line conditions:
+   - Any destroy of `aws_iam_openid_connect_provider.github`.
+   - Any destroy of `aws_s3_bucket.site` or its supporting resources.
+   - Any destroy of DNSSEC resources (also guarded by `prevent_destroy=true`).
+   - Any *create* of csp_report / webauthn_demo / MTA-STS resources (would mean the toggle didn't take effect).
+   - Any cert REPLACEMENT (would mean the SAN list still differs — re-check `enable_mta_sts_alias` in tfvars).
+5. `./scripts/tf.sh p41m0n apply`. Wall-clock ~10-15 minutes — dominated entirely by CloudFront distribution propagation. No ACM cert validation race (no cert change), no Lambda cold-start delays (no Lambdas being created).
 
 ### One-shot upload (operator, local AWS creds)
 
@@ -302,14 +329,14 @@ The pre-step + toggle + cleanup PRs (millsymills.com) all merged; the content PR
 - `aws iam get-open-id-connect-provider --open-id-connect-provider-arn arn:aws:iam::<account>:oidc-provider/token.actions.githubusercontent.com` returns OK (provider survived).
 - `aws iam list-roles | jq '.Roles[] | select(.RoleName == "p41m0n-com-github-deploy")'` returns empty (deploy role gone).
 - `aws s3 ls s3://p41m0n.com-logs` returns NoSuchBucket (logs bucket gone).
-- `aws s3 ls s3://p41m0n.com-csp-reports` returns NoSuchBucket (CSP reports bucket gone).
-- `aws lambda list-functions --query "Functions[?starts_with(FunctionName, 'p41m0n-com-')].FunctionName"` returns `[]` (all four Lambdas gone).
-- `aws dynamodb list-tables --query "TableNames[?starts_with(@, 'p41m0n-com-')]"` returns `[]` (both webauthn DynamoDB tables gone).
+- `aws s3 ls s3://p41m0n.com-csp-reports` returns NoSuchBucket (CSP reports bucket never existed, but confirm it still doesn't).
+- `aws lambda list-functions --query "Functions[?starts_with(FunctionName, 'p41m0n-com-')].FunctionName"` returns `[]` (both deployed Lambdas — inspector_tls + ct_monitor — gone; csp_report + webauthn_demo never existed).
+- `aws dynamodb list-tables --query "TableNames[?starts_with(@, 'p41m0n-com-')]"` returns `[]` (webauthn DynamoDB tables never existed; confirm absent).
 
 ## Acceptance criteria
 
 1. `./scripts/tf.sh millsymills plan` returns an empty plan after the pre-step PR, after the toggle PR, and after the cleanup PR — at each checkpoint independently. (Manual gate; CI runs `terraform validate` only.)
-2. `./scripts/tf.sh p41m0n plan` after the p41m0n.tfvars edits shows ONLY the expected destroys, the cert REPLACEMENT, the CloudFront distribution UPDATE, and the new `site_minimal` response-headers policy. Zero surprise creates or destroys.
+2. `./scripts/tf.sh p41m0n plan` after the p41m0n.tfvars edits shows ONLY: ~36 destroys (inspector_tls suite, ct_monitor suite, github_deploy role + policy, index_rewrite function, BIMI record, logs bucket + supporting + s3_bucket_logging, three cloudfront_logging deliveries, response_headers_policy `site` + `api`), 1 create (`site_minimal`), 1 update (CloudFront distribution). **No** cert replacement, **no** csp_report/webauthn_demo/MTA-STS creates or destroys.
 3. `aws_iam_openid_connect_provider.github` is still present in the AWS account after the p41m0n apply.
 4. `https://p41m0n.com/` and `https://www.p41m0n.com/` serve the meme over HTTPS with HSTS; raw `/face-of-mercy.jpg` returns `image/jpeg`.
 5. `mta-sts.p41m0n.com` is NXDOMAIN; `default._bimi.p41m0n.com` is NXDOMAIN.
