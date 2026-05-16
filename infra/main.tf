@@ -47,3 +47,9 @@ provider "github" {
   owner = split("/", var.github_repo)[0]
   token = var.github_token
 }
+
+# Account ID is referenced from infra/dnssec.tf (KMS key policy) and
+# infra/s3.tf (logs-bucket policy SourceAccount/SourceArn). Lives here
+# rather than in cloudfront_logging.tf so it survives any future
+# conditional gating of the cloudfront-logging resources.
+data "aws_caller_identity" "current" {}
