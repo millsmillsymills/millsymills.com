@@ -29,6 +29,8 @@
 # Closes Phase 1 of #134 for any stack with `enable_mta_sts = true`.
 
 resource "aws_route53_record" "mta_sts_a" {
+  count = var.enable_mta_sts_alias ? 1 : 0
+
   zone_id = data.aws_route53_zone.site.zone_id
   name    = "mta-sts.${var.domain}"
   type    = "A"
@@ -41,6 +43,8 @@ resource "aws_route53_record" "mta_sts_a" {
 }
 
 resource "aws_route53_record" "mta_sts_aaaa" {
+  count = var.enable_mta_sts_alias ? 1 : 0
+
   zone_id = data.aws_route53_zone.site.zone_id
   name    = "mta-sts.${var.domain}"
   type    = "AAAA"
@@ -60,4 +64,17 @@ resource "aws_route53_record" "mta_sts_txt" {
   type    = "TXT"
   ttl     = 3600
   records = ["v=STSv1; id=${var.mta_sts_id}"]
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+# aws_route53_record.mta_sts_txt was already count-gated via enable_mta_sts; no move needed.
+
+moved {
+  from = aws_route53_record.mta_sts_a
+  to   = aws_route53_record.mta_sts_a[0]
+}
+
+moved {
+  from = aws_route53_record.mta_sts_aaaa
+  to   = aws_route53_record.mta_sts_aaaa[0]
 }
