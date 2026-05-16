@@ -16,7 +16,7 @@
 
 @font-face {
 	font-family: 'Tahoma';
-	src: url('/fonts/tahoma.ttf') format('truetype');
+	src: url('/fonts/tahoma.woff2') format('woff2');
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
@@ -24,7 +24,7 @@
 
 @font-face {
 	font-family: 'Franklin Gothic ITC';
-	src: url('/fonts/framdit.ttf') format('truetype');
+	src: url('/fonts/framdit.woff2') format('woff2');
 	font-weight: 400;
 	font-style: italic;
 	font-display: swap;
