@@ -5,8 +5,6 @@
 # All three resources must live in us-east-1 since CloudFront is a
 # us-east-1 service.
 
-data "aws_caller_identity" "current" {}
-
 resource "aws_cloudwatch_log_delivery_source" "cloudfront_access" {
   provider     = aws.us_east_1
   name         = "${replace(var.domain, ".", "-")}-cloudfront-access"
