@@ -75,23 +75,10 @@ jobs:
       - name: Test (vitest)
         run: npm test
 
-      # `astro check` loads astro.config.mjs, which exits 1 when CI=true
-      # without SITE_URL. GitHub sets CI=true on every step, so the
-      # typecheck step needs SITE_URL too — not just the build step.
       - name: Typecheck (astro check)
-        env:
-          # Hardcoded rather than ${{ vars.SITE_URL }} — ci.yml only
-          # typechecks + builds (artifacts are never deployed), the
-          # site domain is public, and a missing repo variable would
-          # silently fail astro.config.mjs's CI=true SITE_URL guard.
-          # Real deploys still resolve SITE_URL per-environment via
-          # deploy.yml / deploy-rehearsal.yml.
-          SITE_URL: https://millsymills.com
         run: npm run check
 
       - name: Build
-        env:
-          SITE_URL: https://millsymills.com
         run: npm run build
 
       - name: Install Playwright browsers (chromium)
@@ -105,8 +92,6 @@ jobs:
         # preview on 127.0.0.1:4321 for the duration of the run.
         # astro preview reloads astro.config.mjs, whose CI=true guard
         # demands SITE_URL — same hardcoded value as Typecheck/Build.
-        env:
-          SITE_URL: https://millsymills.com
         run: npm run test:e2e
 
       # ---- post-build asserts (consume dist/) ----
