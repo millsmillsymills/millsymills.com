@@ -26,7 +26,10 @@ export interface MillsEventMap {
 	'mills:now-playing': CustomEvent<NowPlaying>;
 	'mills:close-window': CustomEvent<{ id: string }>;
 	'mills:clippy-trigger': CustomEvent<ClippyTriggerDetail>;
+	'mills:play-sound': CustomEvent<{ kind: SoundKind }>;
 }
+
+export type SoundKind = 'open' | 'close' | 'error' | 'startup' | 'reset';
 
 export interface NowPlaying {
 	playing: boolean;
@@ -77,4 +80,8 @@ export function dispatchClippyTrigger(trigger: QuipTrigger, appId?: AppId): void
 	window.dispatchEvent(
 		new CustomEvent('mills:clippy-trigger', { detail: { trigger, appId } }),
 	);
+}
+
+export function dispatchPlaySound(kind: SoundKind): void {
+	window.dispatchEvent(new CustomEvent('mills:play-sound', { detail: { kind } }));
 }
