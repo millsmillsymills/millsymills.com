@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #
-# Assert the SLSA generator pin in deploy.yml + deploy-rehearsal.yml has
-# moved off a Node 20 release before GitHub flips the runner default to
-# Node 24 (2026-06-02). After that date, Node-20-based actions are not
-# guaranteed to keep working; on 2026-09-16, Node 20 is removed from the
-# runner image entirely.
+# Assert the SLSA generator pin in deploy.yml has moved off a Node 20
+# release before GitHub flips the runner default to Node 24 (2026-06-02).
+# After that date, Node-20-based actions are not guaranteed to keep working;
+# on 2026-09-16, Node 20 is removed from the runner image entirely.
 #
 # Why a guardrail and not a bump:
 #   The fix is upstream — slsa-framework/slsa-github-generator's
@@ -18,13 +17,11 @@
 #   blocked-on-upstream until they tag a Node-24 release.
 #
 # What this script catches:
-#   1. Pin drift between the two deploy workflows (rehearsal must mirror
-#      production for the pipeline-bug-catch property to hold).
-#   2. The deadline silently passing without our pin moving forward.
-#      Dependabot watches the github-actions ecosystem weekly and will
-#      open a bump PR within ~7-14 days of the upstream release; this
-#      script is the backstop if Dependabot misses or the release never
-#      happens.
+#   The deadline silently passing without our pin moving forward.
+#   Dependabot watches the github-actions ecosystem weekly and will
+#   open a bump PR within ~7-14 days of the upstream release; this
+#   script is the backstop if Dependabot misses or the release never
+#   happens.
 #
 # Wired into scripts/ci-local.sh.
 
@@ -69,20 +66,9 @@ extract_pin() {
 }
 
 deploy_pin=$(extract_pin .github/workflows/deploy.yml)
-rehearsal_pin=$(extract_pin .github/workflows/deploy-rehearsal.yml)
 
-if [[ -z "${deploy_pin}" || -z "${rehearsal_pin}" ]]; then
-	echo "FAIL: could not locate slsa-github-generator pin in one or both deploy workflows" >&2
-	echo "  deploy.yml:           ${deploy_pin:-<missing>}" >&2
-	echo "  deploy-rehearsal.yml: ${rehearsal_pin:-<missing>}" >&2
-	exit 1
-fi
-
-if [[ "${deploy_pin}" != "${rehearsal_pin}" ]]; then
-	echo "FAIL: SLSA generator pin drift between deploy workflows" >&2
-	echo "  deploy.yml:           ${deploy_pin}" >&2
-	echo "  deploy-rehearsal.yml: ${rehearsal_pin}" >&2
-	echo "Rehearsal must mirror prod or the pipeline-bug-catch property breaks." >&2
+if [[ -z "${deploy_pin}" ]]; then
+	echo "FAIL: could not locate slsa-github-generator pin in deploy.yml" >&2
 	exit 1
 fi
 
@@ -120,9 +106,9 @@ if [[ "${today}" < "${DEADLINE}" ]]; then
 fi
 
 echo "FAIL: SLSA generator pin ${current_version} still on Node-20 past deadline ${DEADLINE}" >&2
-echo "      Bump deploy.yml + deploy-rehearsal.yml to a release whose embedded" >&2
-echo "      Node action refs run on Node 24, then add the new tag to" >&2
-echo "      NODE20_VERSIONS in this script (do not remove the old entries)." >&2
+echo "      Bump deploy.yml to a release whose embedded Node action refs" >&2
+echo "      run on Node 24, then add the new tag to NODE20_VERSIONS in" >&2
+echo "      this script (do not remove the old entries)." >&2
 echo "      Upstream tracking: ${UPSTREAM_ISSUE}" >&2
 echo "      Local tracking:    ${LOCAL_ISSUE}" >&2
 exit 1
