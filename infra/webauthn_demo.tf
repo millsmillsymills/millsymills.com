@@ -34,6 +34,8 @@ locals {
 # --------------------------------------------------------------------
 
 resource "aws_dynamodb_table" "webauthn_credentials" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   name         = local.webauthn_demo_name
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "credentialId"
@@ -74,6 +76,8 @@ resource "aws_dynamodb_table" "webauthn_credentials" {
 # --------------------------------------------------------------------
 
 resource "aws_dynamodb_table" "webauthn_sessions" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   name         = local.webauthn_sessions_table
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "sessionId"
@@ -104,6 +108,8 @@ resource "aws_dynamodb_table" "webauthn_sessions" {
 # --------------------------------------------------------------------
 
 resource "null_resource" "webauthn_demo_install" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   triggers = {
     lockfile = filesha256("${local.webauthn_demo_lambda_dir}/package-lock.json")
   }
@@ -130,6 +136,8 @@ data "archive_file" "webauthn_demo" {
 }
 
 resource "aws_iam_role" "webauthn_demo" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   name = "${local.webauthn_demo_name}-lambda"
 
   assume_role_policy = jsonencode({
@@ -145,6 +153,8 @@ resource "aws_iam_role" "webauthn_demo" {
 # Pre-create the log group so retention is owned by Terraform; otherwise
 # Lambda creates it on first invoke with retention=Never.
 resource "aws_cloudwatch_log_group" "webauthn_demo" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   name              = "/aws/lambda/${local.webauthn_demo_name}"
   retention_in_days = 14
 }
@@ -154,8 +164,10 @@ resource "aws_cloudwatch_log_group" "webauthn_demo" {
 # log-group-scoped CRUD instead, matching the resource-scoped pattern
 # we use for DynamoDB below.
 resource "aws_iam_role_policy" "webauthn_demo" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   name = "webauthn-demo"
-  role = aws_iam_role.webauthn_demo.id
+  role = aws_iam_role.webauthn_demo[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -168,8 +180,8 @@ resource "aws_iam_role_policy" "webauthn_demo" {
           "logs:PutLogEvents",
         ]
         Resource = [
-          aws_cloudwatch_log_group.webauthn_demo.arn,
-          "${aws_cloudwatch_log_group.webauthn_demo.arn}:*",
+          aws_cloudwatch_log_group.webauthn_demo[0].arn,
+          "${aws_cloudwatch_log_group.webauthn_demo[0].arn}:*",
         ]
       },
       {
@@ -181,8 +193,8 @@ resource "aws_iam_role_policy" "webauthn_demo" {
           "dynamodb:DeleteItem",
         ]
         Resource = [
-          aws_dynamodb_table.webauthn_credentials.arn,
-          aws_dynamodb_table.webauthn_sessions.arn,
+          aws_dynamodb_table.webauthn_credentials[0].arn,
+          aws_dynamodb_table.webauthn_sessions[0].arn,
         ]
       },
     ]
@@ -190,8 +202,10 @@ resource "aws_iam_role_policy" "webauthn_demo" {
 }
 
 resource "aws_lambda_function" "webauthn_demo" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   function_name    = local.webauthn_demo_name
-  role             = aws_iam_role.webauthn_demo.arn
+  role             = aws_iam_role.webauthn_demo[0].arn
   filename         = data.archive_file.webauthn_demo.output_path
   source_code_hash = data.archive_file.webauthn_demo.output_base64sha256
   handler          = "index.handler"
@@ -213,14 +227,14 @@ resource "aws_lambda_function" "webauthn_demo" {
 
   environment {
     variables = {
-      WEBAUTHN_TABLE           = aws_dynamodb_table.webauthn_credentials.name
-      WEBAUTHN_SESSIONS_TABLE  = aws_dynamodb_table.webauthn_sessions.name
+      WEBAUTHN_TABLE           = aws_dynamodb_table.webauthn_credentials[0].name
+      WEBAUTHN_SESSIONS_TABLE  = aws_dynamodb_table.webauthn_sessions[0].name
       WEBAUTHN_RP_ID           = var.domain
       WEBAUTHN_EXPECTED_ORIGIN = "https://${var.domain}"
     }
   }
 
-  depends_on = [aws_cloudwatch_log_group.webauthn_demo]
+  depends_on = [aws_cloudwatch_log_group.webauthn_demo[0]]
 }
 
 # Public Function URL. No CloudFront OAC fronting -- the
@@ -228,7 +242,9 @@ resource "aws_lambda_function" "webauthn_demo" {
 # (see header comment + issue #140). CORS allows only `https://<domain>`
 # so a browser on any other origin cannot exercise the endpoint.
 resource "aws_lambda_function_url" "webauthn_demo" {
-  function_name      = aws_lambda_function.webauthn_demo.function_name
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  function_name      = aws_lambda_function.webauthn_demo[0].function_name
   authorization_type = "NONE"
 
   cors {
@@ -241,7 +257,7 @@ resource "aws_lambda_function_url" "webauthn_demo" {
 
 output "webauthn_demo_url" {
   description = "Public HTTPS endpoint for the WebAuthn demo Lambda. Routes /registration/options, /registration/verify, /authentication/options, /authentication/verify (all POST). Wire this into the `/demo/passkey` Astro page in the followup page-slice PR (#445)."
-  value       = aws_lambda_function_url.webauthn_demo.function_url
+  value       = var.enable_webauthn_demo ? aws_lambda_function_url.webauthn_demo[0].function_url : null
 }
 
 # --------------------------------------------------------------------
@@ -257,6 +273,8 @@ output "webauthn_demo_url" {
 # --------------------------------------------------------------------
 
 resource "aws_cloudwatch_metric_alarm" "webauthn_demo_throttles" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   alarm_name          = "${local.webauthn_demo_name}-throttles"
   alarm_description   = "webauthn_demo Lambda was throttled -- bursts beyond reserved_concurrent_executions are silently dropping passkey demo requests."
   namespace           = "AWS/Lambda"
@@ -267,11 +285,11 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_throttles" {
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
-  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 
   dimensions = {
-    FunctionName = aws_lambda_function.webauthn_demo.function_name
+    FunctionName = aws_lambda_function.webauthn_demo[0].function_name
   }
 }
 
@@ -281,6 +299,8 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_throttles" {
 # escaped the handler -- worth surfacing immediately on a public
 # no-auth endpoint.
 resource "aws_cloudwatch_metric_alarm" "webauthn_demo_errors" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   alarm_name          = "${local.webauthn_demo_name}-errors"
   alarm_description   = "webauthn_demo Lambda raised an uncaught exception. The handler maps known failures to 4xx JSON responses, so this signals an unexpected error path -- check CloudWatch Logs Insights."
   namespace           = "AWS/Lambda"
@@ -291,11 +311,11 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_errors" {
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
-  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 
   dimensions = {
-    FunctionName = aws_lambda_function.webauthn_demo.function_name
+    FunctionName = aws_lambda_function.webauthn_demo[0].function_name
   }
 }
 
@@ -307,6 +327,8 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_errors" {
 # no-auth endpoint is a DoS signal. Threshold + windows match the
 # csp_report body-cap alarm.
 resource "aws_cloudwatch_metric_alarm" "webauthn_demo_body_too_large" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   alarm_name          = "${local.webauthn_demo_name}-body-too-large"
   alarm_description   = "webauthn_demo Lambda rejected oversize bodies (>4 KiB) at a sustained rate. Likely abuse or a misbehaving client; investigate request volume on the Function URL."
   namespace           = "MillsymillsCom/WebauthnDemo"
@@ -317,8 +339,8 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_body_too_large" {
   threshold           = 5
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
-  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
 # Catches "Lambda stopped being invoked at all" -- the failure mode the
@@ -330,6 +352,8 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_body_too_large" {
 # demo's bursty/zero-traffic baseline while still surfacing genuine
 # outages within a day.
 resource "aws_cloudwatch_metric_alarm" "webauthn_demo_invocations_zero" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
   alarm_name          = "${local.webauthn_demo_name}-invocations-zero"
   alarm_description   = "webauthn_demo Lambda has had zero invocations for 24h. Likely a broken Function URL, revoked IAM role, or accidental delete -- not benign demo traffic gaps."
   namespace           = "AWS/Lambda"
@@ -340,10 +364,72 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_invocations_zero" {
   threshold           = 1
   comparison_operator = "LessThanThreshold"
   treat_missing_data  = "breaching"
-  alarm_actions       = [aws_sns_topic.csp_report_ops.arn]
-  ok_actions          = [aws_sns_topic.csp_report_ops.arn]
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 
   dimensions = {
-    FunctionName = aws_lambda_function.webauthn_demo.function_name
+    FunctionName = aws_lambda_function.webauthn_demo[0].function_name
   }
+}
+
+# moved blocks for the count-gating refactor (2026-05-15).
+
+moved {
+  from = aws_dynamodb_table.webauthn_credentials
+  to   = aws_dynamodb_table.webauthn_credentials[0]
+}
+
+moved {
+  from = aws_dynamodb_table.webauthn_sessions
+  to   = aws_dynamodb_table.webauthn_sessions[0]
+}
+
+moved {
+  from = null_resource.webauthn_demo_install
+  to   = null_resource.webauthn_demo_install[0]
+}
+
+moved {
+  from = aws_iam_role.webauthn_demo
+  to   = aws_iam_role.webauthn_demo[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_group.webauthn_demo
+  to   = aws_cloudwatch_log_group.webauthn_demo[0]
+}
+
+moved {
+  from = aws_iam_role_policy.webauthn_demo
+  to   = aws_iam_role_policy.webauthn_demo[0]
+}
+
+moved {
+  from = aws_lambda_function.webauthn_demo
+  to   = aws_lambda_function.webauthn_demo[0]
+}
+
+moved {
+  from = aws_lambda_function_url.webauthn_demo
+  to   = aws_lambda_function_url.webauthn_demo[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.webauthn_demo_throttles
+  to   = aws_cloudwatch_metric_alarm.webauthn_demo_throttles[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.webauthn_demo_errors
+  to   = aws_cloudwatch_metric_alarm.webauthn_demo_errors[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.webauthn_demo_body_too_large
+  to   = aws_cloudwatch_metric_alarm.webauthn_demo_body_too_large[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.webauthn_demo_invocations_zero
+  to   = aws_cloudwatch_metric_alarm.webauthn_demo_invocations_zero[0]
 }
