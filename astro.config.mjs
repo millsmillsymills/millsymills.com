@@ -120,10 +120,10 @@ const vscodeHighlights = await prerenderHighlights();
 /**
  * Vite plugin: when a source file is loaded via `?raw` into the vscode
  * file-tree snippet bundler, strip any hardcoded production URL from the
- * snippet. Real source files legitimately embed `https://millsymills.com`
- * inside `Astro.site ?? "..."` fallbacks, but our `assert-no-url-leakage.sh`
- * check rejects the literal anywhere in dist/. The snippets are evocative
- * view-source teasers, not runtime logic, so scrubbing is safe here.
+ * snippet. Source files embed `https://millsymills.com` literally, but
+ * dist/ must not expose the production URL in snippet blobs. The snippets
+ * are evocative view-source teasers, not runtime logic, so scrubbing is
+ * safe here.
  *
  * The list of files to scrub is derived from src/scripts/vscode/snippet-manifest.mjs
  * (entries with `scrubUrl: true`) — the same manifest file-tree.ts and
