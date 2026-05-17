@@ -273,6 +273,90 @@ resource "aws_cloudfront_response_headers_policy" "api" {
   }
 }
 
+# Per-path override of `aws_cloudfront_response_headers_policy.site` for
+# `/demo/passkey/*`. Differs ONLY in Permissions-Policy: flips
+# `publickey-credentials-create` + `publickey-credentials-get` from `=()`
+# (strict deny) to `=(self)` so `navigator.credentials.create()` /
+# `.get()` are callable from the demo page. Every other directive is
+# bit-identical to `site` — CSP, COOP/COEP/CORP, HSTS, frame-options,
+# Referrer-Policy, Reporting-Endpoints. The two policies must stay in
+# lockstep on every header except the WebAuthn directives; a divergence
+# silently weakens the demo page relative to the rest of the site.
+#
+# Wired to /demo/passkey/* via an ordered_cache_behavior below.
+resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
+  count = var.cloudfront_headers_profile == "strict" ? 1 : 0
+
+  name    = "${replace(var.domain, ".", "-")}-passkey-demo-headers"
+  comment = "Security headers for ${var.domain} /demo/passkey/* — strict site bundle with WebAuthn allowed"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 63072000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    frame_options {
+      frame_option = "SAMEORIGIN"
+      override     = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+
+    content_security_policy {
+      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
+      override                = true
+    }
+  }
+
+  custom_headers_config {
+    items {
+      header   = "Cross-Origin-Opener-Policy"
+      value    = "same-origin"
+      override = true
+    }
+
+    items {
+      header   = "Cross-Origin-Embedder-Policy"
+      value    = "require-corp"
+      override = true
+    }
+
+    items {
+      header   = "Cross-Origin-Resource-Policy"
+      value    = "same-origin"
+      override = true
+    }
+
+    items {
+      header   = "Reporting-Endpoints"
+      value    = "csp=\"https://${var.domain}/api/csp-report\""
+      override = true
+    }
+
+    # Permissions-Policy with `publickey-credentials-create=(self)` and
+    # `publickey-credentials-get=(self)`. Every other directive matches
+    # `aws_cloudfront_response_headers_policy.site`'s value byte-for-byte
+    # — `assert-permissions-policy.sh` enforces the strict-deny shape
+    # (only `=()` or `=(self)`) on every policy's PP value independently,
+    # so a future PR can't weaken just this one without CI catching it.
+    items {
+      header   = "Permissions-Policy"
+      value    = "accelerometer=(), attribution-reporting=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), compute-pressure=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), serial=(), speaker-selection=(), storage-access=(), sync-xhr=(), unload=(), usb=(), web-share=(), window-management=(), xr-spatial-tracking=()"
+      override = true
+    }
+  }
+}
+
 # Response-headers policy for /api/csp-report. Authored separately from
 # `api` (above) because the CSP endpoint's contract is same-origin POSTs
 # only -- it has no cross-origin embed requirement, unlike /api/tls/*
@@ -449,6 +533,38 @@ resource "aws_cloudfront_distribution" "site" {
       cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
       origin_request_policy_id   = aws_cloudfront_origin_request_policy.csp_report[0].id
       response_headers_policy_id = aws_cloudfront_response_headers_policy.csp_report[0].id
+    }
+  }
+
+  # /demo/passkey/* → S3 origin (same as default), but with the
+  # passkey-allowing response-headers policy so navigator.credentials.*
+  # actually runs in production. The page is static HTML+JS; only the
+  # response-headers policy differs from the default behavior. Gated on
+  # the strict headers profile because the override only applies on
+  # stacks that ship `aws_cloudfront_response_headers_policy.site` —
+  # stacks on the `minimal` profile don't carry the Permissions-Policy
+  # strict-deny baseline that needs overriding in the first place.
+  dynamic "ordered_cache_behavior" {
+    for_each = var.cloudfront_headers_profile == "strict" ? [1] : []
+    content {
+      path_pattern           = "/demo/passkey/*"
+      target_origin_id       = "s3-${var.domain}"
+      allowed_methods        = ["GET", "HEAD"]
+      cached_methods         = ["GET", "HEAD"]
+      viewer_protocol_policy = "redirect-to-https"
+      compress               = true
+
+      # AWS-managed CachingOptimized (same as the default behavior).
+      cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+      response_headers_policy_id = aws_cloudfront_response_headers_policy.passkey_demo[0].id
+
+      dynamic "function_association" {
+        for_each = var.enable_index_rewrite ? [1] : []
+        content {
+          event_type   = "viewer-request"
+          function_arn = aws_cloudfront_function.index_rewrite[0].arn
+        }
+      }
     }
   }
 
