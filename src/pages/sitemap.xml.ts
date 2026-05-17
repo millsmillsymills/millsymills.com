@@ -3,6 +3,13 @@ import { apps } from '../data/apps';
 
 const SITE = 'https://millsymills.com';
 
+// Build-time stamp shared across every <url> in the sitemap. The whole
+// dist/ tree is rebuilt + redeployed on every push or monthly schedule,
+// so "this page was last touched at build time" is true at first order
+// for a static site — finer per-route lastmod (git-blame derived) would
+// be overkill for a portfolio whose routes turn over together.
+const LASTMOD = new Date().toISOString().slice(0, 10);
+
 export const GET: APIRoute = () => {
 	const origin = SITE;
 
@@ -23,6 +30,7 @@ ${urls
 	.map(
 		(u) => `  <url>
     <loc>${u.loc}</loc>
+    <lastmod>${LASTMOD}</lastmod>
     <changefreq>${u.changefreq}</changefreq>
     <priority>${u.priority}</priority>
   </url>`,
