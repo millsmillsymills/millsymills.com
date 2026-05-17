@@ -379,6 +379,29 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_session_miss" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
+# Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` on
+# the GENUINE-regression branch of updateCredentialCounter's catch only
+# (TTL race + counter=0 deliberately don't emit so this alarm reflects
+# real clone / replay signal, not noise). WebAuthn clone-detection is
+# severe enough that the first occurrence should page — threshold 1 in
+# 5min, no smoothing.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_counter_regression" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  alarm_name          = "${local.webauthn_demo_name}-counter-regression"
+  alarm_description   = "webauthn_demo detected a signature counter regression. WebAuthn clone-detection signal: a second authenticator copy replayed an older signCount, or a captured assertion is being replayed. Investigate immediately on a public no-auth endpoint."
+  namespace           = "MillsymillsCom/WebauthnDemo"
+  metric_name         = "CounterRegression"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
+}
+
 # Catches "Lambda stopped being invoked at all" -- the failure mode the
 # other three alarms can't see. They all use `treat_missing_data =
 # "notBreaching"` and only fire on positive samples, so a broken
