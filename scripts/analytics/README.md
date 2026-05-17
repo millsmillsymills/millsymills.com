@@ -75,8 +75,14 @@ The bucket layout adds Hive-partition columns to every file path. DuckDB
 exposes them as varchars when `hive_partitioning = true`:
 
 ```
-s3://<stack>.com-logs/cloudfront-access/AwsAccountId=<id>/AwsRegion=Global/year=YYYY/month=MM/day=DD/hour=HH/<UUID>.parquet
+s3://<stack>.com-logs/AWSLogs/aws-account-id=<id>/CloudFront/cloudfront-access/year=YYYY/month=MM/day=DD/hour=HH/<UUID>.parquet
 ```
+
+CloudFront's v2 delivery framework auto-prepends `AWSLogs/aws-account-id=<id>/CloudFront/`
+to the suffix path we configure (`cloudfront-access`) when the destination
+bucket has no prefix; with `enable_hive_compatible_path = true` the account-id
+segment renders as `aws-account-id=…` so partition discovery works in DuckDB /
+Athena. See [AWS standard-logging docs § "Example paths to access logs"](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging.html).
 
 Queries that filter on `year` / `month` / `day` get partition pruning for free;
 queries that don't will scan the full retention window (up to 90 days). Always

@@ -12,7 +12,7 @@ SELECT
 	cs_uri_stem AS path,
 	COUNT(*)    AS hits
 FROM read_parquet(
-	's3://<bucket>/cloudfront-access/**/*.parquet',
+	's3://<bucket>/AWSLogs/aws-account-id=*/CloudFront/cloudfront-access/**/*.parquet',
 	hive_partitioning = true
 )
 WHERE make_date(

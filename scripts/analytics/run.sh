@@ -112,10 +112,28 @@ SQL=$(
 )
 
 # httpfs is the DuckDB extension that lets read_parquet() resolve s3:// URLs.
-# INSTALL + LOAD are idempotent; AWS_REGION / credentials come from the
-# operator's environment / ~/.aws/.
+# INSTALL + LOAD are idempotent.
+#
+# `CREATE SECRET ... PROVIDER credential_chain` walks the AWS SDK credential
+# chain (env vars → AWS_PROFILE → ~/.aws/credentials → IMDS); the bare
+# `SET s3_access_key_id` form doesn't, so AWS_PROFILE wouldn't be honoured
+# without the secret.
+#
+# `URL_STYLE 'path'` is required because the bucket name contains dots
+# (`<domain>-logs` → `millsymills.com-logs`); virtual-hosted style would
+# resolve to `https://millsymills.com-logs.s3.amazonaws.com/`, which fails
+# certificate validation against the `*.s3.amazonaws.com` wildcard.
+#
+# `REGION 'us-west-2'` matches the primary region declared in
+# `infra/variables.tf` (and the logs bucket's actual `LocationConstraint`).
 duckdb -markdown -c "
 INSTALL httpfs;
 LOAD httpfs;
+CREATE OR REPLACE SECRET cloudfront_logs (
+	TYPE S3,
+	PROVIDER credential_chain,
+	REGION 'us-west-2',
+	URL_STYLE 'path'
+);
 ${SQL}
 "
