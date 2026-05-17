@@ -122,7 +122,7 @@ resource "aws_iam_role_policy" "github_deploy" {
 }
 
 output "github_deploy_role_arn" {
-  description = "Pass this to the GitHub Actions deploy workflow as the AWS_DEPLOY_ROLE_ARN env-scoped variable on the matching GitHub Environment (production for deploy.yml). Null on stacks with enable_github_deploy_role=false."
+  description = "Pass this to the GitHub Actions deploy workflow as the AWS_DEPLOY_ROLE_ARN env-scoped variable on the matching GitHub Environment (production for deploy.yml). Null on stacks with `enable_github_deploy_role = false` (no per-stack deploy role provisioned). `terraform output -raw github_deploy_role_arn` errors loudly on null with `Unsupported value for raw output`, so the runbook copy-paste step fails fast rather than silently passing an empty string to GitHub. The deploy workflow itself is never invoked on a stack without the role (deploy.yml only targets millsymills today), so the null case has no automated consumer."
   value       = var.enable_github_deploy_role ? aws_iam_role.github_deploy[0].arn : null
 }
 
