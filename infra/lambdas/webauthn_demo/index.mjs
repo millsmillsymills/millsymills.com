@@ -176,6 +176,34 @@ function parseBody(event) {
 	}
 }
 
+// EMF metric for the session-miss alarm in webauthn_demo.tf. Fired
+// every time a verify handler gets a sessionId that has no entry in
+// the sessions table (unknown OR expired OR replayed-after-eager-delete).
+// Sustained volume on a public no-auth endpoint is the brute-force /
+// session-guessing signal — the handler returns 400 either way but
+// AWS/Lambda's Errors metric only counts uncaught exceptions, not
+// handler-returned 4xx. Wrapped so a stringify/log failure can't turn
+// the 400 path into an uncaught exception.
+function emitSessionMissMetric() {
+	try {
+		console.warn(JSON.stringify({
+			_aws: {
+				Timestamp: Date.now(),
+				CloudWatchMetrics: [{
+					Namespace: 'MillsymillsCom/WebauthnDemo',
+					Dimensions: [[]],
+					Metrics: [{ Name: 'SessionMiss', Unit: 'Count' }],
+				}],
+			},
+			level: 'warn',
+			msg: 'webauthn-demo session miss',
+			SessionMiss: 1,
+		}));
+	} catch (emfErr) {
+		console.error('emf emit failed', { err: emfErr?.message });
+	}
+}
+
 async function putSession(sessionId, payload) {
 	await ddb.send(
 		new PutCommand({
@@ -315,7 +343,10 @@ async function registrationVerifyHandler(body) {
 		return errorResponse(400, 'missing response');
 	}
 	const session = await takeSession(sessionId, 'registration');
-	if (!session) return errorResponse(400, 'unknown or expired session');
+	if (!session) {
+		emitSessionMissMetric();
+		return errorResponse(400, 'unknown or expired session');
+	}
 
 	if (!originMatches(response)) {
 		return errorResponse(400, 'origin mismatch');
@@ -375,7 +406,10 @@ async function authenticationVerifyHandler(body) {
 		return errorResponse(400, 'missing response');
 	}
 	const session = await takeSession(sessionId, 'authentication');
-	if (!session) return errorResponse(400, 'unknown or expired session');
+	if (!session) {
+		emitSessionMissMetric();
+		return errorResponse(400, 'unknown or expired session');
+	}
 
 	if (!originMatches(response)) {
 		return errorResponse(400, 'origin mismatch');
