@@ -15,7 +15,7 @@ already exist in S3. Design:
 ## Usage
 
 ```
-./scripts/analytics/run.sh <stack> [<query-name>] [days=30]
+./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [--csv] [--save]
 ```
 
 - `<stack>` — `millsymills` or `p41m0n`.
@@ -23,16 +23,38 @@ already exist in S3. Design:
   just `<stack>` to list the available queries.
 - `[days]` — lookback window. Default `30`. Capped at `90` (current-retention
   ceiling on the logs bucket).
+- `--csv` — emit DuckDB CSV instead of the default markdown table. Pipe-friendly
+  (`| q -H -d, "SELECT ..."`, `| ddgrep`, etc.).
+- `--save` — also write the rendered output to
+  `.cache/analytics/<stack>-<query>-<UTC-timestamp>.{md,csv}`. Stdout is
+  unchanged; the file is a copy in the active format. Directory is created
+  on demand. `.cache/analytics/` is gitignored.
 
-Output is a markdown table to stdout.
+Output is a markdown table to stdout by default. Combine `--csv --save` to
+get CSV in both places.
 
-### Worked example
+### Worked examples
 
 ```
 ./scripts/analytics/run.sh millsymills top-urls 30
 ```
 
-Prints the top 50 URI stems by request count over the last 30 days.
+Prints the top 50 URI stems by request count over the last 30 days as a
+markdown table.
+
+```
+./scripts/analytics/run.sh millsymills top-urls 7 --csv | column -t -s,
+```
+
+Pretty-prints the CSV output for quick eyeballing in a terminal.
+
+```
+./scripts/analytics/run.sh millsymills top-urls 30 --save
+```
+
+Markdown table to stdout AND copy at
+`.cache/analytics/millsymills-top-urls-<UTC-timestamp>.md` for sharing in
+a PR description or pasting into a notebook.
 
 ## How to add a new query
 

@@ -3,7 +3,7 @@
 # DuckDB query runner over CloudFront access logs (Parquet, Hive-partitioned).
 #
 # Usage:
-#   ./scripts/analytics/run.sh <stack> <query-name> [days=30]
+#   ./scripts/analytics/run.sh <stack> <query-name> [days=30] [--csv] [--save]
 #
 # See scripts/analytics/README.md and
 # docs/superpowers/specs/2026-05-17-cloudfront-analytics-design.md for the
@@ -17,15 +17,19 @@ QUERIES_DIR="scripts/analytics/queries"
 
 usage() {
 	cat <<'EOF'
-usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30]
+usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [--csv] [--save]
 
   <stack>       millsymills | p41m0n
   <query-name>  basename (no .sql) of a file under scripts/analytics/queries/
                 run with just <stack> to list available queries
   [days]        lookback window. Default 30. Capped at 90 (current-retention
                 ceiling on the logs bucket).
+  --csv         emit DuckDB CSV instead of the default markdown table.
+  --save        also write the rendered output to
+                .cache/analytics/<stack>-<query>-<UTC-timestamp>.{md,csv}.
+                stdout is unchanged; the file is a copy in the active format.
 
-Output is a markdown table to stdout.
+Output is a markdown table to stdout by default.
 EOF
 }
 
@@ -65,8 +69,14 @@ if [[ ! -f "$QUERY_FILE" ]]; then
 	exit 2
 fi
 
-DAYS="${1:-30}"
-shift || true
+# DAYS is positional and optional. If the next arg starts with `--` it's a
+# flag, not days — keep the default and leave the arg for the flag loop.
+if [[ "${1:-}" =~ ^-- ]] || [[ -z "${1:-}" ]]; then
+	DAYS=30
+else
+	DAYS="$1"
+	shift
+fi
 if ! [[ "$DAYS" =~ ^[0-9]+$ ]] || ((DAYS == 0)); then
 	printf '\033[1;31mrefusing: days must be a positive integer, got %q\033[0m\n' "$DAYS" >&2
 	exit 2
@@ -75,6 +85,19 @@ if ((DAYS > 90)); then
 	printf '\033[1;33mnote: days capped at 90 (current-retention ceiling)\033[0m\n' >&2
 	DAYS=90
 fi
+
+EMIT_CSV=0
+SAVE=0
+for arg in "$@"; do
+	case "$arg" in
+		--csv) EMIT_CSV=1 ;;
+		--save) SAVE=1 ;;
+		*)
+			printf '\033[1;31mrefusing: unknown argument %q (expected --csv or --save)\033[0m\n' "$arg" >&2
+			exit 2
+			;;
+	esac
+done
 
 if ! command -v duckdb >/dev/null 2>&1; then
 	printf '\033[1;31mrefusing: duckdb not on PATH. Install: brew install duckdb\033[0m\n' >&2
@@ -125,7 +148,7 @@ SQL=$(
 #
 # `REGION 'us-west-2'` matches the primary region declared in
 # `infra/variables.tf` (and the logs bucket's actual `LocationConstraint`).
-duckdb -markdown -c "
+FULL_SQL="
 INSTALL httpfs;
 LOAD httpfs;
 CREATE OR REPLACE SECRET cloudfront_logs (
@@ -136,3 +159,23 @@ CREATE OR REPLACE SECRET cloudfront_logs (
 );
 ${SQL}
 "
+
+if ((EMIT_CSV)); then
+	FMT_FLAG="-csv"
+	EXT="csv"
+else
+	FMT_FLAG="-markdown"
+	EXT="md"
+fi
+
+if ((SAVE)); then
+	mkdir -p .cache/analytics
+	TS=$(date -u +%Y%m%dT%H%M%SZ)
+	SAVE_PATH=".cache/analytics/${STACK}-${QUERY_NAME}-${TS}.${EXT}"
+	# `tee` duplicates duckdb's stdout to the save path; the script's
+	# `set -o pipefail` preserves duckdb's exit code through the pipe.
+	duckdb "$FMT_FLAG" -c "$FULL_SQL" | tee "$SAVE_PATH"
+	printf '\033[2msaved: %s\033[0m\n' "$SAVE_PATH" >&2
+else
+	duckdb "$FMT_FLAG" -c "$FULL_SQL"
+fi
