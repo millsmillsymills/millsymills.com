@@ -72,8 +72,7 @@ resource "aws_route53_record" "mta_sts_txt" {
   records = ["v=STSv1; id=${var.mta_sts_id}"]
 }
 
-# moved blocks for the count-gating refactor (2026-05-15).
-# aws_route53_record.mta_sts_txt was already count-gated via enable_mta_sts; no move needed.
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_route53_record.mta_sts_a

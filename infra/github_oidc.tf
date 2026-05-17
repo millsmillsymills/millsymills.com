@@ -122,9 +122,9 @@ output "github_deploy_role_arn" {
   value       = var.enable_github_deploy_role ? aws_iam_role.github_deploy[0].arn : null
 }
 
-# moved blocks for the count-gating refactor (2026-05-15).
-# aws_iam_openid_connect_provider.github is intentionally NOT moved —
-# it stays unconditional (account-wide resource shared with millsymills).
+# moved blocks: preserve state addresses across the count = ... gating above.
+# aws_iam_openid_connect_provider.github stays unconditional (account-wide
+# resource shared across all stacks in this account).
 
 moved {
   from = aws_iam_role.github_deploy

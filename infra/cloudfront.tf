@@ -172,11 +172,11 @@ resource "aws_cloudfront_response_headers_policy" "site" {
   }
 }
 
-# Minimal response-headers policy for stacks that don't ship the strict
-# CSP/COOP/COEP/CORP/Permissions-Policy bundle. Suitable for static-image
-# stacks (no JS, no third-party assets, single image).
-# HSTS + nosniff + frame-options + Referrer-Policy is the floor — every
-# property below is independent of CSP and should ship on every stack.
+# Minimal response-headers policy: HSTS + nosniff + frame-options +
+# Referrer-Policy only. Provisioned when
+# `var.cloudfront_headers_profile = "minimal"`; the `"strict"` profile
+# provisions `aws_cloudfront_response_headers_policy.site` instead, which
+# layers CSP/COOP/COEP/CORP/Permissions-Policy on top of the same floor.
 resource "aws_cloudfront_response_headers_policy" "site_minimal" {
   count = var.cloudfront_headers_profile == "minimal" ? 1 : 0
 
@@ -477,7 +477,7 @@ resource "aws_cloudfront_distribution" "site" {
   }
 }
 
-# moved blocks for the count-gating refactor (2026-05-15 rehearsal teardown).
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_cloudfront_function.index_rewrite

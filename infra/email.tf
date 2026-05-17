@@ -135,7 +135,7 @@ resource "aws_route53_record" "bimi" {
   ]
 }
 
-# moved block for the count-gating refactor (2026-05-15).
+# moved block: preserve state address across the count = ... gating above.
 
 moved {
   from = aws_route53_record.bimi
