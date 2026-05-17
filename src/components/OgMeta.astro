@@ -1,0 +1,40 @@
+---
+interface Props {
+	title: string;
+	description?: string;
+	ogUrl?: string;
+	ogImage?: string;
+	ogType?: string;
+	ogSiteName?: string;
+}
+
+const {
+	title,
+	description,
+	ogUrl,
+	ogImage,
+	ogType = 'website',
+	ogSiteName,
+} = Astro.props;
+
+function imageMimeType(url: string): string {
+	if (/\.jpe?g(\?|#|$)/i.test(url)) return 'image/jpeg';
+	if (/\.webp(\?|#|$)/i.test(url)) return 'image/webp';
+	if (/\.gif(\?|#|$)/i.test(url)) return 'image/gif';
+	if (/\.avif(\?|#|$)/i.test(url)) return 'image/avif';
+	return 'image/png';
+}
+---
+<meta property="og:title" content={title} />
+{description && <meta property="og:description" content={description} />}
+<meta property="og:type" content={ogType} />
+{ogSiteName && <meta property="og:site_name" content={ogSiteName} />}
+{ogUrl && <meta property="og:url" content={ogUrl} />}
+{ogImage && <meta property="og:image" content={ogImage} />}
+{ogImage && <meta property="og:image:type" content={imageMimeType(ogImage)} />}
+{ogImage && <meta property="og:image:width" content="1200" />}
+{ogImage && <meta property="og:image:height" content="630" />}
+<meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+<meta name="twitter:title" content={title} />
+{description && <meta name="twitter:description" content={description} />}
+{ogImage && <meta name="twitter:image" content={ogImage} />}
