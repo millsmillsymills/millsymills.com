@@ -67,3 +67,6 @@ docs/reviews/
 # Playwright test artifacts (per-run traces, screenshots, html report)
 test-results/
 playwright-report/
+
+# scripts/analytics/run.sh --save destination (future flag, but reserve the path now)
+.cache/analytics/
