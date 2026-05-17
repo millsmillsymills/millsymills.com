@@ -37,9 +37,10 @@ Prints the top 50 URI stems by request count over the last 30 days.
 ## How to add a new query
 
 1. Copy an existing file in `queries/`, rename to `<question>.sql`.
-2. Use the `<bucket>`, `<since_year>`, `<since_month>`, `<since_day>` placeholders
-   the same way `top-urls.sql` does. `run.sh` substitutes them textually before
-   handing the SQL to DuckDB.
+2. Use the `<bucket>`, `<since_date>`, `<days>` placeholders the same way
+   `top-urls.sql` does. `run.sh` substitutes them textually before handing the
+   SQL to DuckDB. (`lint-queries.sh` also recognises `<path>` as a stand-in for
+   URI-prefix filters, useful for queries that take a path argument.)
 3. Run `./scripts/analytics/lint-queries.sh` to catch column-name typos against
    the fake schema (no AWS calls).
 4. Smoke against prod: `./scripts/analytics/run.sh millsymills <question> 7`.

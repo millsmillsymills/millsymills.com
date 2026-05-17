@@ -220,6 +220,14 @@ if ! command -v shfmt >/dev/null 2>&1; then
 	printf '\033[1;31m✗ shfmt not on PATH; install with `brew install shfmt`\033[0m\n' >&2
 	exit 1
 fi
+# Hard-require duckdb here so the SQL parse-check actually runs in this CI
+# context — lint-queries.sh silently skips when duckdb is absent (so a dev
+# running it ad-hoc isn't blocked), and that silent-skip is the wrong posture
+# for the gate. Matches the shellcheck/shfmt fail-loud posture above.
+if ! command -v duckdb >/dev/null 2>&1; then
+	printf '\033[1;31m✗ duckdb not on PATH; install with `brew install duckdb`\033[0m\n' >&2
+	exit 1
+fi
 shellcheck scripts/analytics/run.sh scripts/analytics/lint-queries.sh
 # -ci: switch-case patterns indent inside `case ... esac`, matching the rest
 # of scripts/ (e.g. tf.sh).
