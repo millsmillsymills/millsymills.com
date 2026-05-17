@@ -256,7 +256,7 @@ resource "aws_lambda_function_url" "webauthn_demo" {
 }
 
 output "webauthn_demo_url" {
-  description = "Public HTTPS endpoint for the WebAuthn demo Lambda. Routes /registration/options, /registration/verify, /authentication/options, /authentication/verify (all POST). Wire this into the `/demo/passkey` Astro page in the followup page-slice PR (#445)."
+  description = "Public HTTPS endpoint for the WebAuthn demo Lambda. Routes /registration/options, /registration/verify, /authentication/options, /authentication/verify (all POST). Wire this into the `/demo/passkey` Astro page in the followup page-slice PR (#445). Null on stacks with `enable_webauthn_demo = false`; consumers must either guard for null or be downstream of a stack with the toggle on. `terraform output -raw webauthn_demo_url` errors loudly on null (`Unsupported value for raw output`), so a copy-paste workflow surfaces the absence; `terraform output -json` returns JSON null, so automated consumers must reject it explicitly."
   value       = var.enable_webauthn_demo ? aws_lambda_function_url.webauthn_demo[0].function_url : null
 }
 
