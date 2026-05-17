@@ -172,10 +172,11 @@ resource "aws_cloudfront_response_headers_policy" "site" {
   }
 }
 
-# Minimal response-headers policy. Ships HSTS + nosniff + frame-options +
-# Referrer-Policy — the floor every stack should carry regardless of
-# whether it serves a JS-bearing site or a single static asset. Selected
-# via `var.cloudfront_headers_profile = "minimal"`.
+# Minimal response-headers policy: HSTS + nosniff + frame-options +
+# Referrer-Policy only. Provisioned when
+# `var.cloudfront_headers_profile = "minimal"`; the `"strict"` profile
+# provisions `aws_cloudfront_response_headers_policy.site` instead, which
+# layers CSP/COOP/COEP/CORP/Permissions-Policy on top of the same floor.
 resource "aws_cloudfront_response_headers_policy" "site_minimal" {
   count = var.cloudfront_headers_profile == "minimal" ? 1 : 0
 
