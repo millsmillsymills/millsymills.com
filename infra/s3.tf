@@ -122,6 +122,19 @@ resource "aws_s3_bucket" "logs" {
 
   bucket        = "${var.domain}-logs"
   force_destroy = false
+
+  # Belt-and-braces with force_destroy=false: flipping
+  # enable_access_logging true -> false on a non-empty bucket would fail
+  # the destroy anyway (force_destroy=false), but the destroy plan still
+  # runs the sibling resources' (PAB / SSE / versioning / policy)
+  # destroys in parallel. prevent_destroy short-circuits the whole plan
+  # so the operator must explicitly remove this block first, then flip
+  # the toggle — a deliberate two-step that prevents accidental
+  # forensic-log loss via a one-line tfvars edit. See variable
+  # description in infra/variables.tf for the full recovery path.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "logs" {
