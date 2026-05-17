@@ -262,8 +262,19 @@ resource "aws_s3_bucket_policy" "logs" {
         Principal = {
           Service = "delivery.logs.amazonaws.com"
         }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.logs[0].arn}/cloudfront-access/*"
+        Action = "s3:PutObject"
+        # Per AWS v2-delivery docs, when the destination bucket has no prefix
+        # CloudFront auto-prepends `AWSLogs/{account-id}/CloudFront/` to the
+        # suffix path (`cloudfront-access` here); with `enable_hive_compatible_path
+        # = true` the account-id segment is rendered as
+        # `aws-account-id={account-id}` so partition discovery works in
+        # Athena / DuckDB. The full rendered prefix is therefore
+        # `AWSLogs/aws-account-id={account-id}/CloudFront/cloudfront-access/`.
+        # The earlier resource value `cloudfront-access/*` was the *suffix*
+        # we asked for, NOT the path AWS actually writes to — PUTs were
+        # silently denied since the cutover. Refs slice-1 smoke discovery.
+        # https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging.html § "Example paths to access logs"
+        Resource = "${aws_s3_bucket.logs[0].arn}/AWSLogs/aws-account-id=${data.aws_caller_identity.current.account_id}/CloudFront/cloudfront-access/*"
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
