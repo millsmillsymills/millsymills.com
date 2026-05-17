@@ -283,7 +283,7 @@ resource "aws_s3_bucket_policy" "logs" {
   })
 }
 
-# moved blocks for the count-gating refactor (2026-05-15).
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_s3_bucket_logging.site

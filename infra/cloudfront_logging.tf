@@ -42,7 +42,7 @@ resource "aws_cloudwatch_log_delivery" "cloudfront_access" {
   depends_on = [aws_s3_bucket_policy.logs[0]]
 }
 
-# moved blocks for the count-gating refactor (2026-05-15).
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_cloudwatch_log_delivery_source.cloudfront_access

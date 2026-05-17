@@ -3,10 +3,9 @@ resource "aws_acm_certificate" "site" {
   domain_name       = var.domain
   validation_method = "DNS"
 
-  # The `mta-sts.<domain>` SAN is gated on `var.enable_mta_sts_alias`.
-  # When true (millsymills default), the cert covers apex + www + mta-sts
-  # so the operator can flip MTA-STS on/off via `enable_mta_sts` without
-  # a cert-replacement round-trip. When false (p41m0n teardown), the cert
+  # The `mta-sts.<domain>` SAN is gated on `var.enable_mta_sts_alias` so
+  # the operator can flip MTA-STS on/off via `enable_mta_sts` without a
+  # cert-replacement round-trip. When the alias is disabled, the cert
   # shrinks to apex + www, freeing the SAN slot and avoiding ACM renewals
   # on a subdomain that resolves to nothing.
   subject_alternative_names = compact([
