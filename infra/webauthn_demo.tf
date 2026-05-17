@@ -263,13 +263,23 @@ output "webauthn_demo_url" {
 # --------------------------------------------------------------------
 # Operational alarms.
 #
-# Mirrors the csp_report alarm posture (`infra/csp_report.tf`): a
+# Mirrors the csp_report alarm shape (`infra/csp_report.tf`): a
 # public, no-auth, internet-facing Lambda capped at
 # reserved_concurrent_executions = 5 needs visibility on throttling,
 # unhandled errors, and oversize-body abuse. Alarms publish to the
 # shared `csp_report_ops` SNS topic so all Lambda-side ops alerts land
 # on one channel; spinning up a webauthn-only topic is overkill while
 # there's exactly one operator on the other end.
+#
+# Tuning intentionally diverges from csp_report (which uses
+# period=300, evaluation_periods=2-3 to ride out spike noise during
+# the CSP cutover): webauthn_demo is post-cutover, has no in-flight
+# rollout that would generate transient spikes, and the demo
+# endpoint is exercised live by a single user — every Throttle /
+# Error / 413 is a real signal worth a same-period page. Tightening
+# to period=60-300 / evaluation_periods=1 trades a slightly higher
+# false-positive rate (still vanishingly low at this traffic volume)
+# for faster MTTD on a public no-auth surface.
 # --------------------------------------------------------------------
 
 resource "aws_cloudwatch_metric_alarm" "webauthn_demo_throttles" {
@@ -337,6 +347,32 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_body_too_large" {
   period              = 300
   evaluation_periods  = 1
   threshold           = 5
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
+}
+
+# Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` via
+# EMF on the verify-handler `takeSession(...) === null` branch. A
+# session miss = unknown sessionId, expired session, or replayed
+# sessionId after the eager-delete in `takeSession`. Sustained volume
+# on a public no-auth endpoint is the brute-force / session-guessing
+# signal — Lambda's built-in Errors metric only counts uncaught
+# exceptions, so handler-returned 400s aren't visible there. Threshold
+# (50/5min) tolerates the realistic background rate (a few stale-tab
+# retries, fuzzers) while surfacing sustained guessing volume.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_session_miss" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  alarm_name          = "${local.webauthn_demo_name}-session-miss"
+  alarm_description   = "webauthn_demo verify handler rejected sessionId at a sustained rate. Unknown / expired / replayed sessions; likely brute-force or session-guessing — check request volume on the Function URL."
+  namespace           = "MillsymillsCom/WebauthnDemo"
+  metric_name         = "SessionMiss"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 50
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
