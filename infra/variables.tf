@@ -121,14 +121,13 @@ variable "mta_sts_id" {
   }
 }
 
-# ─── per-feature toggles for the p41m0n teardown (2026-05-15) ──────────
+# ─── per-feature toggles ───────────────────────────────────────────────
 #
-# All defaults are `true` so the millsymills stack is unaffected. The
-# p41m0n stack flips them all to `false` (or `"minimal"` for the headers
-# profile) via infra/stacks/p41m0n.tfvars. Each toggle is paired with
-# `moved` blocks in the gated file so existing state addresses survive
-# the count-gating refactor — see the "moved blocks are mandatory"
-# section in the spec for the full rationale.
+# Each toggle gates a feature behind `count = var.enable_X ? 1 : 0`. Any
+# .tf file that count-gates an existing resource must accompany the change
+# with a `moved` block from `aws_X.Y` to `aws_X.Y[0]`, otherwise existing
+# state instances re-address on apply and Terraform queues destructive
+# replacements.
 
 variable "enable_inspector_tls" {
   description = "Provision the inspector_tls Lambda + CloudFront origin/cache-behavior + dedicated /api/tls/* response-headers policy. Drop on stacks without the /inspector/ app."

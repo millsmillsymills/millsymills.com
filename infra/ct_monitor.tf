@@ -133,7 +133,7 @@ resource "aws_lambda_permission" "ct_monitor_eventbridge" {
   source_arn    = aws_cloudwatch_event_rule.ct_monitor[0].arn
 }
 
-# moved blocks for the count-gating refactor (2026-05-15).
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_sns_topic.ct_monitor

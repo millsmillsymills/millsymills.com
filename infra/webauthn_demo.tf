@@ -372,7 +372,7 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_invocations_zero" {
   }
 }
 
-# moved blocks for the count-gating refactor (2026-05-15).
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_dynamodb_table.webauthn_credentials
