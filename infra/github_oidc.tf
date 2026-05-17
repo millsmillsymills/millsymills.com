@@ -33,6 +33,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 data "aws_iam_policy_document" "github_deploy_trust" {
+  count = var.enable_github_deploy_role ? 1 : 0
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -72,11 +74,13 @@ resource "aws_iam_role" "github_deploy" {
   count = var.enable_github_deploy_role ? 1 : 0
 
   name               = "${replace(var.domain, ".", "-")}-github-deploy"
-  assume_role_policy = data.aws_iam_policy_document.github_deploy_trust.json
+  assume_role_policy = data.aws_iam_policy_document.github_deploy_trust[0].json
   description        = "Assumed by GitHub Actions for ${var.github_repo} (${var.deploy_branch}) to deploy ${var.domain}."
 }
 
 data "aws_iam_policy_document" "github_deploy" {
+  count = var.enable_github_deploy_role ? 1 : 0
+
   statement {
     sid    = "SyncSiteObjects"
     effect = "Allow"
@@ -114,7 +118,7 @@ resource "aws_iam_role_policy" "github_deploy" {
 
   name   = "deploy"
   role   = aws_iam_role.github_deploy[0].id
-  policy = data.aws_iam_policy_document.github_deploy.json
+  policy = data.aws_iam_policy_document.github_deploy[0].json
 }
 
 output "github_deploy_role_arn" {

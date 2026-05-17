@@ -1,12 +1,13 @@
 aws_region    = "us-west-2"
 domain        = "p41m0n.com"
-github_repo   = "millsmillsymills/millsymills.com"
 deploy_branch = "main"
-# deploy_workflow / deploy_environment removed — no GH deploy workflow
-# for the slimmed stack (see enable_github_deploy_role = false). The CI
-# gate in ci.yml that asserts per-stack deploy_workflow files exist
-# falls back to deploy.yml when the var is absent (which exists for
-# millsymills), so the assertion still passes.
+# github_repo / deploy_workflow / deploy_environment removed — no GH
+# deploy workflow for the slimmed stack (see enable_github_deploy_role
+# = false). github_repo's conditional validation in variables.tf only
+# fires when the deploy role is enabled. The CI gate in ci.yml that
+# asserts per-stack deploy_workflow files exist falls back to
+# deploy.yml when the var is absent (which exists for millsymills),
+# so the assertion still passes.
 
 # All heavyweight features off — see
 # docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md.

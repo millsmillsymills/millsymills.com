@@ -11,12 +11,13 @@ variable "domain" {
 }
 
 variable "github_repo" {
-  description = "GitHub repo (owner/name) allowed to assume the deploy role via OIDC. No default: forks must set this explicitly so the deploy role can't be trivially assumed by the upstream repo."
+  description = "GitHub repo (owner/name) allowed to assume the deploy role via OIDC. Required when `enable_github_deploy_role = true` (default); ignored otherwise — stacks that don't ship the deploy role don't need to set this. Forks must set it explicitly so the deploy role can't be trivially assumed by the upstream repo."
   type        = string
+  default     = ""
 
   validation {
-    condition     = can(regex("^[^/]+/[^/]+$", var.github_repo))
-    error_message = "github_repo must be in `owner/name` form (e.g. `millsmillsymills/millsymills.com`)."
+    condition     = !var.enable_github_deploy_role || can(regex("^[^/]+/[^/]+$", var.github_repo))
+    error_message = "github_repo must be in `owner/name` form (e.g. `millsmillsymills/millsymills.com`) when enable_github_deploy_role = true."
   }
 }
 
