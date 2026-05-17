@@ -145,9 +145,7 @@ locals {
   inspector_tls_origin_host = var.enable_inspector_tls ? replace(replace(aws_lambda_function_url.inspector_tls[0].function_url, "https://", ""), "/", "") : null
 }
 
-# moved blocks for the count-gating refactor (2026-05-15 p41m0n teardown spec).
-# Without these, every existing instance on the millsymills stack would re-address
-# from `aws_X.Y` to `aws_X.Y[0]` and Terraform would queue destructive replacements.
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_iam_role.inspector_tls

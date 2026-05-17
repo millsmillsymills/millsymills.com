@@ -389,7 +389,7 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_body_cap_exceeded" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
-# moved blocks for the count-gating refactor (2026-05-15).
+# moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
   from = aws_s3_bucket.csp_report
