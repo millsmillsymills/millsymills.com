@@ -9,6 +9,10 @@ import ShutdownOverlay from '../components/desktop/ShutdownOverlay.astro';
 import { profile } from '../data/profile';
 
 const canonical = 'https://millsymills.com/';
+// Reuse the about.exe OG card — its copy ("mills — corporate security
+// engineer @ Trail of Bits…") is exactly the framing we want as the
+// social preview for the landing desktop.
+const ogImage = 'https://millsymills.com/og/about.png';
 ---
 
 <DesktopLayout
@@ -16,6 +20,7 @@ const canonical = 'https://millsymills.com/';
 	description={`${profile.title} @ ${profile.currentEmployer}. portfolio + links.`}
 	canonical={canonical}
 	ogUrl={canonical}
+	ogImage={ogImage}
 >
 	<Desktop />
 	<MobileFallback />
