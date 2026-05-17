@@ -160,7 +160,11 @@ variable "enable_ct_monitor" {
 }
 
 variable "enable_access_logging" {
-  description = "Provision the <domain>-logs S3 bucket + S3 server access logging + CloudFront access-log v2 delivery as a coherent unit. Drop on stacks that don't need access logs."
+  description = <<-DESC
+    Provision the <domain>-logs S3 bucket + S3 server access logging + CloudFront access-log v2 delivery as a coherent unit. Drop on stacks that don't need access logs.
+
+    Flipping true -> false on a non-empty bucket: the bucket is created with `force_destroy = false` (forensic logs must not vanish on a mistaken apply), so Terraform's destroy of `aws_s3_bucket.logs[0]` will fail when the bucket still holds objects. Recovery requires emptying the bucket (`aws s3 rm s3://<domain>-logs --recursive --include "*"`, plus a version-aware sweep — see `infra/s3.tf` versioning + lifecycle settings) BEFORE re-applying with the toggle off. The other gated resources (PAB, ownership, SSE, versioning, lifecycle, bucket policy) destroy in parallel; if the bucket destroy fails partway through, the bucket can briefly exist without its `DenyInsecureTransport` policy + per-bucket `PublicAccessBlock` until apply is re-run. Not catastrophic (no public ACL grants are made anywhere) but defense-in-depth is degraded during the gap.
+  DESC
   type        = bool
   default     = true
 }
