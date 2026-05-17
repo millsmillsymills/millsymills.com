@@ -294,17 +294,73 @@ async function updateCredentialCounter(credentialId, newCounter) {
 					'attribute_exists(credentialId) AND #counter < :new',
 				ExpressionAttributeNames: { '#counter': 'counter' },
 				ExpressionAttributeValues: { ':new': newCounter },
+				// Distinguish ConditionalCheckFailedException sources by
+				// inspecting the row state at the time of failure: absent
+				// row = TTL race, stored counter >= new = genuine regression
+				// (clone / replay). Without ALL_OLD the catch block can't
+				// tell them apart and a clone signal drowns in TTL noise.
+				ReturnValuesOnConditionCheckFailure: 'ALL_OLD',
 			}),
 		);
 	} catch (err) {
 		if (err?.name === 'ConditionalCheckFailedException') {
-			console.warn('webauthn-demo counter regression rejected', {
+			const credentialIdHash = credentialDiscriminator(credentialId);
+			const old = err.Item;
+			if (!old) {
+				// `attribute_exists(credentialId)` failed -- the row is
+				// gone. Most likely DynamoDB TTL evicted it between the
+				// `getCredentialById` lookup in the verify handler and
+				// this update. Benign; the assertion already succeeded
+				// crypto-wise.
+				console.warn('webauthn-demo credential vanished mid-update', {
+					newCounter,
+					credentialIdHash,
+				});
+				return;
+			}
+			// Row exists and the counter did NOT advance -- the
+			// `#counter < :new` clause failed. This is the WebAuthn
+			// clone-detection signal: a second authenticator copy with
+			// the same private key replayed an older signCount, or a
+			// genuine attacker is replaying captured assertions. Log
+			// + emit CounterRegression EMF so the alarm pages.
+			console.error('webauthn-demo counter regression detected', {
 				newCounter,
-				credentialIdHash: credentialDiscriminator(credentialId),
+				storedCounter: old.counter,
+				credentialIdHash,
 			});
+			emitCounterRegressionMetric();
 			return;
 		}
 		throw err;
+	}
+}
+
+// EMF metric for the counter-regression alarm in webauthn_demo.tf.
+// Emitted only on the genuine-regression branch of
+// updateCredentialCounter's catch -- TTL races and counter=0
+// authenticators (the other two ConditionalCheckFailedException
+// sources) deliberately don't emit so the alarm reflects real clone /
+// replay signal. Wrapped per the same defense as BodyTooLarge /
+// SessionMiss: a stringify/log failure can't escape and turn an
+// already-handled regression into an uncaught exception.
+function emitCounterRegressionMetric() {
+	try {
+		console.warn(JSON.stringify({
+			_aws: {
+				Timestamp: Date.now(),
+				CloudWatchMetrics: [{
+					Namespace: 'MillsymillsCom/WebauthnDemo',
+					Dimensions: [[]],
+					Metrics: [{ Name: 'CounterRegression', Unit: 'Count' }],
+				}],
+			},
+			level: 'warn',
+			msg: 'webauthn-demo counter regression',
+			CounterRegression: 1,
+		}));
+	} catch (emfErr) {
+		console.error('emf emit failed', { err: emfErr?.message });
 	}
 }
 
