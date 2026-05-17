@@ -119,9 +119,9 @@ DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip t
 
 Managed in `infra/mta_sts.tf`. The `mta-sts.<domain>` ACM SAN, CloudFront alias, and A/AAAA records ship unconditionally; the `_mta-sts.<domain>` discovery TXT is gated on `var.enable_mta_sts`. The policy file lives at `src/pages/.well-known/mta-sts.txt.ts` and is served from `https://mta-sts.<domain>/.well-known/mta-sts.txt`.
 
-Phase 1 (rehearsal on `p41m0n.com`) ships `mode: testing` + `max_age: 86400`. Senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Watch the next 24-48h cycle of TLS-RPT reports for `policy-type: sts` (vs `no-policy-found`) to confirm senders picked it up.
+Phase 1 (rehearsal on `p41m0n.com`) shipped `mode: testing` + `max_age: 86400` — the 24h value was the fast-rehearsal default for shaking out TLS-RPT. Senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Watch the next 24-48h cycle of TLS-RPT reports for `policy-type: sts` (vs `no-policy-found`) to confirm senders picked it up.
 
-Phase 2 (promote to `millsymills.com`) flips `enable_mta_sts = true` in `infra/stacks/millsymills.tfvars` post-cutover. Same Terraform module, same Astro page; only the per-stack tfvars change.
+Phase 2 (promote to `millsymills.com`) flips `enable_mta_sts = true` in `infra/stacks/millsymills.tfvars` post-cutover. Same Terraform module, same Astro page; only the per-stack tfvars change. Once the testing-mode rollout is observed stable, `max_age` is bumped to the RFC 8461 §3.2 SHOULD floor of 604800 (7d) — current state on millsymills.com.
 
 Flipping to `mode: enforce` (after 2-4 weeks of clean TLS-RPT reports):
 

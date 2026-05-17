@@ -26,7 +26,10 @@ protonmail_dkim_selectors = {
 # (src/pages/.well-known/mta-sts.txt.ts, mode: testing) by flipping
 # the per-stack discovery-TXT switch.
 enable_mta_sts = true
-mta_sts_id     = "20260514000000"
+# Bumped 2026-05-17 alongside the mta-sts.txt.ts max_age 86400 -> 604800
+# change (RFC 8461 §3.2). Senders refresh their cached policy when this
+# value changes; the bump is what makes the new max_age propagate.
+mta_sts_id = "20260517000000"
 
 # Google Workspace site-verification CNAME salvaged from the old DNS
 # provider (Squarespace-managed zone) on the 2026-05 cutover (step 8).
