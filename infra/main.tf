@@ -39,12 +39,15 @@ provider "aws" {
 
 # GitHub provider — manages repo-level controls (currently just the `main`
 # branch protection rule, see `github_branch_protection.tf`). `owner` is
-# derived from `var.github_repo` (the `owner/name` form already validated in
-# `variables.tf`). `token` comes from `var.github_token` (sensitive); set it
-# at apply time via `TF_VAR_github_token=$(gh auth token)` so the token
-# never lands in tfvars on disk.
+# derived from `var.github_repo` (the `owner/name` form, validated in
+# `variables.tf` when enable_github_deploy_role = true). `token` comes
+# from `var.github_token` (sensitive); set it at apply time via
+# `TF_VAR_github_token=$(gh auth token)` so the token never lands in
+# tfvars on disk. When github_repo is empty (stacks without the deploy
+# role), owner falls through to "" — harmless as long as no github_*
+# resource is materialized on that stack.
 provider "github" {
-  owner = split("/", var.github_repo)[0]
+  owner = var.github_repo != "" ? split("/", var.github_repo)[0] : ""
   token = var.github_token
 }
 
