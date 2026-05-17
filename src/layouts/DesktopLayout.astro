@@ -2,6 +2,7 @@
 import '../styles/desktop.css';
 import { profile } from '../data/profile';
 import Clippy from '../components/desktop/Clippy.astro';
+import OgMeta from '../components/OgMeta.astro';
 import { serializeJsonForScript } from '../scripts/util/html';
 
 interface Props {
@@ -66,19 +67,13 @@ const jsonLdSerialized = serializeJsonForScript(jsonLd);
 		{noindex && <meta name="robots" content="noindex,nofollow" />}
 		{description && <meta name="description" content={description} />}
 		{canonical && <link rel="canonical" href={canonical} />}
-		<meta property="og:title" content={title} />
-		{description && <meta property="og:description" content={description} />}
-		<meta property="og:type" content="website" />
-		<meta property="og:site_name" content="millsymills.com" />
-		{ogUrl && <meta property="og:url" content={ogUrl} />}
-		{ogImage && <meta property="og:image" content={ogImage} />}
-		{ogImage && <meta property="og:image:type" content="image/png" />}
-		{ogImage && <meta property="og:image:width" content="1200" />}
-		{ogImage && <meta property="og:image:height" content="630" />}
-		<meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
-		<meta name="twitter:title" content={title} />
-		{description && <meta name="twitter:description" content={description} />}
-		{ogImage && <meta name="twitter:image" content={ogImage} />}
+		<OgMeta
+			title={title}
+			description={description}
+			ogUrl={ogUrl}
+			ogImage={ogImage}
+			ogSiteName="millsymills.com"
+		/>
 
 		{/* for agents + devtools spelunkers — decode the token, submit the flag. */}
 		<meta name="x-mills-token" content="ZmxhZ3tiYXNlX3NpeHR5X2ZvdXJfaXNfYV9jbGFzc2ljfQ==" />
