@@ -16,29 +16,42 @@ if ! command -v duckdb >/dev/null 2>&1; then
 	exit 0
 fi
 
-# Stand-in for read_parquet('s3://...') matching the column names + types
-# our queries reference. Add columns here when a query references a new one.
+# Stand-in for read_parquet('s3://...') matching the v2 Parquet schema +
+# the `aws-account-id` hive-partition column. All native columns are
+# VARCHAR in the AWS schema; cast in SQL where queries need numeric / date
+# semantics. Add columns here when a query references a new one.
 FAKE_SCHEMA="
 CREATE OR REPLACE TEMP VIEW fake_logs AS
 SELECT
-	CAST(NULL AS VARCHAR)   AS cs_uri_stem,
-	CAST(NULL AS VARCHAR)   AS cs_uri_query,
-	CAST(NULL AS VARCHAR)   AS cs_method,
-	CAST(NULL AS VARCHAR)   AS cs_host,
-	CAST(NULL AS VARCHAR)   AS cs_referer,
-	CAST(NULL AS VARCHAR)   AS cs_user_agent,
-	CAST(NULL AS VARCHAR)   AS c_ip,
-	CAST(NULL AS VARCHAR)   AS c_country,
-	CAST(NULL AS INTEGER)   AS sc_status,
-	CAST(NULL AS BIGINT)    AS sc_bytes,
-	CAST(NULL AS BIGINT)    AS cs_bytes,
-	CAST(NULL AS DOUBLE)    AS time_taken,
-	CAST(NULL AS VARCHAR)   AS x_edge_result_type,
-	CAST(NULL AS TIMESTAMP) AS \"timestamp\",
-	CAST(NULL AS VARCHAR)   AS year,
-	CAST(NULL AS VARCHAR)   AS month,
-	CAST(NULL AS VARCHAR)   AS day,
-	CAST(NULL AS VARCHAR)   AS hour
+	CAST(NULL AS VARCHAR) AS \"date\",
+	CAST(NULL AS VARCHAR) AS \"time\",
+	CAST(NULL AS VARCHAR) AS x_edge_location,
+	CAST(NULL AS VARCHAR) AS sc_bytes,
+	CAST(NULL AS VARCHAR) AS c_ip,
+	CAST(NULL AS VARCHAR) AS cs_method,
+	CAST(NULL AS VARCHAR) AS cs_Host,
+	CAST(NULL AS VARCHAR) AS cs_uri_stem,
+	CAST(NULL AS VARCHAR) AS sc_status,
+	CAST(NULL AS VARCHAR) AS cs_Referer,
+	CAST(NULL AS VARCHAR) AS cs_User_Agent,
+	CAST(NULL AS VARCHAR) AS cs_uri_query,
+	CAST(NULL AS VARCHAR) AS cs_Cookie,
+	CAST(NULL AS VARCHAR) AS x_edge_result_type,
+	CAST(NULL AS VARCHAR) AS x_edge_request_id,
+	CAST(NULL AS VARCHAR) AS x_host_header,
+	CAST(NULL AS VARCHAR) AS cs_protocol,
+	CAST(NULL AS VARCHAR) AS cs_bytes,
+	CAST(NULL AS VARCHAR) AS time_taken,
+	CAST(NULL AS VARCHAR) AS time_to_first_byte,
+	CAST(NULL AS VARCHAR) AS ssl_protocol,
+	CAST(NULL AS VARCHAR) AS ssl_cipher,
+	CAST(NULL AS VARCHAR) AS x_edge_response_result_type,
+	CAST(NULL AS VARCHAR) AS cs_protocol_version,
+	CAST(NULL AS VARCHAR) AS c_port,
+	CAST(NULL AS VARCHAR) AS x_edge_detailed_result_type,
+	CAST(NULL AS VARCHAR) AS sc_content_type,
+	CAST(NULL AS VARCHAR) AS sc_content_len,
+	CAST(NULL AS VARCHAR) AS \"aws-account-id\"
 WHERE 1 = 0;
 "
 
@@ -53,9 +66,7 @@ for q in scripts/analytics/queries/*.sql; do
 
 	# Substitute stand-ins for runtime bind values.
 	rewritten=${rewritten//<bucket>/example-bucket}
-	rewritten=${rewritten//<since_year>/2026}
-	rewritten=${rewritten//<since_month>/1}
-	rewritten=${rewritten//<since_day>/1}
+	rewritten=${rewritten//<since_date>/2026-01-01}
 	rewritten=${rewritten//<days>/30}
 	rewritten=${rewritten//<path>/\/example\/}
 

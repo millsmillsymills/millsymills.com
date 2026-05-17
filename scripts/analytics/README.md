@@ -50,43 +50,55 @@ framework" — three similar `SELECT count(*), ... FROM ... GROUP BY ... ORDER B
 
 ## Log schema (CloudFront v2 standard-logging Parquet)
 
-Columns the queries reference. Names + types track the AWS schema; reproduced
-here because the AWS doc page churns. Authoritative source:
+Every column AWS writes is `VARCHAR`. Cast in SQL where queries need numeric
+or date semantics. Authoritative source (column meanings):
 <https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging.html>.
 
-| column | type | meaning |
-|---|---|---|
-| `timestamp` | timestamp | event time (UTC) |
-| `c_ip` | varchar | viewer IP |
-| `c_country` | varchar | viewer country (CloudFront geo) |
-| `cs_method` | varchar | request method |
-| `cs_host` | varchar | request `Host` header |
-| `cs_uri_stem` | varchar | request path (no query string) |
-| `cs_uri_query` | varchar | query string |
-| `cs_referer` | varchar | `Referer` header |
-| `cs_user_agent` | varchar | `User-Agent` |
-| `cs_bytes` | bigint | bytes received from the viewer |
-| `sc_status` | integer | HTTP status code |
-| `sc_bytes` | bigint | bytes sent to the viewer |
-| `time_taken` | double | request latency (s) |
-| `x_edge_result_type` | varchar | `Hit` / `Miss` / `RefreshHit` / `Error` / ... |
+| column | meaning |
+|---|---|
+| `date` | request date (ISO `YYYY-MM-DD`, UTC) |
+| `time` | request time (`HH:MM:SS`, UTC) |
+| `x_edge_location` | edge location code (`SEA19-C2` etc.) |
+| `c_ip` | viewer IP |
+| `cs_method` | request method |
+| `cs_Host` | request `Host` header |
+| `cs_uri_stem` | request path (no query string) |
+| `cs_uri_query` | query string |
+| `cs_Referer` | `Referer` header |
+| `cs_User_Agent` | `User-Agent` |
+| `cs_Cookie` | request cookies (always `-` here; cache policy strips them) |
+| `cs_protocol` / `cs_protocol_version` | scheme + HTTP version |
+| `cs_bytes` / `sc_bytes` | bytes in / out |
+| `sc_status` | HTTP status code (cast to INT for ranges) |
+| `time_taken` / `time_to_first_byte` | latency (s, cast to DOUBLE) |
+| `x_edge_result_type` / `x_edge_response_result_type` | `Hit` / `Miss` / `RefreshHit` / `Error` / ... |
+| `x_edge_detailed_result_type` | finer-grained edge outcome |
+| `x_edge_request_id` | CloudFront request id |
+| `x_host_header` | `:authority` |
+| `x_forwarded_for` | XFF |
+| `ssl_protocol` / `ssl_cipher` | negotiated TLS params |
 
-The bucket layout adds Hive-partition columns to every file path. DuckDB
-exposes them as varchars when `hive_partitioning = true`:
+Note: column names are mixed-case (`cs_Host`, `cs_Referer`, `cs_User_Agent`,
+`cs_Cookie`). Quote them or match exactly.
+
+The S3 path layout is:
 
 ```
-s3://<stack>.com-logs/AWSLogs/aws-account-id=<id>/CloudFront/cloudfront-access/year=YYYY/month=MM/day=DD/hour=HH/<UUID>.parquet
+s3://<stack>.com-logs/AWSLogs/aws-account-id=<id>/CloudFront/cloudfront-access/<distId>.<YYYY-MM-DD-HH>.<hash>.parquet
 ```
 
 CloudFront's v2 delivery framework auto-prepends `AWSLogs/aws-account-id=<id>/CloudFront/`
 to the suffix path we configure (`cloudfront-access`) when the destination
 bucket has no prefix; with `enable_hive_compatible_path = true` the account-id
-segment renders as `aws-account-id=…` so partition discovery works in DuckDB /
-Athena. See [AWS standard-logging docs § "Example paths to access logs"](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging.html).
+segment renders as `aws-account-id=…` so DuckDB / Athena pick it up as a
+hive-partition column. See [AWS standard-logging docs § "Example paths to access logs"](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/standard-logging.html).
 
-Queries that filter on `year` / `month` / `day` get partition pruning for free;
-queries that don't will scan the full retention window (up to 90 days). Always
-prefer the partition columns over `WHERE timestamp >= …`.
+`aws-account-id` is the only hive-partition column on this layout; year /
+month / day are NOT in the path. Use `WHERE date >= '<YYYY-MM-DD>'` to scope
+the window (the `date` column is an ISO string, so lexical compare is correct).
+DuckDB pushes the predicate into the Parquet reader and skips row groups whose
+date bounds fall outside the window — that's where the speedup comes from at
+this scale.
 
 ## Why DuckDB, not Athena
 

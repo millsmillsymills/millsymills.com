@@ -88,13 +88,14 @@ if ! aws sts get-caller-identity >/dev/null 2>&1; then
 	exit 1
 fi
 
-# Compute the since-partition tuple (year, month, day) for `today - DAYS`.
+# Compute the since-date ISO string for `today - DAYS`.  The v2 Parquet
+# logs carry the date as a varchar in the `date` column (YYYY-MM-DD), so a
+# lexical compare against this ISO string is correct without parsing.
 # Python over `date` to stay portable across BSD (macOS) and GNU (CI) coreutils.
-read -r SINCE_YEAR SINCE_MONTH SINCE_DAY < <(
+SINCE_DATE=$(
 	python3 -c "
 from datetime import date, timedelta
-d = date.today() - timedelta(days=${DAYS})
-print(d.year, d.month, d.day)
+print((date.today() - timedelta(days=${DAYS})).isoformat())
 "
 )
 
@@ -104,9 +105,7 @@ print(d.year, d.month, d.day)
 SQL=$(
 	sed \
 		-e "s|<bucket>|${BUCKET}|g" \
-		-e "s|<since_year>|${SINCE_YEAR}|g" \
-		-e "s|<since_month>|${SINCE_MONTH}|g" \
-		-e "s|<since_day>|${SINCE_DAY}|g" \
+		-e "s|<since_date>|${SINCE_DATE}|g" \
 		-e "s|<days>|${DAYS}|g" \
 		"$QUERY_FILE"
 )
