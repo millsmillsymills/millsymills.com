@@ -112,3 +112,41 @@ expiry, MFA delete requires root credentials for every state
 write) that's heavy for a single-operator personal site.
 Versioning + lifecycle + the deliberate `prevent_destroy` on the
 bucket cover the realistic recovery scenarios.
+
+## Future: fully destroying a stack
+
+The standard teardown (e.g. p41m0n per
+`docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md`)
+slims a stack down -- the state key stays active because Proton
+catchall + Route53 zone + the account-wide IAM OIDC provider stay
+live. If a stack is ever fully destroyed (domain expiry, rename,
+account-level cleanup), the state object becomes an orphan: a
+non-empty JSON in S3 with no live resources behind it.
+
+```bash
+# 1. Destroy whatever's left in the stack. Idempotent on an
+#    already-empty state.
+./scripts/tf.sh <stack> destroy
+
+# 2. Delete the current-version state object. Versioning is on, so
+#    the prior contents survive as noncurrent versions and are
+#    reaped on their own schedule by the noncurrent-version
+#    lifecycle (`var.noncurrent_version_retention_days`, default
+#    365d). Until then they're recoverable per the "Recovery"
+#    section above.
+aws s3api delete-object \
+  --bucket millsymills-terraform-state \
+  --key <stack>/terraform.tfstate
+
+# 3. (Optional) Delete the S3-native lockfile if one's lingering
+#    from a crashed apply.
+aws s3api delete-object \
+  --bucket millsymills-terraform-state \
+  --key <stack>/terraform.tfstate.tflock
+```
+
+In the same commit, remove `infra/stacks/<stack>.tfvars` and
+`infra/stacks/<stack>.backend.hcl` so `scripts/tf.sh` stops
+recognising the stack name. Leaving those files behind without a
+live state key produces a confusing "stack exists but plan
+fails" mode for the next operator.
