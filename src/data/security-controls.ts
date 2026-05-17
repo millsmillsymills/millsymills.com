@@ -414,15 +414,6 @@ export const securityControls: readonly SecurityControl[] = [
 
 	// ─── roadmap ───────────────────────────────────────────────────────
 	{
-		id: 'mta-sts',
-		title: 'MTA-STS',
-		category: 'email',
-		status: 'roadmap',
-		what: 'Static `mta-sts.<domain>/.well-known/mta-sts.txt` policy + `_mta-sts` TXT record telling sending MTAs to enforce TLS to inbound mail.',
-		why: 'Upgrades opportunistic SMTP TLS to enforced — blocks passive downgrade attacks visible to peer MTAs.',
-		tradeoffs: 'Gated on Proton activation. Will deploy in `mode: testing` first so TLS-RPT can surface failures before flipping to `enforce`.',
-	},
-	{
 		id: 'bimi',
 		title: 'BIMI (logo on authenticated mail)',
 		category: 'email',
