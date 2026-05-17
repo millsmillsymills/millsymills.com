@@ -168,19 +168,35 @@ test('/authentication/options returns sessionId + options', async () => {
 	assert.equal(putCalls[0].input.Item.type, 'authentication');
 });
 
-test('/registration/verify with unknown session returns 400', async () => {
+test('/registration/verify with unknown session returns 400 and emits SessionMiss EMF', async () => {
 	ddbResponses.set('GetCommand', { Item: undefined });
-	const res = await handler(
-		eventOf({
-			path: '/registration/verify',
-			body: {
-				sessionId: 'bogus',
-				response: { response: { clientDataJSON: clientDataJSON('https://example.test') } },
-			},
-		}),
-	);
+	const original = console.warn;
+	const lines = [];
+	console.warn = (msg) => lines.push(typeof msg === 'string' ? msg : JSON.stringify(msg));
+	let res;
+	try {
+		res = await handler(
+			eventOf({
+				path: '/registration/verify',
+				body: {
+					sessionId: 'bogus',
+					response: { response: { clientDataJSON: clientDataJSON('https://example.test') } },
+				},
+			}),
+		);
+	} finally {
+		console.warn = original;
+	}
 	assert.equal(res.statusCode, 400);
 	assert.match(res.body, /unknown or expired session/);
+	const emf = lines
+		.map((line) => {
+			try { return JSON.parse(line); } catch { return null; }
+		})
+		.find((parsed) => parsed && parsed._aws && parsed.SessionMiss === 1);
+	assert.ok(emf, 'expected a SessionMiss EMF JSON line on the session-miss path');
+	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Name, 'SessionMiss');
+	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Unit, 'Count');
 });
 
 test('/registration/verify with origin mismatch returns 400 before crypto', async () => {
