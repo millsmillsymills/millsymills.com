@@ -331,27 +331,77 @@ test('updateCredentialCounter skips DDB write for counter=0 authenticators (U2F)
 	assert.equal(updates.length, 0);
 });
 
-test('updateCredentialCounter swallows ConditionalCheckFailedException (counter regression)', async () => {
+test('updateCredentialCounter passes ReturnValuesOnConditionCheckFailure=ALL_OLD', async () => {
+	await __test.updateCredentialCounter('cred1', 5);
+	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
+	assert.equal(updates[0].input.ReturnValuesOnConditionCheckFailure, 'ALL_OLD');
+});
+
+test('updateCredentialCounter genuine regression: console.error + CounterRegression EMF', async () => {
 	ddbResponses.set('UpdateCommand', () => {
 		const err = new Error('counter not strictly greater');
 		err.name = 'ConditionalCheckFailedException';
+		err.Item = { credentialId: 'cred1', counter: 7 };
 		throw err;
 	});
 	const originalWarn = console.warn;
+	const originalError = console.error;
 	const warnings = [];
+	const errors = [];
 	console.warn = (...args) => warnings.push(args);
+	console.error = (...args) => errors.push(args);
 	try {
 		await __test.updateCredentialCounter('cred1', 3);
 	} finally {
 		console.warn = originalWarn;
+		console.error = originalError;
 	}
-	assert.equal(warnings.length, 1);
-	assert.match(String(warnings[0][0]), /counter regression/);
-	const ctx = warnings[0][1];
+	const regressionError = errors.find(([msg]) => /counter regression detected/.test(String(msg)));
+	assert.ok(regressionError, 'expected console.error for genuine regression');
+	const ctx = regressionError[1];
 	assert.equal(ctx.newCounter, 3);
-	assert.equal(typeof ctx.credentialIdHash, 'string');
-	assert.equal(ctx.credentialIdHash.length, 8);
+	assert.equal(ctx.storedCounter, 7);
 	assert.equal(ctx.credentialIdHash, __test.credentialDiscriminator('cred1'));
+	const emf = warnings
+		.map((args) => {
+			try { return JSON.parse(String(args[0])); } catch { return null; }
+		})
+		.find((parsed) => parsed && parsed._aws && parsed.CounterRegression === 1);
+	assert.ok(emf, 'expected CounterRegression EMF JSON line');
+	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Name, 'CounterRegression');
+});
+
+test('updateCredentialCounter TTL race: warn only, no CounterRegression EMF', async () => {
+	ddbResponses.set('UpdateCommand', () => {
+		const err = new Error('row gone');
+		err.name = 'ConditionalCheckFailedException';
+		// No err.Item -- attribute_exists(credentialId) was the clause that failed.
+		throw err;
+	});
+	const originalWarn = console.warn;
+	const originalError = console.error;
+	const warnings = [];
+	const errors = [];
+	console.warn = (...args) => warnings.push(args);
+	console.error = (...args) => errors.push(args);
+	try {
+		await __test.updateCredentialCounter('cred1', 3);
+	} finally {
+		console.warn = originalWarn;
+		console.error = originalError;
+	}
+	const vanished = warnings.find(([msg]) => /credential vanished mid-update/.test(String(msg)));
+	assert.ok(vanished, 'expected warn on TTL-race branch');
+	const ctx = vanished[1];
+	assert.equal(ctx.newCounter, 3);
+	assert.equal(ctx.credentialIdHash, __test.credentialDiscriminator('cred1'));
+	assert.equal(errors.length, 0, 'TTL race must not console.error');
+	const emf = warnings
+		.map((args) => {
+			try { return JSON.parse(String(args[0])); } catch { return null; }
+		})
+		.find((parsed) => parsed && parsed._aws && parsed.CounterRegression === 1);
+	assert.equal(emf, undefined, 'TTL race must not emit CounterRegression EMF');
 });
 
 test('credentialDiscriminator is the first 8 hex chars of SHA-256', () => {
