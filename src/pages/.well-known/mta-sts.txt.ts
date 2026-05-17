@@ -33,7 +33,12 @@ export const GET: APIRoute = () => {
 		'mode: testing',
 		'mx: mail.protonmail.ch',
 		'mx: mailsec.protonmail.ch',
-		'max_age: 86400',
+		// RFC 8461 §3.2 SHOULDs max_age >= 604800 (7 days) — applied
+		// once the testing-mode rollout was confirmed stable. Promotion
+		// from testing -> enforce remains pending on 2-4 weeks of clean
+		// TLS-RPT reports; until that flip, max_age controls how long
+		// senders cache the testing policy, not enforcement window.
+		'max_age: 604800',
 		'',
 	].join('\n');
 
