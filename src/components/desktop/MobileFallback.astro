@@ -1,64 +1,8 @@
 ---
-import About from './apps/About.astro';
-import Resume from './apps/Resume.astro';
-import Photos from './apps/Photos.astro';
-import Mail from './apps/Mail.astro';
-import Flags from './apps/Flags.astro';
-import Music from './apps/Music.astro';
-import Memes from './apps/Memes.astro';
-import Minesweeper from './apps/Minesweeper.astro';
-import Trash from './apps/Trash.astro';
-import Projects from './apps/Projects.astro';
-import Uses from './apps/Uses.astro';
-import Privacy from './apps/Privacy.astro';
-import Security from './apps/Security.astro';
-import Incidents from './apps/Incidents.astro';
-import Inspector from './apps/Inspector.astro';
-import VSCode from './apps/VSCode.astro';
-import Stub from './apps/Stub.astro';
 import { profile } from '../../data/profile';
 import { apps, iconSpriteStyle } from '../../data/apps';
 
 const MSHELL_ICON_PX = 56;
-
-const contentFor = (id: string) => {
-	switch (id) {
-		case 'about':
-			return About;
-		case 'resume':
-			return Resume;
-		case 'photos':
-			return Photos;
-		case 'mail':
-			return Mail;
-		case 'flags':
-			return Flags;
-		case 'music':
-			return Music;
-		case 'memes':
-			return Memes;
-		case 'minesweeper':
-			return Minesweeper;
-		case 'trash':
-			return Trash;
-		case 'projects':
-			return Projects;
-		case 'uses':
-			return Uses;
-		case 'privacy':
-			return Privacy;
-		case 'security':
-			return Security;
-		case 'incidents':
-			return Incidents;
-		case 'inspector':
-			return Inspector;
-		case 'vscode':
-			return VSCode;
-		default:
-			return null;
-	}
-};
 ---
 
 <div class="mshell">
@@ -104,6 +48,11 @@ const contentFor = (id: string) => {
 		</ul>
 	</section>
 
+	{/* App-view containers are empty placeholders. mobile-shell.ts moves
+	    each app's body in from the corresponding Desktop window on the
+	    mobile breakpoint (and back again on resize past 768px). Keeping
+	    a single SSR per app body is what avoids duplicate `id` attrs in
+	    `dist/` — see #519. */}
 	<section class="mshell__app-view" hidden>
 		<header class="mshell__app-chrome">
 			<button type="button" class="mshell__chrome-back" aria-label="back to home">
@@ -113,15 +62,9 @@ const contentFor = (id: string) => {
 		</header>
 		<div class="mshell__app-body">
 			{
-				apps.filter((a) => !a.desktopOnly && !a.hidden).map((a) => {
-					const Content = contentFor(a.id);
-					return (
-						<div data-mobile-app={a.id} hidden>
-							{Content && <Content />}
-							{!Content && <Stub title={a.label} />}
-						</div>
-					);
-				})
+				apps.filter((a) => !a.desktopOnly && !a.hidden).map((a) => (
+					<div data-mobile-app={a.id} hidden />
+				))
 			}
 		</div>
 	</section>
