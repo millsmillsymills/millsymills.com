@@ -15,32 +15,82 @@ already exist in S3. Design:
 ## Usage
 
 ```
-./scripts/analytics/run.sh <stack> [<query-name>] [days=30]
+./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>]
 ```
 
 - `<stack>` — `millsymills` or `p41m0n`.
 - `<query-name>` — basename (no `.sql`) of a file under `queries/`. Run with
   just `<stack>` to list the available queries.
 - `[days]` — lookback window. Default `30`. Capped at `90` (current-retention
-  ceiling on the logs bucket).
+  ceiling on the logs bucket). Required positionally if you also pass a `<path>`.
+- `[<path>]` — URI-prefix bind value for queries that take one (currently
+  `path-hits`). Must start with `/` and contain only `[A-Za-z0-9/_.-]`. Refused
+  for queries that don't reference `<path>` so typos surface.
 
 Output is a markdown table to stdout.
 
-### Worked example
+### Worked examples
 
 ```
 ./scripts/analytics/run.sh millsymills top-urls 30
 ```
 
-Prints the top 50 URI stems by request count over the last 30 days.
+Top 50 URI stems by request count over the last 30 days.
+
+```
+./scripts/analytics/run.sh millsymills errors 7
+```
+
+4xx/5xx URIs over the last 7 days, with hit count and a representative status
+code per path. Useful for spotting a sudden 404 spike after a rename or a
+single endpoint throwing 5xx.
+
+```
+./scripts/analytics/run.sh millsymills status-distribution 30
+```
+
+Count of requests per HTTP status code. Quick sanity check on the
+healthy-vs-error ratio across the window.
+
+```
+./scripts/analytics/run.sh millsymills referrers 30
+```
+
+Top external referrers (same-origin navigations are filtered out via a
+`Referer`-host vs `cs_Host` compare). Surfaces aggregator pickups and
+crawler entry points.
+
+```
+./scripts/analytics/run.sh millsymills user-agents 7
+```
+
+Top User-Agent strings with an `is_bot` flag from a substring scan
+(`bot|crawler|spider|slurp|wget|curl|httpclient|httpx|python-requests|libwww|scrapy|headlesschrome`).
+Heuristic only — the operator eyeballs the list.
+
+```
+./scripts/analytics/run.sh millsymills requests-over-time 30
+```
+
+Requests per calendar day. Pair with `top-urls` to confirm whether a spike
+is broad traffic or one URL.
+
+```
+./scripts/analytics/run.sh millsymills path-hits 30 /demo/passkey/
+```
+
+Hits whose URI stem starts with `/demo/passkey/`, grouped by exact stem. Pass
+a trailing slash for directory semantics; omit it for any URI starting with
+that string.
 
 ## How to add a new query
 
 1. Copy an existing file in `queries/`, rename to `<question>.sql`.
 2. Use the `<bucket>`, `<since_date>`, `<days>` placeholders the same way
    `top-urls.sql` does. `run.sh` substitutes them textually before handing the
-   SQL to DuckDB. (`lint-queries.sh` also recognises `<path>` as a stand-in for
-   URI-prefix filters, useful for queries that take a path argument.)
+   SQL to DuckDB. If the query needs a URI-prefix bind value, reference
+   `<path>` — `run.sh` then requires the operator to pass a path positional
+   after `<days>` (and refuses one for queries that don't reference `<path>`).
 3. Run `./scripts/analytics/lint-queries.sh` to catch column-name typos against
    the fake schema (no AWS calls).
 4. Smoke against prod: `./scripts/analytics/run.sh millsymills <question> 7`.
