@@ -121,7 +121,10 @@ class MobileShell {
 	}
 
 	private show(appId: string | null, fromPop = false): void {
-		this.apps.forEach((el) => (el.hidden = true));
+		this.apps.forEach((el, id) => {
+			el.hidden = true;
+			this.syncDesktopWindowHidden(id, true);
+		});
 
 		if (!appId) {
 			this.home.hidden = false;
@@ -140,6 +143,14 @@ class MobileShell {
 		this.home.hidden = true;
 		this.appView.hidden = false;
 		app.hidden = false;
+		// Mirror the open state onto the corresponding Desktop window's
+		// `hidden` attr so scripts watching window-manager's canonical
+		// "this app just opened" signal (e.g. inspector.exe's
+		// MutationObserver on `[data-window-id="inspector"]`) also fire
+		// on mobile. The window is `display:none` via CSS at this
+		// breakpoint, so the flip has no visual effect — it's purely
+		// the signalling channel.
+		this.syncDesktopWindowHidden(appId, false);
 		document.body.classList.add('mshell-app-open');
 
 		const launcher = this.home.querySelector<HTMLElement>(`[data-open-app="${appId}"]`);
@@ -150,6 +161,14 @@ class MobileShell {
 		if (!fromPop) history.pushState({ current: appId }, '', location.pathname);
 
 		this.scrollToHashIn(app);
+	}
+
+	private syncDesktopWindowHidden(appId: string, hidden: boolean): void {
+		const win = document.querySelector<HTMLElement>(
+			`section.window[data-window-id="${CSS.escape(appId)}"]`,
+		);
+		if (!win) return;
+		win.hidden = hidden;
 	}
 
 	private scrollToHashIn(container: HTMLElement): void {
