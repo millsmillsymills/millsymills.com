@@ -3,7 +3,7 @@
 # DuckDB query runner over CloudFront access logs (Parquet, Hive-partitioned).
 #
 # Usage:
-#   ./scripts/analytics/run.sh <stack> <query-name> [days=30] [<path>]
+#   ./scripts/analytics/run.sh <stack> <query-name> [days=30] [<path>] [--csv] [--save]
 #
 # See scripts/analytics/README.md and
 # docs/superpowers/specs/2026-05-17-cloudfront-analytics-design.md for the
@@ -15,9 +15,32 @@ cd "$(git rev-parse --show-toplevel)"
 
 QUERIES_DIR="scripts/analytics/queries"
 
+# Strip `--`-prefixed flags out of $@ up front so positionals (stack,
+# query, days, path) can be in any order with the flags. Without this
+# split, `... top-urls --csv 30` would fail (the days-parser would see
+# --csv and the flag-loop would see 30), even though the operator's
+# intent is obvious.
+EMIT_CSV=0
+SAVE=0
+SHOW_HELP=0
+POSITIONALS=()
+for arg in "$@"; do
+	case "$arg" in
+		--csv) EMIT_CSV=1 ;;
+		--save) SAVE=1 ;;
+		-h | --help) SHOW_HELP=1 ;;
+		--*)
+			printf '\033[1;31mrefusing: unknown flag %q (expected --csv, --save, --help)\033[0m\n' "$arg" >&2
+			exit 2
+			;;
+		*) POSITIONALS+=("$arg") ;;
+	esac
+done
+set -- "${POSITIONALS[@]+"${POSITIONALS[@]}"}"
+
 usage() {
 	cat <<'EOF'
-usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>]
+usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--csv] [--save]
 
   <stack>       millsymills | p41m0n
   <query-name>  basename (no .sql) of a file under scripts/analytics/queries/
@@ -27,17 +50,26 @@ usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>]
   [<path>]      URI-prefix bind value for queries that take one (e.g.
                 path-hits). Refused for queries that don't reference <path>.
                 Must start with `/` and contain only [A-Za-z0-9/_.-].
+  --csv         emit DuckDB CSV instead of the default markdown table.
+  --save        also write the rendered output to
+                .cache/analytics/<stack>-<query>-<UTC-timestamp>.{md,csv}.
+                stdout is unchanged; the file is a copy in the active format.
 
-Output is a markdown table to stdout.
+Output is a markdown table to stdout by default.
 EOF
 }
+
+if ((SHOW_HELP)); then
+	usage
+	exit 0
+fi
 
 STACK="${1:-}"
 shift || true
 
 case "$STACK" in
 	millsymills | p41m0n) ;;
-	"" | -h | --help | help)
+	"" | help)
 		usage
 		exit 0
 		;;
@@ -53,7 +85,7 @@ BUCKET="${DOMAIN}-logs"
 QUERY_NAME="${1:-}"
 shift || true
 
-if [[ -z "$QUERY_NAME" || "$QUERY_NAME" == "--help" || "$QUERY_NAME" == "-h" ]]; then
+if [[ -z "$QUERY_NAME" ]]; then
 	printf 'available queries:\n'
 	for q in "$QUERIES_DIR"/*.sql; do
 		[[ -f "$q" ]] || continue
@@ -68,6 +100,7 @@ if [[ ! -f "$QUERY_FILE" ]]; then
 	exit 2
 fi
 
+# DAYS is the next positional. Flags were already split out of $@ above.
 DAYS="${1:-30}"
 shift || true
 if ! [[ "$DAYS" =~ ^[0-9]+$ ]] || ((DAYS == 0)); then
@@ -98,6 +131,11 @@ if grep -q '<path>' "$QUERY_FILE"; then
 	fi
 elif [[ -n "$PATH_ARG" ]]; then
 	printf '\033[1;31mrefusing: query %q does not accept a path argument, got %q\033[0m\n' "$QUERY_NAME" "$PATH_ARG" >&2
+	exit 2
+fi
+
+if (($# > 0)); then
+	printf '\033[1;31mrefusing: trailing positional %q (expected at most: <stack> <query> [days] [<path>])\033[0m\n' "$1" >&2
 	exit 2
 fi
 
@@ -153,7 +191,7 @@ SQL=$(sed "${SED_ARGS[@]}" "$QUERY_FILE")
 #
 # `REGION 'us-west-2'` matches the primary region declared in
 # `infra/variables.tf` (and the logs bucket's actual `LocationConstraint`).
-duckdb -markdown -c "
+FULL_SQL="
 INSTALL httpfs;
 LOAD httpfs;
 CREATE OR REPLACE SECRET cloudfront_logs (
@@ -164,3 +202,23 @@ CREATE OR REPLACE SECRET cloudfront_logs (
 );
 ${SQL}
 "
+
+if ((EMIT_CSV)); then
+	FMT_FLAG="-csv"
+	EXT="csv"
+else
+	FMT_FLAG="-markdown"
+	EXT="md"
+fi
+
+if ((SAVE)); then
+	mkdir -p .cache/analytics
+	TS=$(date -u +%Y%m%dT%H%M%SZ)
+	SAVE_PATH=".cache/analytics/${STACK}-${QUERY_NAME}-${TS}.${EXT}"
+	# `tee` duplicates duckdb's stdout to the save path; the script's
+	# `set -o pipefail` preserves duckdb's exit code through the pipe.
+	duckdb "$FMT_FLAG" -c "$FULL_SQL" | tee "$SAVE_PATH"
+	printf '\033[2msaved: %s\033[0m\n' "$SAVE_PATH" >&2
+else
+	duckdb "$FMT_FLAG" -c "$FULL_SQL"
+fi

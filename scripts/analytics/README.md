@@ -15,7 +15,7 @@ already exist in S3. Design:
 ## Usage
 
 ```
-./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>]
+./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--csv] [--save]
 ```
 
 - `<stack>` — `millsymills` or `p41m0n`.
@@ -26,8 +26,15 @@ already exist in S3. Design:
 - `[<path>]` — URI-prefix bind value for queries that take one (currently
   `path-hits`). Must start with `/` and contain only `[A-Za-z0-9/_.-]`. Refused
   for queries that don't reference `<path>` so typos surface.
+- `--csv` — emit DuckDB CSV instead of the default markdown table. Pipe-friendly
+  (`| q -H -d, "SELECT ..."`, `| ddgrep`, etc.). Can appear anywhere in `$@`.
+- `--save` — also write the rendered output to
+  `.cache/analytics/<stack>-<query>-<UTC-timestamp>.{md,csv}`. Stdout is
+  unchanged; the file is a copy in the active format. Directory is created
+  on demand. `.cache/analytics/` is gitignored. Can appear anywhere in `$@`.
 
-Output is a markdown table to stdout.
+Output is a markdown table to stdout by default. Combine `--csv --save` to
+get CSV in both places.
 
 ### Worked examples
 
@@ -35,7 +42,7 @@ Output is a markdown table to stdout.
 ./scripts/analytics/run.sh millsymills top-urls 30
 ```
 
-Top 50 URI stems by request count over the last 30 days.
+Top 50 URI stems by request count over the last 30 days as a markdown table.
 
 ```
 ./scripts/analytics/run.sh millsymills errors 7
@@ -82,6 +89,20 @@ is broad traffic or one URL.
 Hits whose URI stem starts with `/demo/passkey/`, grouped by exact stem. Pass
 a trailing slash for directory semantics; omit it for any URI starting with
 that string.
+
+```
+./scripts/analytics/run.sh millsymills top-urls 7 --csv | column -t -s,
+```
+
+Pretty-prints the CSV output for quick eyeballing in a terminal.
+
+```
+./scripts/analytics/run.sh millsymills top-urls 30 --save
+```
+
+Markdown table to stdout AND copy at
+`.cache/analytics/millsymills-top-urls-<UTC-timestamp>.md` for sharing in
+a PR description or pasting into a notebook.
 
 ## How to add a new query
 
