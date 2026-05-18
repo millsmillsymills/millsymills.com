@@ -300,6 +300,48 @@ jobs:
           cp dist.tar.gz dist.tar.gz.cosign.bundle dist.tar.gz.intoto.jsonl \
             dist/.well-known/slsa/
 
+      # Guard against silent build dropouts BEFORE any S3 sync runs.
+      # Pass 3's `--delete` (added in #547 / #515) makes the html +
+      # .well-known/ sync load-bearing for every artifact `/security/`
+      # advertises (SBOM, security.txt, MTA-STS, SLSA bundle + provenance,
+      # WKD policy). If an upstream step ever produces an empty / missing
+      # file (syft regression, Astro endpoint returning 0 bytes, SLSA
+      # staging skipped) we want the deploy to fail HERE, before
+      # `--delete` wipes the existing prod copy.
+      - name: Assert critical dist/ artifacts present
+        run: |
+          set -euo pipefail
+          # Non-empty required: content drives the contract.
+          required_nonempty=(
+            dist/index.html
+            dist/.well-known/security.txt
+            dist/.well-known/mta-sts.txt
+            dist/.well-known/sbom.spdx.json
+            dist/.well-known/slsa/dist.tar.gz
+            dist/.well-known/slsa/dist.tar.gz.cosign.bundle
+            dist/.well-known/slsa/dist.tar.gz.intoto.jsonl
+          )
+          # Presence-only required: WKD `policy` is intentionally a zero-
+          # byte file per the OpenPGP Web Key Directory spec (presence is
+          # the signal). `-s` would false-fail it.
+          required_exists=(
+            dist/.well-known/openpgpkey/policy
+          )
+          missing=0
+          for f in "${required_nonempty[@]}"; do
+            if [ ! -s "$f" ]; then
+              echo "::error::missing or empty: $f"
+              missing=1
+            fi
+          done
+          for f in "${required_exists[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::missing: $f"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
         with:
@@ -315,9 +357,17 @@ jobs:
       # `--delete` is set on all three passes. `aws s3 sync`'s
       # `--exclude`/`--include` filters apply to both the source and
       # destination listings, so pass 3's `--delete` only removes S3
-      # objects matching `*.html` or `.well-known/*` that no longer
-      # exist locally — it cannot touch `_astro/`, images, fonts, or
-      # other tiers covered by passes 1 and 2.
+      # objects matching `*.html` or `.well-known/*` (recursive — the
+      # `.well-known/*` glob covers `.well-known/slsa/...` etc.) that
+      # no longer exist locally; it cannot touch `_astro/`, images,
+      # fonts, or other tiers covered by passes 1 and 2.
+      #
+      # The leading `--exclude "*"` on pass 3 is LOAD-BEARING — without
+      # it `--include` is a no-op (everything is implicitly included)
+      # and `--delete` would scope to the entire bucket. Never reorder
+      # or drop that exclude. The "Assert critical dist/ artifacts
+      # present" step above is the safety net catching the other failure
+      # mode (build-time generator silently produces an empty file).
       #
       # Cache-Control is applied on every upload because Astro rebuilds
       # all of dist/ on each run, making local mtime newer than the S3
