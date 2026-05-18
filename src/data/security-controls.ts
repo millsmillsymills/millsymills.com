@@ -432,14 +432,6 @@ export const securityControls: readonly SecurityControl[] = [
 		why: 'Closes the remaining XSS-via-injected-style vector and removes the only weak link in the current CSP allow-list.',
 	},
 	{
-		id: 'signed-commits',
-		title: 'Required signed commits on main',
-		category: 'supply-chain',
-		status: 'roadmap',
-		what: 'Branch protection rule requiring signed commits on `main`; CONTRIBUTING.md documents SSH commit-signing setup.',
-		why: 'Rooted provenance — every commit on the protected branch carries a verified signing identity, so a stolen GitHub credential can\'t silently inject code.',
-	},
-	{
 		id: 'hsts-preload',
 		title: 'HSTS preload-list submission',
 		category: 'web',
