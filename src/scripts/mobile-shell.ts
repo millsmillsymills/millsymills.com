@@ -12,7 +12,15 @@
  * is intentionally not used — landing visitors on an app they happened
  * to open last week makes the homepage look like that app's "coming
  * soon" body, not the launcher.
+ *
+ * Bodies are server-rendered exactly once, inside the corresponding
+ * Desktop window (see #519). On the mobile breakpoint we move each
+ * body's DOM into the matching `[data-mobile-app]` container; on resize
+ * past 768px we move it back. The breakpoint matches the CSS rule in
+ * `desktop.css` that toggles `.desktop` vs `.mshell` visibility.
  */
+
+const MOBILE_MQL = '(max-width: 768px)';
 
 class MobileShell {
 	private root: HTMLElement;
@@ -20,6 +28,8 @@ class MobileShell {
 	private appView: HTMLElement;
 	private chromeTitle: HTMLElement;
 	private apps: Map<string, HTMLElement> = new Map();
+	private mql: MediaQueryList;
+	private transplanted = false;
 
 	constructor(root: HTMLElement) {
 		this.root = root;
@@ -39,6 +49,10 @@ class MobileShell {
 			const next = (e.state as { current?: string | null } | null)?.current ?? null;
 			this.show(next, /* fromPop */ true);
 		});
+
+		this.mql = window.matchMedia(MOBILE_MQL);
+		this.applyBreakpoint();
+		this.mql.addEventListener('change', () => this.applyBreakpoint());
 
 		let initial: string | null = null;
 		const bodyInitial = document.body?.dataset.initialOpen;
@@ -82,8 +96,35 @@ class MobileShell {
 		setInterval(tick, 30_000);
 	}
 
+	private applyBreakpoint(): void {
+		if (this.mql.matches && !this.transplanted) {
+			this.transplant('to-mobile');
+			this.transplanted = true;
+		} else if (!this.mql.matches && this.transplanted) {
+			this.transplant('to-desktop');
+			this.transplanted = false;
+		}
+	}
+
+	private transplant(direction: 'to-mobile' | 'to-desktop'): void {
+		this.apps.forEach((mobileContainer, id) => {
+			const winBody = document.querySelector<HTMLElement>(
+				`section.window[data-window-id="${CSS.escape(id)}"] .window__body`,
+			);
+			if (!winBody) return;
+			const [from, to] =
+				direction === 'to-mobile' ? [winBody, mobileContainer] : [mobileContainer, winBody];
+			while (from.firstChild) {
+				to.appendChild(from.firstChild);
+			}
+		});
+	}
+
 	private show(appId: string | null, fromPop = false): void {
-		this.apps.forEach((el) => (el.hidden = true));
+		this.apps.forEach((el, id) => {
+			el.hidden = true;
+			this.syncDesktopWindowHidden(id, true);
+		});
 
 		if (!appId) {
 			this.home.hidden = false;
@@ -102,6 +143,14 @@ class MobileShell {
 		this.home.hidden = true;
 		this.appView.hidden = false;
 		app.hidden = false;
+		// Mirror the open state onto the corresponding Desktop window's
+		// `hidden` attr so scripts watching window-manager's canonical
+		// "this app just opened" signal (e.g. inspector.exe's
+		// MutationObserver on `[data-window-id="inspector"]`) also fire
+		// on mobile. The window is `display:none` via CSS at this
+		// breakpoint, so the flip has no visual effect — it's purely
+		// the signalling channel.
+		this.syncDesktopWindowHidden(appId, false);
 		document.body.classList.add('mshell-app-open');
 
 		const launcher = this.home.querySelector<HTMLElement>(`[data-open-app="${appId}"]`);
@@ -110,6 +159,30 @@ class MobileShell {
 		this.appView.scrollTop = 0;
 
 		if (!fromPop) history.pushState({ current: appId }, '', location.pathname);
+
+		this.scrollToHashIn(app);
+	}
+
+	private syncDesktopWindowHidden(appId: string, hidden: boolean): void {
+		const win = document.querySelector<HTMLElement>(
+			`section.window[data-window-id="${CSS.escape(appId)}"]`,
+		);
+		if (!win) return;
+		win.hidden = hidden;
+	}
+
+	private scrollToHashIn(container: HTMLElement): void {
+		const hash = location.hash;
+		if (!hash || hash.length < 2) return;
+		let target: Element | null;
+		try {
+			target = container.querySelector(`#${CSS.escape(hash.slice(1))}`);
+		} catch {
+			return;
+		}
+		if (target) {
+			requestAnimationFrame(() => target!.scrollIntoView({ block: 'start' }));
+		}
 	}
 }
 
