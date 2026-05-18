@@ -269,11 +269,7 @@ const _APPS_DATA = [
 		id: 'trash',
 		label: 'trash',
 		glyph: '🗑️',
-		// XP-native Recycle Bin from the WinIcons sprite pack. Replaces the
-		// vaporwave `dixie-cup.png` placeholder with the canonical aqua-glass
-		// XP Recycle Bin (row 9, col 10 of WinIcons_48.png) -- the strongest
-		// "this is literally the XP icon for this app" match in the pack.
-		iconSprite: { sheet: 'WinIcons_48', col: 10, row: 9 },
+		iconUrl: '/images/icons/vaporwave/dixie-cup.png',
 		title: 'recycle.bin',
 		ogDescription: 'deleted files. mostly garbage.',
 		x: 280,

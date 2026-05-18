@@ -3,7 +3,7 @@
 # DuckDB query runner over CloudFront access logs (Parquet, Hive-partitioned).
 #
 # Usage:
-#   ./scripts/analytics/run.sh <stack> <query-name> [days=30] [--csv] [--save]
+#   ./scripts/analytics/run.sh <stack> <query-name> [days=30] [<path>] [--csv] [--save]
 #
 # See scripts/analytics/README.md and
 # docs/superpowers/specs/2026-05-17-cloudfront-analytics-design.md for the
@@ -16,10 +16,10 @@ cd "$(git rev-parse --show-toplevel)"
 QUERIES_DIR="scripts/analytics/queries"
 
 # Strip `--`-prefixed flags out of $@ up front so positionals (stack,
-# query, days) can be in any order with the flags. Without this split,
-# `... top-urls --csv 30` would fail (the days-parser would see --csv
-# and the flag-loop would see 30), even though the operator's intent
-# is obvious.
+# query, days, path) can be in any order with the flags. Without this
+# split, `... top-urls --csv 30` would fail (the days-parser would see
+# --csv and the flag-loop would see 30), even though the operator's
+# intent is obvious.
 EMIT_CSV=0
 SAVE=0
 SHOW_HELP=0
@@ -40,13 +40,16 @@ set -- "${POSITIONALS[@]+"${POSITIONALS[@]}"}"
 
 usage() {
 	cat <<'EOF'
-usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [--csv] [--save]
+usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--csv] [--save]
 
   <stack>       millsymills | p41m0n
   <query-name>  basename (no .sql) of a file under scripts/analytics/queries/
                 run with just <stack> to list available queries
   [days]        lookback window. Default 30. Capped at 90 (current-retention
                 ceiling on the logs bucket).
+  [<path>]      URI-prefix bind value for queries that take one (e.g.
+                path-hits). Refused for queries that don't reference <path>.
+                Must start with `/` and contain only [A-Za-z0-9/_.-].
   --csv         emit DuckDB CSV instead of the default markdown table.
   --save        also write the rendered output to
                 .cache/analytics/<stack>-<query>-<UTC-timestamp>.{md,csv}.
@@ -109,8 +112,30 @@ if ((DAYS > 90)); then
 	DAYS=90
 fi
 
+# Optional <path> positional, used by queries that take a URI-prefix bind
+# value. Required iff the query SQL references <path>; refused for queries
+# that don't (so typos surface instead of silently being ignored). Validate
+# shape since the value reaches duckdb via sed substitution.
+PATH_ARG="${1:-}"
+if [[ -n "$PATH_ARG" ]]; then
+	shift
+fi
+if grep -q '<path>' "$QUERY_FILE"; then
+	if [[ -z "$PATH_ARG" ]]; then
+		printf '\033[1;31mrefusing: query %q requires a path argument (e.g. /demo/passkey/)\033[0m\n' "$QUERY_NAME" >&2
+		exit 2
+	fi
+	if ! [[ "$PATH_ARG" =~ ^/[A-Za-z0-9/_.-]*$ ]]; then
+		printf '\033[1;31mrefusing: path must start with / and contain only [A-Za-z0-9/_.-], got %q\033[0m\n' "$PATH_ARG" >&2
+		exit 2
+	fi
+elif [[ -n "$PATH_ARG" ]]; then
+	printf '\033[1;31mrefusing: query %q does not accept a path argument, got %q\033[0m\n' "$QUERY_NAME" "$PATH_ARG" >&2
+	exit 2
+fi
+
 if (($# > 0)); then
-	printf '\033[1;31mrefusing: trailing positional %q (expected at most: <stack> <query> [days])\033[0m\n' "$1" >&2
+	printf '\033[1;31mrefusing: trailing positional %q (expected at most: <stack> <query> [days] [<path>])\033[0m\n' "$1" >&2
 	exit 2
 fi
 
@@ -137,16 +162,19 @@ print((date.today() - timedelta(days=${DAYS})).isoformat())
 "
 )
 
-# Textual substitution into the query SQL. Bucket and date values are
-# validated above (stack whitelist; days is a positive integer) so this is
-# safe — no operator-controlled string reaches duckdb.
-SQL=$(
-	sed \
-		-e "s|<bucket>|${BUCKET}|g" \
-		-e "s|<since_date>|${SINCE_DATE}|g" \
-		-e "s|<days>|${DAYS}|g" \
-		"$QUERY_FILE"
+# Textual substitution into the query SQL. Bucket, date, and path values
+# are validated above (stack whitelist, days = positive integer, path =
+# constrained character set) so this is safe — no unconstrained
+# operator-controlled string reaches duckdb.
+SED_ARGS=(
+	-e "s|<bucket>|${BUCKET}|g"
+	-e "s|<since_date>|${SINCE_DATE}|g"
+	-e "s|<days>|${DAYS}|g"
 )
+if [[ -n "$PATH_ARG" ]]; then
+	SED_ARGS+=(-e "s|<path>|${PATH_ARG}|g")
+fi
+SQL=$(sed "${SED_ARGS[@]}" "$QUERY_FILE")
 
 # httpfs is the DuckDB extension that lets read_parquet() resolve s3:// URLs.
 # INSTALL + LOAD are idempotent.
