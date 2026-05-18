@@ -312,9 +312,12 @@ jobs:
       # get a 5m TTL with must-revalidate; remaining static assets (images,
       # fonts, manifests) sit in the middle at 1d.
       #
-      # `--delete` is scoped to `_astro/` (pass 1) and the catch-all
-      # non-hashed prefix (pass 2). HTML routes / `.well-known/` rarely
-      # rename; orphans there can be cleaned manually if it happens.
+      # `--delete` is set on all three passes. `aws s3 sync`'s
+      # `--exclude`/`--include` filters apply to both the source and
+      # destination listings, so pass 3's `--delete` only removes S3
+      # objects matching `*.html` or `.well-known/*` that no longer
+      # exist locally — it cannot touch `_astro/`, images, fonts, or
+      # other tiers covered by passes 1 and 2.
       #
       # Cache-Control is applied on every upload because Astro rebuilds
       # all of dist/ on each run, making local mtime newer than the S3
@@ -344,7 +347,7 @@ jobs:
         env:
           SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
         run: |
-          aws s3 sync dist/ "s3://${SITE_DOMAIN}" \
+          aws s3 sync dist/ "s3://${SITE_DOMAIN}" --delete \
             --exclude "*" \
             --include "*.html" \
             --include ".well-known/*" \
