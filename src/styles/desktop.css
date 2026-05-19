@@ -1856,6 +1856,33 @@ body:not([data-flags-unlocked='true']) [data-flags-gated] {
 }
 
 /* ------------------------------------------------------------------ */
+/* hit counter (web-1.0 pixel + live count from /api/hits)            */
+/* ------------------------------------------------------------------ */
+
+.taskbar__hits {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-right: 6px;
+	padding: 0 6px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--ink-muted);
+}
+
+.taskbar__hits img {
+	height: 18px;
+	width: auto;
+	image-rendering: pixelated;
+}
+
+.taskbar__hits-count {
+	font-variant-numeric: tabular-nums;
+	color: var(--neon-cyan);
+	letter-spacing: 0.04em;
+}
+
+/* ------------------------------------------------------------------ */
 /* reset-confirm modal                                                */
 /* ------------------------------------------------------------------ */
 

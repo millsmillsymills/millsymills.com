@@ -1,0 +1,33 @@
+---
+// Web-1.0 hit counter. Pixel asset in `public/images/icons/web10/hit-counter.png`
+// + a live count fetched from /api/hits (Lambda + DynamoDB; see
+// `infra/hitcounter.tf`). Placed in the taskbar chrome.
+//
+// Rendered as a button so the entire badge is keyboard-focusable; the
+// underlying action is decorative (no on-click behaviour today), so
+// click is a no-op aria-label-only affordance for screen readers.
+//
+// The count starts as `--` so the first paint is deterministic even
+// before the fetch resolves. Errors leave the placeholder in place
+// rather than flashing a "0" -- honest about the failure mode.
+---
+
+<span
+	class="taskbar__hits"
+	data-hit-counter
+	role="status"
+	aria-live="polite"
+	aria-label="page hits: pending"
+>
+	<img
+		src="/images/icons/web10/hit-counter.png"
+		alt=""
+		decoding="async"
+		loading="lazy"
+	/>
+	<span class="taskbar__hits-count" data-hit-counter-value>--</span>
+</span>
+
+<script>
+	import '../../scripts/hit-counter';
+</script>

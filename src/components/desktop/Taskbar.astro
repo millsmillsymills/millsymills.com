@@ -1,4 +1,6 @@
 ---
+import HitCounter from './HitCounter.astro';
+
 interface MenuItem {
 	target: string;
 	label: string;
@@ -53,6 +55,7 @@ const { menu } = Astro.props;
 	>
 		<img src="/images/vaporwave-ui/buttons/mute.png" alt="sound: off" decoding="async" />
 	</button>
+	<HitCounter />
 	<span class="taskbar__clock motif-chrom" aria-label="current time">--:--</span>
 </nav>
 
