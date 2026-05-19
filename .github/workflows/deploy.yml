@@ -96,28 +96,25 @@ jobs:
     steps:
       # Belt-and-braces alongside the Terraform-managed branch protection
       # rule in infra/github_branch_protection.tf (#432). The Terraform
-      # rule is enforced at apply time; this check surfaces UI drift in
-      # the deploy logs without gating the deploy.
+      # rule is enforced at apply time; this check gates the deploy if
+      # the UI gets toggled out from under it.
       #
-      # Non-blocking (`continue-on-error: true`): reading
       # `GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures`
       # requires admin permission on the repo, which the default
       # `GITHUB_TOKEN` does not carry regardless of `permissions:` block.
-      # Until a fine-grained PAT secret with `Administration: Read` is
-      # wired up to the production environment, the gh call fails with
-      # HTTP 403 — which would block every deploy if this step were
-      # required. Logged as a warning instead; revisit when the PAT
-      # secret lands.
+      # We use a fine-grained PAT scoped to this repo with
+      # `Administration: Read` and nothing else, stored on the production
+      # environment as `BRANCH_PROTECTION_READ_TOKEN`. See CLAUDE.md
+      # "Secrets and PAT rotation" for the rotation cadence.
       - name: Verify signed-commits enforcement on main
-        continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           enabled=$(gh api "repos/${REPO}/branches/main/protection/required_signatures" --jq '.enabled')
           if [ "${enabled}" != "true" ]; then
-            echo "::warning::required_signatures drift on main: expected true, got '${enabled}'"
+            echo "::error::required_signatures drift on main: expected true, got '${enabled}'"
             exit 1
           fi
           echo "signed-commits enforcement on main: enabled"
