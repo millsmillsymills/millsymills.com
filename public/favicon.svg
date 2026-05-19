@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
-	<!-- y2k pink pixel "m" -->
+	<!-- neon-noir pixel "m" -- hot pink ground + white letterform + cyan
+	     corner-sparkle accents per the vaporwave aesthetic spec (#392/#393). -->
 	<rect width="64" height="64" rx="10" fill="#ff4fa8"/>
 	<rect x="2" y="2" width="60" height="60" rx="9" fill="none" stroke="#321a44" stroke-width="3"/>
 	<g fill="#fff9f3">
@@ -12,8 +13,11 @@
 		<rect x="36" y="20" width="6" height="6"/>
 		<rect x="28" y="26" width="8" height="6"/>
 	</g>
-	<!-- corner sparkles -->
-	<g fill="#ffd6ec">
+	<!-- cyan accent dot on the M's center peak, completing the spec's
+	     "hot pink + cyan" two-color requirement. -->
+	<rect x="30" y="26" width="4" height="2" fill="#00e5ff"/>
+	<!-- corner sparkles — neon cyan (was the placeholder pink #ffd6ec). -->
+	<g fill="#00e5ff">
 		<rect x="6" y="6" width="3" height="3"/>
 		<rect x="55" y="6" width="3" height="3"/>
 		<rect x="6" y="55" width="3" height="3"/>
