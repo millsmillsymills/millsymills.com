@@ -27,6 +27,20 @@ export interface MillsEventMap {
 	'mills:close-window': CustomEvent<{ id: string }>;
 	'mills:clippy-trigger': CustomEvent<ClippyTriggerDetail>;
 	'mills:play-sound': CustomEvent<{ kind: SoundKind }>;
+	// Fired by window-manager AFTER a window transitions hidden -> visible
+	// (a true open, not a focus-raise on an already-open window). The
+	// `userGesture` flag is true when the open came from a click/keyboard
+	// path with a real user interaction (taskbar start menu, desktop icon,
+	// context menu) and false when the open was initiated by code (the
+	// `initialOpen` prop / deep-link bootstrap, programmatic restore from
+	// localStorage). Subscribers that want to call audio.play() should
+	// gate on `userGesture` -- the autoplay policy will reject play()
+	// without one and surface NotAllowedError.
+	'mills:window-open': CustomEvent<{ id: string; userGesture: boolean }>;
+	// Fired by window-manager AFTER a window transitions visible -> hidden
+	// (a true close, not a no-op on an already-closed window). Subscribers
+	// can release per-window resources (audio playback, observers, etc.).
+	'mills:window-closed': CustomEvent<{ id: string }>;
 }
 
 export type SoundKind = 'open' | 'close' | 'error' | 'startup' | 'reset';
@@ -84,4 +98,16 @@ export function dispatchClippyTrigger(trigger: QuipTrigger, appId?: AppId): void
 
 export function dispatchPlaySound(kind: SoundKind): void {
 	window.dispatchEvent(new CustomEvent('mills:play-sound', { detail: { kind } }));
+}
+
+export function dispatchWindowOpen(id: string, userGesture: boolean): void {
+	window.dispatchEvent(
+		new CustomEvent('mills:window-open', { detail: { id, userGesture } }),
+	);
+}
+
+export function dispatchWindowClosed(id: string): void {
+	window.dispatchEvent(
+		new CustomEvent('mills:window-closed', { detail: { id } }),
+	);
 }
