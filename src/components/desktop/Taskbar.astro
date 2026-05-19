@@ -53,7 +53,7 @@ const { menu } = Astro.props;
 		aria-pressed="false"
 		aria-label="system sounds: off — click to unmute"
 	>
-		<img src="/images/vaporwave-ui/buttons/mute.png" alt="sound: off" decoding="async" />
+		<span class="taskbar__sound-glyph" data-sound-glyph aria-hidden="true">🔇</span>
 	</button>
 	<HitCounter />
 	<span class="taskbar__clock motif-chrom" aria-label="current time">--:--</span>
