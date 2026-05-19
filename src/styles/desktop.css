@@ -1023,8 +1023,25 @@ a {
 }
 
 .mshell__sparkles {
-	letter-spacing: 4px;
+	display: inline-flex;
+	gap: 4px;
+	font-family: var(--font-pixel);
+	font-size: 14px;
+	line-height: 1;
+}
+
+.mshell__sparkles-chip {
 	color: var(--neon-cyan);
+	image-rendering: pixelated;
+	text-shadow: 0 0 4px currentColor;
+}
+
+.mshell__sparkles-chip:nth-child(2) {
+	color: var(--neon-pink);
+}
+
+.mshell__sparkles-chip:nth-child(3) {
+	color: var(--neon-lilac);
 }
 
 .mshell__clock {

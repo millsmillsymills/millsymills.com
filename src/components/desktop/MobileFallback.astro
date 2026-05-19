@@ -7,7 +7,20 @@ const MSHELL_ICON_PX = 56;
 
 <div class="mshell">
 	<div class="mshell__statusbar">
-		<span class="mshell__sparkles" aria-hidden="true">✦ ✧ ⋆</span>
+		{/*
+		 * On-brand status-bar chips (#392). Three solid pixel blocks in the
+		 * neon-noir palette (cyan / pink / lilac) replace the previous
+		 * `✦ ✧ ⋆` Unicode cluster. The pixel-block glyph (U+25B0) reads as
+		 * an 8-bit power-LED indicator at the status-bar size and matches
+		 * the chrome's existing pixel font + `--neon-*` accents. Colors
+		 * applied via `:nth-child` in desktop.css so markup stays free
+		 * of inline style attributes.
+		 */}
+		<span class="mshell__sparkles" aria-hidden="true">
+			<span class="mshell__sparkles-chip">▰</span>
+			<span class="mshell__sparkles-chip">▰</span>
+			<span class="mshell__sparkles-chip">▰</span>
+		</span>
 		<span class="mshell__clock" aria-label="current time">--:--</span>
 	</div>
 
