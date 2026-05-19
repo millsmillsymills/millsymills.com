@@ -87,6 +87,7 @@ One-shot cutover checklist. Do these roughly in order; the email steps (Proton) 
    - `curl --tlsv1.3 --tls-max 1.3 -I https://millsymills.com/` succeeds (TLS 1.3-only floor is enforced).
    - `curl -I https://millsymills.com/` shows HSTS, CSP, X-Content-Type-Options, Referrer-Policy, COOP/COEP/CORP.
    - `openssl s_client -connect millsymills.com:443 -groups X25519MLKEM768 </dev/null 2>/dev/null | grep "Server Temp Key"` returns `Server Temp Key: X25519MLKEM768` (post-quantum hybrid KEX is negotiating; requires openssl ≥ 3.5 client-side).
+   - **HSTS preload submission.** Once verify is clean and `hstspreload.org/api/v2/preloadable?domain=<fqdn>` returns `{errors:[], warnings:[]}` and every in-use subdomain (`www.`, `mta-sts.`, anything else) serves HTTPS, submit at https://hstspreload.org/. **Removal is asymmetric and slow** — to back out, first publish `Strict-Transport-Security: max-age=0` and verify it's live, then file a removal request at https://hstspreload.org/removal/. Chrome propagates removals over the next ~12 weeks via the browser release train; Firefox/Safari are similar. Until propagation completes, every browser that has shipped a preloaded build will refuse HTTP and refuse to honor `max-age=0`. **Do not submit until the long-term posture is settled.**
 10. **Email activation.** Follow the ProtonMail runbook below — independent of web, can happen before or after.
 11. **DNSSEC chain at registrar.** Route53 starts signing on first apply (#125), but the parent zone (`.com`) only enforces validation once a DS record is published at the registrar. Order matters — getting it wrong takes ~50% of the world's resolvers offline until parent-TTL expires. See `infra/dnssec.tf` for the full ordering; the short version: confirm signing is live with `dig +dnssec @ns-XXX.awsdns-XX.com millsymills.com`, submit the DS to the registrar (see API call below if Gandi), then verify a green run on https://dnsviz.net/d/millsymills.com/dnssec/. **Reversal is asymmetric: REMOVE the DS record at the registrar FIRST and wait the parent TTL BEFORE disabling signing in Terraform**, or the zone goes BOGUS for validating resolvers.
    - **Submitting DS via API at Gandi.** Gandi's `POST /v5/domain/domains/<fqdn>/dnskeys` does NOT accept the standard DS quadruple (keytag/algorithm/digest_type/digest). The `terraform output -raw dnssec_ds_record` value is for *parent-zone verification* only, not direct submission. Gandi expects the DNSKEY itself and computes the DS internally — the p41m0n rehearsal locked this in. Run `GANDI_API_KEY=... ./scripts/gandi-submit-ds.sh <fqdn> <stack>` (the script reads the live KSK from the Route53 zone and POSTs the right shape; reverse with the DELETE-by-id path documented in its header). **Squarespace as the millsymills registrar:** submit DS via their UI — `gandi-submit-ds.sh` is Gandi-specific.
@@ -163,6 +164,24 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
    - `SITE_DOMAIN` — `millsymills.com`.
    - `CLOUDFRONT_DISTRIBUTION_ID` — from `terraform output cloudfront_distribution_id`.
    - `SITE_URL` — `https://millsymills.com` (or equivalent for the `rehearsal` environment: `https://p41m0n.com`). **Required** — `astro.config.mjs` refuses CI builds that do not set `SITE_URL`.
+5. In GitHub repo settings → **Environments → production → Secrets**, set:
+   - `BRANCH_PROTECTION_READ_TOKEN` — a fine-grained PAT scoped to **this repo only** with **Repository permissions → Administration: Read** and nothing else. Consumed by the "Verify signed-commits enforcement on main" step in `deploy.yml` (#478) — the default `GITHUB_TOKEN` cannot read `branches/main/protection/required_signatures` regardless of `permissions:` block. See "Secrets and PAT rotation" below for cadence.
+
+### Secrets and PAT rotation
+
+Two human-rotated PATs / tokens live outside Terraform:
+
+| Where | Name | Scope | Used by | Rotation |
+|---|---|---|---|---|
+| Production env secret | `BRANCH_PROTECTION_READ_TOKEN` | Fine-grained PAT, this repo only, `Administration: Read` | `deploy.yml` signed-commits drift check | Yearly; on PAT expiry the next deploy fails loudly with HTTP 403 — mint a replacement and re-paste |
+| Local shell | `TF_VAR_github_token` (or `gh auth token`) | Whatever your `gh auth login` carries (broad) | `infra/main.tf` GitHub provider for `terraform apply` | When `gh auth status` says expired |
+
+PAT mint flow (BRANCH_PROTECTION_READ_TOKEN):
+1. GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
+2. Resource owner: your user. Repository access: **Only select repositories** → `millsmillsymills/millsymills.com`. Repository permissions: **Administration: Read** only — no other scopes.
+3. Expiration: 1 year (set a calendar reminder).
+4. Copy the token, paste into the production environment as `BRANCH_PROTECTION_READ_TOKEN`. Never commit.
+5. Verify on the next dispatched deploy: the "Verify signed-commits enforcement on main" step should log `signed-commits enforcement on main: enabled` and the overall job stays green.
 
 ### Build-time env vars
 
