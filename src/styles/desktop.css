@@ -1057,6 +1057,53 @@ a {
 	color: var(--ink-muted);
 }
 
+/* Desktop-nudge banner (#397). Sits between the hero and the icon grid
+   on mobile only. Two-tone neon-noir border for visual weight without
+   stealing focus from the grid. */
+.mshell__nudge {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 14px 0 18px;
+	padding: 10px 12px;
+	background: var(--bg-raised);
+	border: 1px solid var(--neon-cyan);
+	border-left: 3px solid var(--neon-pink);
+	border-radius: 4px;
+}
+
+.mshell__nudge-text {
+	flex: 1;
+	margin: 0;
+	font-family: var(--font-screen);
+	font-size: 13px;
+	line-height: 1.4;
+	color: var(--ink-primary);
+}
+
+.mshell__nudge-dismiss {
+	all: unset;
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	font-family: var(--font-screen);
+	font-size: 18px;
+	line-height: 1;
+	color: var(--ink-muted);
+	cursor: pointer;
+	border-radius: 3px;
+}
+
+.mshell__nudge-dismiss:hover,
+.mshell__nudge-dismiss:focus-visible {
+	color: var(--neon-pink);
+	background: var(--bg-edge);
+	outline: none;
+}
+
 /* Fixed 3-column grid so 13 visible apps wrap to a balanced 4 full rows
    + 1 orphan, instead of the flexbox-driven 4-col + lonely-vscode shape
    the wider mobile breakpoints (390 / 414 / 768) used to produce.
