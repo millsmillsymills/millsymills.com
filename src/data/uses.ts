@@ -133,4 +133,51 @@ export const gear: readonly GearGroup[] = [
 			},
 		],
 	},
+	{
+		title: 'mac security',
+		items: [
+			{
+				name: 'Objective-See LuLu',
+				detail: 'host-based firewall, alerts on new outbound connections',
+				url: 'https://objective-see.org/products/lulu.html',
+				why: 'macOS has no built-in outbound-traffic prompt — LuLu fills that gap. catches a backgrounded process phoning home before it does.',
+			},
+			{
+				name: 'Objective-See DoNotDisturb',
+				detail: 'detects lid-open intrusion events',
+				url: 'https://objective-see.org/products/dnd.html',
+				why: 'the evil-maid attack at its laziest: open the laptop, plug in a USB, walk away. DND records the event with timestamp + (optionally) a webcam frame so an unattended open is observable after the fact.',
+			},
+			{
+				name: 'Objective-See KnockKnock',
+				detail: 'on-demand persistence scanner (no daemon)',
+				url: 'https://objective-see.org/products/knockknock.html',
+				why: "what BlockBlock catches in real time, KnockKnock surfaces in retrospect — useful after the fact when you're auditing a machine you can't fully trust.",
+			},
+			{
+				name: 'Objective-See TaskExplorer',
+				detail: 'process inspector — code-signing, loaded dylibs, network',
+				url: 'https://objective-see.org/products/taskexplorer.html',
+				why: "Activity Monitor doesn't show code-signing trust, loaded dylibs, or per-process network usage. TaskExplorer surfaces all three in one pane — closest thing to Procmon on macOS.",
+			},
+			{
+				name: 'Objective-See Netiquette',
+				detail: 'network monitor — live snapshot of process ↔ connection',
+				url: 'https://objective-see.org/products/netiquette.html',
+				why: 'complements LuLu: LuLu prompts on new outbound; Netiquette shows the live picture of what is currently connected, with the offending process named.',
+			},
+			{
+				name: 'Objective-See BlockBlock',
+				detail: 'monitors persistence locations, alerts on installs',
+				url: 'https://objective-see.org/products/blockblock.html',
+				why: 'malware persists via LaunchAgents, LoginItems, kexts, and a long tail of obscure plist paths. BlockBlock prompts on every write so a silent install is noisy.',
+			},
+			{
+				name: 'Objective-See OverSight',
+				detail: 'alerts when the mic or webcam is activated',
+				url: 'https://objective-see.org/products/oversight.html',
+				why: 'closes the gap between the camera LED and the OS-level permission grant — explicit notification per access, with the offending process named.',
+			},
+		],
+	},
 ];
