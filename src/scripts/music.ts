@@ -44,12 +44,17 @@ function playErrorMessage(err: unknown): string {
 // and the rendered `<div class="window" data-window-id="music">` in the
 // desktop layout. Subscribers to mills:window-open / mills:window-closed
 // filter on this string to decide whether the event is theirs.
-const MUSIC_WINDOW_ID = 'music';
+export const MUSIC_WINDOW_ID = 'music';
 
-class MusicPlayer {
+export class MusicPlayer {
 	private audio: HTMLAudioElement;
 	private tracks: Track[] = [];
 	private current = -1;
+	// Lifetime guard for window-level listeners (window-open/closed). The
+	// production page has one MusicPlayer per page, so a leak doesn't
+	// matter there; the destroy() handle exists so tests can mount + unmount
+	// repeatedly without accumulating listeners on `window`.
+	private abort = new AbortController();
 
 	private titleEl: HTMLElement | null;
 	private artistEl: HTMLElement | null;
@@ -103,32 +108,51 @@ class MusicPlayer {
 	 * keep streaming. Re-opening triggers a fresh autoplay.
 	 */
 	private bindWindowLifecycle(): void {
-		window.addEventListener('mills:window-open', (event) => {
-			if (event.detail.id !== MUSIC_WINDOW_ID) return;
-			if (!event.detail.userGesture) return;
-			// If a track is already loaded and playing (e.g. user
-			// re-opened a previously-minimized window), don't restart.
-			if (this.current !== -1 && !this.audio.paused) return;
-			if (this.current === -1) {
-				this.load(0, true);
-			} else {
-				this.audio
-					.play()
-					.catch((err) => this.setStatus(playErrorMessage(err)));
-			}
-		});
+		const { signal } = this.abort;
+		window.addEventListener(
+			'mills:window-open',
+			(event) => {
+				if (event.detail.id !== MUSIC_WINDOW_ID) return;
+				if (!event.detail.userGesture) return;
+				// If a track is already loaded and playing (e.g. user
+				// re-opened a previously-minimized window), don't restart.
+				if (this.current !== -1 && !this.audio.paused) return;
+				if (this.current === -1) {
+					this.load(0, true);
+				} else {
+					this.audio
+						.play()
+						.catch((err) => this.setStatus(playErrorMessage(err)));
+				}
+			},
+			{ signal },
+		);
 
-		window.addEventListener('mills:window-closed', (event) => {
-			if (event.detail.id !== MUSIC_WINDOW_ID) return;
-			this.audio.pause();
-			// Releasing the src tells the browser it can drop the buffered
-			// audio. The next open re-loads via this.load(0, true) so the
-			// playhead resets to the start of the playlist intentionally.
-			this.audio.removeAttribute('src');
-			this.audio.load();
-			this.current = -1;
-			this.refreshTrackHighlight();
-		});
+		window.addEventListener(
+			'mills:window-closed',
+			(event) => {
+				if (event.detail.id !== MUSIC_WINDOW_ID) return;
+				this.audio.pause();
+				// Releasing the src tells the browser it can drop the buffered
+				// audio. The next open re-loads via this.load(0, true) so the
+				// playhead resets to the start of the playlist intentionally.
+				this.audio.removeAttribute('src');
+				this.audio.load();
+				this.current = -1;
+				this.refreshTrackHighlight();
+			},
+			{ signal },
+		);
+	}
+
+	/**
+	 * Release window-level listeners so a long-lived page (HMR, tests, future
+	 * SPA navigation) can dispose a MusicPlayer cleanly without leaking event
+	 * subscriptions. The production page only instantiates one MusicPlayer for
+	 * its lifetime; this is here for test hygiene + future-proofing.
+	 */
+	destroy(): void {
+		this.abort.abort();
 	}
 
 	private bindControls(root: HTMLElement): void {
