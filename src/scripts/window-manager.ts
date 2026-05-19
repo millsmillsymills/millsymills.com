@@ -13,7 +13,12 @@
  */
 
 import { isAppId } from '../data/apps';
-import { dispatchClippyTrigger, dispatchPlaySound } from './util/events';
+import {
+	dispatchClippyTrigger,
+	dispatchPlaySound,
+	dispatchWindowClosed,
+	dispatchWindowOpen,
+} from './util/events';
 
 const STORAGE_KEY = 'mills.desktop.v1';
 const Z_BASE = 100;
@@ -339,6 +344,13 @@ class WindowManager {
 		this.renderTaskbar();
 		this.persist();
 
+		if (!wasOpen) {
+			// `silent: true` is the bootstrap path (initialOpen prop /
+			// deep-link). Treat that as code-initiated, not a user gesture,
+			// so subscribers (e.g. music player autoplay) can gate.
+			dispatchWindowOpen(id, !opts.silent);
+		}
+
 		if (!opts.silent && !wasOpen) {
 			dispatchClippyTrigger('open', isAppId(id) ? id : undefined);
 			dispatchPlaySound('open');
@@ -358,6 +370,7 @@ class WindowManager {
 		this.persist();
 
 		if (wasOpen) {
+			dispatchWindowClosed(id);
 			dispatchClippyTrigger('close', isAppId(id) ? id : undefined);
 			dispatchPlaySound('close');
 		}
