@@ -142,6 +142,17 @@ variable "enable_csp_report" {
   default     = true
 }
 
+variable "enable_hitcounter" {
+  description = "Provision the hit-counter Lambda + DynamoDB table + CloudFront origin/cache-behavior + alarms + SNS topic. Backs `/api/hits` for the web-1.0 hit counter in the taskbar chrome. Requires `enable_inspector_tls = true` because the cache behavior reuses the `api` response-headers policy that inspector_tls owns."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = !var.enable_hitcounter || var.enable_inspector_tls
+    error_message = "enable_hitcounter requires enable_inspector_tls; the /api/hits cache behavior reuses `aws_cloudfront_response_headers_policy.api` which is only provisioned when inspector_tls is enabled."
+  }
+}
+
 variable "enable_webauthn_demo" {
   description = "Provision the webauthn_demo Lambda + 2 DynamoDB tables + IAM role + log group + Function URL + 4 CloudWatch alarms + output. Requires `enable_csp_report = true` until the alarms migrate to a dedicated SNS topic (they currently publish to the shared `aws_sns_topic.csp_report_ops`). Drop on stacks without /demo/passkey."
   type        = bool

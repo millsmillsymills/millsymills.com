@@ -79,6 +79,30 @@ resource "aws_cloudfront_origin_request_policy" "csp_report" {
   }
 }
 
+# Origin-request policy for /api/hits. Same Host-rewrite rationale as
+# the other Lambda origins -- Function URLs reject any Host header that
+# doesn't match `<id>.lambda-url.<region>.on.aws`. The handler doesn't
+# read any viewer-supplied headers, so whitelist is empty -- CloudFront
+# only forwards the rewritten Host (plus its own sigv4 signing headers).
+resource "aws_cloudfront_origin_request_policy" "hits" {
+  count = var.enable_hitcounter ? 1 : 0
+
+  name    = "${replace(var.domain, ".", "-")}-hits-origin-req"
+  comment = "Strip viewer headers en route to hits Lambda; let CloudFront rewrite Host"
+
+  headers_config {
+    header_behavior = "none"
+  }
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+
+  query_strings_config {
+    query_string_behavior = "none"
+  }
+}
+
 resource "aws_cloudfront_response_headers_policy" "site" {
   count = var.cloudfront_headers_profile == "strict" ? 1 : 0
 
@@ -467,6 +491,24 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  # Lambda Function URL origin for /api/hits. Same OAC + AWS_IAM pattern.
+  # See `infra/hitcounter.tf`.
+  dynamic "origin" {
+    for_each = var.enable_hitcounter ? [1] : []
+    content {
+      domain_name              = local.hits_origin_host
+      origin_id                = "lambda-${local.hits_name}"
+      origin_access_control_id = aws_cloudfront_origin_access_control.hits[0].id
+
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+    }
+  }
+
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
@@ -533,6 +575,29 @@ resource "aws_cloudfront_distribution" "site" {
       cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
       origin_request_policy_id   = aws_cloudfront_origin_request_policy.csp_report[0].id
       response_headers_policy_id = aws_cloudfront_response_headers_policy.csp_report[0].id
+    }
+  }
+
+  # /api/hits → hits Lambda. GET only (browser fetch from the taskbar
+  # chrome). CachingDisabled because every viewer fetch must reach the
+  # Lambda to atomically increment the DynamoDB counter -- a cached
+  # response would freeze the count for CloudFront's cache TTL. Reuses
+  # the `api` response-headers policy (same one inspector_tls uses) so
+  # the JSON body gets the standard security headers.
+  dynamic "ordered_cache_behavior" {
+    for_each = var.enable_hitcounter ? [1] : []
+    content {
+      path_pattern           = "/api/hits"
+      target_origin_id       = "lambda-${local.hits_name}"
+      allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+      cached_methods         = ["GET", "HEAD"]
+      viewer_protocol_policy = "https-only"
+      compress               = true
+
+      # AWS-managed CachingDisabled
+      cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+      origin_request_policy_id   = aws_cloudfront_origin_request_policy.hits[0].id
+      response_headers_policy_id = aws_cloudfront_response_headers_policy.api[0].id
     }
   }
 
