@@ -17,6 +17,36 @@ const MSHELL_ICON_PX = 56;
 			<p>{profile.title} @ {profile.currentEmployer}</p>
 		</header>
 
+		{/*
+		 * Desktop-nudge banner (#397). The desktop chrome (windowing,
+		 * Clippy, hover affordances) is built for a pointer + larger
+		 * viewport. Clippy itself bails on `hover: none` (see
+		 * `src/scripts/clippy.ts`) so mobile visitors never see the
+		 * desktop-only nudge surface — this banner is the equivalent
+		 * affordance for the mobile shell. Shown once per session
+		 * (sessionStorage), dismissable inline. `hidden` keeps it out
+		 * of first paint until the script decides whether to show it.
+		 */}
+		<aside
+			class="mshell__nudge"
+			data-mobile-nudge
+			role="status"
+			aria-live="polite"
+			hidden
+		>
+			<p class="mshell__nudge-text">
+				psst — i'm built for desktop. swing by on a real screen if you can.
+			</p>
+			<button
+				type="button"
+				class="mshell__nudge-dismiss"
+				data-mobile-nudge-dismiss
+				aria-label="dismiss desktop nudge"
+			>
+				×
+			</button>
+		</aside>
+
 		<ul class="mshell__grid">
 			{
 				apps.filter((a) => !a.desktopOnly && !a.hidden).map((a) => (
@@ -72,4 +102,5 @@ const MSHELL_ICON_PX = 56;
 
 <script>
 	import '../../scripts/mobile-shell';
+	import '../../scripts/mobile-nudge';
 </script>
