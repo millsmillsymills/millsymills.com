@@ -4,11 +4,13 @@ import { MUSIC_WINDOW_ID, MusicPlayer } from './music';
 
 // jsdom doesn't implement <audio> playback. Stub the load/play/pause
 // surface MusicPlayer depends on so the controller's lifecycle reactions
-// are observable without a real media pipeline.
+// are observable without a real media pipeline. Typed `Mock<...>` so the
+// spy signatures structurally match `HTMLMediaElement.prototype.{play,
+// pause, load}` -- no `as unknown as` cast needed.
 interface AudioStubs {
-	play: ReturnType<typeof vi.fn>;
-	pause: ReturnType<typeof vi.fn>;
-	load: ReturnType<typeof vi.fn>;
+	play: ReturnType<typeof vi.fn<() => Promise<void>>>;
+	pause: ReturnType<typeof vi.fn<() => void>>;
+	load: ReturnType<typeof vi.fn<() => void>>;
 }
 
 let audioStubs: AudioStubs;
@@ -16,22 +18,18 @@ let activePlayers: MusicPlayer[] = [];
 
 beforeEach(() => {
 	audioStubs = {
-		play: vi.fn().mockResolvedValue(undefined),
-		pause: vi.fn(),
-		load: vi.fn(),
+		play: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+		pause: vi.fn<() => void>(),
+		load: vi.fn<() => void>(),
 	};
-	// HTMLMediaElement.prototype.play / pause / load all have specific
-	// signatures (e.g. play returns Promise<void>); the generic vi.fn() Mock
-	// type doesn't structurally match. The cast is safe because the spies
-	// only proxy through to the recording stubs.
 	vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(
-		audioStubs.play as unknown as () => Promise<void>,
+		audioStubs.play,
 	);
 	vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(
-		audioStubs.pause as unknown as () => void,
+		audioStubs.pause,
 	);
 	vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(
-		audioStubs.load as unknown as () => void,
+		audioStubs.load,
 	);
 });
 
@@ -154,6 +152,39 @@ describe('MusicPlayer window-open autoplay', () => {
 		dispatchWindowOpen('terminal', true);
 		dispatchWindowOpen('mail', true);
 		expect(audioStubs.play).not.toHaveBeenCalled();
+	});
+
+	it('no-ops when a track is already loaded and playing on re-open', () => {
+		mountPlayer();
+		dispatchWindowOpen(MUSIC_WINDOW_ID, true);
+		expect(audioStubs.play).toHaveBeenCalledTimes(1);
+
+		// Pretend playback is in flight: pin audio.paused = false. The
+		// production guard `current !== -1 && !audio.paused` should short-
+		// circuit before another play() call lands.
+		const pausedSpy = vi
+			.spyOn(HTMLMediaElement.prototype, 'paused', 'get')
+			.mockReturnValue(false);
+		audioStubs.play.mockClear();
+
+		dispatchWindowOpen(MUSIC_WINDOW_ID, true);
+		expect(audioStubs.play).not.toHaveBeenCalled();
+
+		pausedSpy.mockRestore();
+	});
+
+	it('resumes via audio.play() when a track is loaded but paused', () => {
+		mountPlayer();
+		// First open: loads track 0 + autoplay -> 1 play call.
+		dispatchWindowOpen(MUSIC_WINDOW_ID, true);
+		expect(audioStubs.play).toHaveBeenCalledTimes(1);
+
+		audioStubs.play.mockClear();
+		// jsdom's HTMLAudioElement.paused defaults to true even after a
+		// stubbed play(), so the second open hits the `audio.play()` resume
+		// arm rather than the early-return guard.
+		dispatchWindowOpen(MUSIC_WINDOW_ID, true);
+		expect(audioStubs.play).toHaveBeenCalledTimes(1);
 	});
 });
 
