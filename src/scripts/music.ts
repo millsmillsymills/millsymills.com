@@ -40,6 +40,12 @@ function playErrorMessage(err: unknown): string {
 	return 'cannot play';
 }
 
+// Window id of the music.exe / winamp.exe shell -- see src/data/apps.ts
+// and the rendered `<div class="window" data-window-id="music">` in the
+// desktop layout. Subscribers to mills:window-open / mills:window-closed
+// filter on this string to decide whether the event is theirs.
+const MUSIC_WINDOW_ID = 'music';
+
 class MusicPlayer {
 	private audio: HTMLAudioElement;
 	private tracks: Track[] = [];
@@ -83,6 +89,46 @@ class MusicPlayer {
 
 		this.bindControls(root);
 		this.bindAudioEvents();
+		this.bindWindowLifecycle();
+	}
+
+	/**
+	 * Issue #402: opening music.exe IS the play gesture. Autoplay the
+	 * first track when the window-manager fires a true open with a real
+	 * user gesture; on deep-link / restore-from-storage opens (`silent`
+	 * path -> `userGesture: false`) leave the player paused so the
+	 * autoplay-policy NotAllowedError doesn't fire.
+	 *
+	 * Close path: pause and clear audio.src so a closed window doesn't
+	 * keep streaming. Re-opening triggers a fresh autoplay.
+	 */
+	private bindWindowLifecycle(): void {
+		window.addEventListener('mills:window-open', (event) => {
+			if (event.detail.id !== MUSIC_WINDOW_ID) return;
+			if (!event.detail.userGesture) return;
+			// If a track is already loaded and playing (e.g. user
+			// re-opened a previously-minimized window), don't restart.
+			if (this.current !== -1 && !this.audio.paused) return;
+			if (this.current === -1) {
+				this.load(0, true);
+			} else {
+				this.audio
+					.play()
+					.catch((err) => this.setStatus(playErrorMessage(err)));
+			}
+		});
+
+		window.addEventListener('mills:window-closed', (event) => {
+			if (event.detail.id !== MUSIC_WINDOW_ID) return;
+			this.audio.pause();
+			// Releasing the src tells the browser it can drop the buffered
+			// audio. The next open re-loads via this.load(0, true) so the
+			// playhead resets to the start of the playlist intentionally.
+			this.audio.removeAttribute('src');
+			this.audio.load();
+			this.current = -1;
+			this.refreshTrackHighlight();
+		});
 	}
 
 	private bindControls(root: HTMLElement): void {
