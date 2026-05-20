@@ -65,8 +65,8 @@ export class MusicPlayer {
 	private muteBtn: HTMLButtonElement | null;
 	private seekBar: HTMLInputElement | null;
 	private cassetteEl: HTMLElement | null;
-	private playImg: HTMLImageElement | null;
-	private muteImg: HTMLImageElement | null;
+	private playGlyph: HTMLElement | null;
+	private muteGlyph: HTMLElement | null;
 
 	constructor(root: HTMLElement) {
 		this.audio = root.querySelector<HTMLAudioElement>('[data-music-audio]')!;
@@ -79,8 +79,10 @@ export class MusicPlayer {
 		this.muteBtn = root.querySelector<HTMLButtonElement>('[data-music-mute]');
 		this.seekBar = root.querySelector<HTMLInputElement>('[data-music-seek]');
 		this.cassetteEl = root.querySelector<HTMLElement>('[data-music-state]');
-		this.playImg = this.playBtn?.querySelector<HTMLImageElement>('img') ?? null;
-		this.muteImg = this.muteBtn?.querySelector<HTMLImageElement>('img') ?? null;
+		this.playGlyph =
+			this.playBtn?.querySelector<HTMLElement>('[data-music-play-glyph]') ?? null;
+		this.muteGlyph =
+			this.muteBtn?.querySelector<HTMLElement>('[data-music-mute-glyph]') ?? null;
 
 		root.querySelectorAll<HTMLElement>('[data-music-track]').forEach((el, i) => {
 			this.tracks.push({
@@ -238,10 +240,9 @@ export class MusicPlayer {
 
 	private toggleMute(): void {
 		this.audio.muted = !this.audio.muted;
-		if (this.muteImg) {
-			this.muteImg.src = this.audio.muted
-				? '/images/vaporwave-ui/buttons/mute.png'
-				: '/images/vaporwave-ui/buttons/unmute.png';
+		if (this.muteGlyph) {
+			// 🔇 (U+1F507) speaker w/ cancellation stroke; 🔊 (U+1F50A) full volume.
+			this.muteGlyph.textContent = this.audio.muted ? '🔇' : '🔊';
 		}
 		if (this.muteBtn) {
 			this.muteBtn.setAttribute('aria-pressed', String(this.audio.muted));
@@ -264,11 +265,9 @@ export class MusicPlayer {
 	}
 
 	private setPlayGlyph(which: 'play' | 'pause'): void {
-		if (this.playImg) {
-			this.playImg.src =
-				which === 'pause'
-					? '/images/vaporwave-ui/buttons/pause.png'
-					: '/images/vaporwave-ui/buttons/play.png';
+		if (this.playGlyph) {
+			// ▶ (U+25B6) play; ⏸ (U+23F8) double vertical bar.
+			this.playGlyph.textContent = which === 'pause' ? '⏸' : '▶';
 		}
 		// aria-pressed=true when the player is actively playing (button shows
 		// pause glyph). aria-label flips so screen readers announce the action
