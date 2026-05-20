@@ -36,16 +36,15 @@ between Terraform and reality fails locally.
 ## First-time bootstrap
 
 The `millsymills-terraform-state` bucket already exists (created
-by hand per the original CLAUDE.md runbook). Import it instead of
-creating a duplicate.
+by hand per the original CLAUDE.md runbook). The `import { ... }`
+block in `main.tf` adopts it into state on first apply -- no
+manual `terraform import` step required.
 
 ```bash
 cd infra/bootstrap-state
 terraform init                  # local backend; downloads aws provider
-terraform import \
-  aws_s3_bucket.state \
-  millsymills-terraform-state
-terraform plan                  # confirm the plan only reconciles
+terraform plan                  # confirm the plan ADOPTS the
+                                # existing bucket and reconciles
                                 # missing controls (versioning,
                                 # policies, lifecycle) -- if it
                                 # proposes RECREATING the bucket,
@@ -53,8 +52,13 @@ terraform plan                  # confirm the plan only reconciles
 terraform apply
 ```
 
+Once the bucket is in state, the `import` block is a no-op on every
+subsequent plan.
+
 For a green-field account where the bucket does not yet exist,
-skip the `import` step -- `apply` will create it.
+comment out the `import` block in `main.tf` before the first
+`apply` -- AWS would otherwise return `NoSuchBucket`. Restore the
+block after the bucket is created so the config remains portable.
 
 After `apply`, `terraform.tfstate` lives in this directory under
 the local backend. **Do not commit it.** A `.gitignore` entry
