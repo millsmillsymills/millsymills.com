@@ -131,6 +131,20 @@ jobs:
         working-directory: infra
         run: terraform validate
 
+      # `infra/bootstrap-state/` is a separate Terraform root (its
+      # own backend + provider config). The validate above does not
+      # cover it. Validate explicitly so a syntax error in the
+      # bootstrap module fails CI instead of only surfacing at
+      # manual plan time. Mirror of the matching block in
+      # `scripts/ci-local.sh`.
+      - name: terraform init (bootstrap-state, no backend)
+        working-directory: infra/bootstrap-state
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate (bootstrap-state)
+        working-directory: infra/bootstrap-state
+        run: terraform validate
+
       # tf.sh refusal checks + per-stack workflow / environment
       # consistency. These are inline rather than calling ci-local.sh
       # so each gate fails as its own visible step rather than under
