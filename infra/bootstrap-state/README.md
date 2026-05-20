@@ -38,11 +38,15 @@ between Terraform and reality fails locally.
 The `millsymills-terraform-state` bucket already exists (created
 by hand per the original CLAUDE.md runbook). The `import { ... }`
 block in `main.tf` adopts it into state on first apply -- no
-manual `terraform import` step required.
+manual `terraform import` step required. State for this module
+lives in the same bucket it manages, keyed under
+`bootstrap-state/terraform.tfstate`.
 
 ```bash
 cd infra/bootstrap-state
-terraform init                  # local backend; downloads aws provider
+terraform init                  # downloads aws provider + wires
+                                # the s3 backend at
+                                # bootstrap-state/terraform.tfstate
 terraform plan                  # confirm the plan ADOPTS the
                                 # existing bucket and reconciles
                                 # missing controls (versioning,
@@ -55,45 +59,45 @@ terraform apply
 Once the bucket is in state, the `import` block is a no-op on every
 subsequent plan.
 
-For a green-field account where the bucket does not yet exist,
-comment out the `import` block in `main.tf` before the first
-`apply` -- AWS would otherwise return `NoSuchBucket`. Restore the
-block after the bucket is created so the config remains portable.
+## Green-field bootstrap (fresh account, no bucket yet)
 
-After `apply`, `terraform.tfstate` lives in this directory under
-the local backend. **Do not commit it.** A `.gitignore` entry
-covers `*.tfstate*` already.
+The remote `s3` backend can't init against a bucket that doesn't
+exist yet, and the `import` block can't adopt something that
+doesn't exist either. Both must be neutralised for the very first
+apply:
 
-## Optional: migrate state into the bucket
+1. Edit `main.tf`: comment out the `backend "s3" { ... }` block
+   (leaves an implicit local backend) AND the `import { ... }`
+   block.
+2. `terraform init && terraform apply` -- creates the bucket from
+   scratch using the local backend.
+3. Restore both blocks in `main.tf`.
+4. `terraform init -migrate-state` -- copies the freshly-created
+   local `terraform.tfstate` up to the bucket it now manages.
+5. Delete the on-disk `terraform.tfstate*` files; the bucket is
+   the source of truth from here on.
 
-To get the bootstrap module's own state out of the local
-filesystem and into S3 (under a distinct key from the site
-stacks), edit the backend block at the top of `main.tf`:
+## Migrating an existing local state into the bucket
 
-```terraform
-  backend "s3" {
-    bucket       = "millsymills-terraform-state"
-    key          = "bootstrap-state/terraform.tfstate"
-    region       = "us-west-2"
-    encrypt      = true
-    use_lockfile = true
-  }
-```
-
-Then:
+If you're upgrading from a deployment that pre-dates the remote
+backend (i.e. you have a local `terraform.tfstate` on disk from a
+prior local-backend apply), one-time migration:
 
 ```bash
-terraform init -migrate-state
+cd infra/bootstrap-state
+terraform init -migrate-state   # Terraform copies the local
+                                # state up to s3://millsymills-
+                                # terraform-state/bootstrap-state/
+                                # terraform.tfstate and offers to
+                                # remove the local copy.
+terraform state list            # sanity-check resources match.
+trash terraform.tfstate*        # remove the now-stale local copy.
 ```
 
-Terraform copies the local state up to the bucket. `terraform
-state list` should still show the same resources after migration.
-
-This step is optional: the local backend is fine for a
-single-operator setup, and keeping it local avoids the one-day
-chicken-and-egg loop where migrating bootstrap state into a
-broken bucket would lock out recovery. Decide based on whether
-the bucket needs to be reachable to multiple operators.
+The chicken-and-egg only bites on a brand-new account. For any
+existing deployment (including this one) the bucket is already
+populated, so the remote backend is just a wire-up rather than a
+bootstrap step.
 
 ## Recovery
 
