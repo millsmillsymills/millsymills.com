@@ -211,6 +211,16 @@ section "terraform: validate"
 terraform -chdir=infra validate
 ok "terraform validate"
 
+# `infra/bootstrap-state/` is a separate Terraform root (its own
+# backend, its own provider config) -- the `-chdir=infra` validate
+# above does not descend into it. Validate explicitly so a syntax
+# error in the bootstrap module (e.g. a bad `import { ... }` block)
+# fails CI rather than only surfacing at manual `terraform plan` time.
+section "terraform: bootstrap-state init + validate"
+terraform -chdir=infra/bootstrap-state init -backend=false -input=false -reconfigure
+terraform -chdir=infra/bootstrap-state validate
+ok "terraform validate (bootstrap-state)"
+
 section "scripts: analytics shellcheck + shfmt + SQL lint"
 if ! command -v shellcheck >/dev/null 2>&1; then
 	printf '\033[1;31m✗ shellcheck not on PATH; install with `brew install shellcheck`\033[0m\n' >&2
