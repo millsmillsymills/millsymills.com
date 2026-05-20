@@ -66,6 +66,24 @@ resource "aws_s3_bucket" "state" {
   }
 }
 
+# Declarative adoption of the pre-existing state bucket. The bucket
+# was created by hand before this module existed (see README's
+# "First-time bootstrap" section), so a green-field `terraform apply`
+# would try to recreate it -- which the matching `prevent_destroy`
+# on the resource would refuse. This `import` block makes the first
+# apply idempotent for any future operator: Terraform notices the
+# bucket already exists and adopts it into state in the same plan as
+# the controls below. Once the bucket is in state, the import block
+# is a no-op on every subsequent plan.
+#
+# Green-field caveat: if a future fork creates a fresh bucket with a
+# different name, override `var.bucket_name` AND comment this block
+# out for that first apply -- AWS will return NoSuchBucket otherwise.
+import {
+  to = aws_s3_bucket.state
+  id = var.bucket_name
+}
+
 # Versioning is the recovery story for an accidental `terraform
 # state rm` or a bad apply that overwrote state -- we can roll back
 # to the previous object version. Required by #283's acceptance
