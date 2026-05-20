@@ -26,11 +26,22 @@ terraform {
     }
   }
 
-  # Local backend by default. After first apply (or after
-  # `terraform import` against an existing manually-created
-  # bucket), this can optionally migrate to the same S3 bucket
-  # under a distinct key. See README.md.
-  backend "local" {}
+  # Remote backend in the very bucket this module manages. Keyed
+  # under `bootstrap-state/` so it cohabits cleanly with the site
+  # stacks' state objects (`millsymills.com/terraform.tfstate`,
+  # `p41m0n/terraform.tfstate`, etc.). The chicken-and-egg is
+  # broken by the declarative `import { ... }` block below: on a
+  # green-field account, comment the backend out, run an initial
+  # local-backend apply to create the bucket, then re-enable the
+  # backend block and `terraform init -migrate-state` once the
+  # bucket exists. See README.md.
+  backend "s3" {
+    bucket       = "millsymills-terraform-state"
+    key          = "bootstrap-state/terraform.tfstate"
+    region       = "us-west-2"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
