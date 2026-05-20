@@ -281,6 +281,7 @@ const _APPS_DATA = [
 		id: 'vscode',
 		label: 'vscode',
 		glyph: '🆅',
+		iconUrl: '/images/icons/vscode-pixel.svg',
 		title: 'vscode.exe',
 		ogDescription: 'an evocative, pink-tinted vscode reskin. browse real dotfiles and snippets of the site\'s own source.',
 		x: 140,
