@@ -9,12 +9,10 @@ import { isEnabled, markGesture, play, setEnabled } from './system-sounds';
 
 function syncToggle(button: HTMLButtonElement): void {
 	const enabled = isEnabled();
-	const icon = button.querySelector<HTMLImageElement>('img');
-	if (icon) {
-		icon.src = enabled
-			? '/images/vaporwave-ui/buttons/unmute.png'
-			: '/images/vaporwave-ui/buttons/mute.png';
-		icon.alt = enabled ? 'sound: on' : 'sound: off';
+	const glyph = button.querySelector<HTMLElement>('[data-sound-glyph]');
+	if (glyph) {
+		// 🔊 (U+1F50A) speaker w/ three waves; 🔇 (U+1F507) speaker w/ stroke.
+		glyph.textContent = enabled ? '🔊' : '🔇';
 	}
 	button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
 	button.setAttribute(
