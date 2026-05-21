@@ -65,7 +65,20 @@ case "$SUBCMD" in
 		;;
 	plan|apply|destroy|refresh)
 		stale_state_guard
-		terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" "${@:2}"
+		# Optional per-stack secrets file. Listed LAST so it overrides any
+		# matching key from `stacks/${STACK}.tfvars` and from the
+		# auto-loaded root `infra/terraform.tfvars` (terraform applies
+		# `-var-file` flags in CLI order, last write wins).
+		secrets_file="infra/stacks/${STACK}.secrets.tfvars"
+		if [[ -f "$secrets_file" ]]; then
+			if [[ ! -r "$secrets_file" ]]; then
+				printf '\033[1;31mrefusing: %s exists but is not readable\033[0m\n' "$secrets_file" >&2
+				exit 5
+			fi
+			terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" -var-file="stacks/${STACK}.secrets.tfvars" "${@:2}"
+		else
+			terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" "${@:2}"
+		fi
 		;;
 	output|state|import|console|show|force-unlock)
 		# Touch remote state — guard against running against the wrong stack.
