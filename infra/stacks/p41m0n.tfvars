@@ -12,6 +12,7 @@ deploy_branch = "main"
 # All heavyweight features off — see
 # docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md.
 enable_inspector_tls      = false
+enable_hitcounter         = false
 enable_csp_report         = false
 enable_webauthn_demo      = false
 enable_ct_monitor         = false
