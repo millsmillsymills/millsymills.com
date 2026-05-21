@@ -41,9 +41,9 @@ infra/errored.tfstate
 # recursive (e.g. **/*.tfvars), it would silently start ignoring those files.
 infra/*.tfvars
 !infra/terraform.tfvars.example
-# Per-stack secret tokens (e.g., Proton domain-verification). Auto-loaded by
-# scripts/tf.sh when present; keeps stack-specific secrets out of the
-# auto-loaded root infra/terraform.tfvars (which is shared across stacks).
+# Per-stack secret tokens. Kept separate because terraform auto-loads root
+# `infra/terraform.tfvars` for every stack, so any secret put there leaks
+# across stacks.
 infra/stacks/*.secrets.tfvars
 
 # local-only state (brainstorming scratch, claude scheduled tasks + settings, misc)

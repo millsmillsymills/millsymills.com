@@ -65,12 +65,16 @@ case "$SUBCMD" in
 		;;
 	plan|apply|destroy|refresh)
 		stale_state_guard
-		# Optional per-stack secrets file (gitignored). Used to keep
-		# stack-specific secret tokens (e.g., Proton domain-verification)
-		# out of the auto-loaded root `terraform.tfvars`, which would
-		# otherwise apply one stack's secrets to the other.
+		# Optional per-stack secrets file. Listed LAST so it overrides any
+		# matching key from `stacks/${STACK}.tfvars` and from the
+		# auto-loaded root `infra/terraform.tfvars` (terraform applies
+		# `-var-file` flags in CLI order, last write wins).
 		secrets_file="infra/stacks/${STACK}.secrets.tfvars"
 		if [[ -f "$secrets_file" ]]; then
+			if [[ ! -r "$secrets_file" ]]; then
+				printf '\033[1;31mrefusing: %s exists but is not readable\033[0m\n' "$secrets_file" >&2
+				exit 5
+			fi
 			terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" -var-file="stacks/${STACK}.secrets.tfvars" "${@:2}"
 		else
 			terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" "${@:2}"
