@@ -13,7 +13,13 @@ export interface Project {
 	readonly install?: string;
 	/** short blurb shown by `mcp describe`. */
 	readonly describe?: string;
-	/** path to a logo asset under `public/`, e.g. `/images/projects/foo.svg`. Optional. */
+	/**
+	 * Path to a logo asset under `public/`, e.g. `/images/projects/foo.png`.
+	 * Default for repos under `millsmillsymills/` is the owner avatar
+	 * (`/images/projects/millsmillsymills.png`) — a placeholder until each
+	 * repo gets a custom logo upstream. Override per-project once a repo
+	 * ships its own icon.
+	 */
 	readonly icon?: `/${string}`;
 }
 
@@ -25,6 +31,7 @@ export const projects: readonly Project[] = [
 		description:
 			'Exposes an Unraid server (array status, docker containers, VMs, shares, parity, SMART) as tools to any MCP client. Built for homelab operators who want to debug or automate their box from a chat interface. Runs as a container on the Unraid host.',
 		repo: 'https://github.com/millsmillsymills/unraid-mcp',
+		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'unraid', 'homelab', 'python'],
 		install: 'claude mcp add unraid --transport http http://<unraid-host>:8765/',
@@ -38,6 +45,7 @@ export const projects: readonly Project[] = [
 		description:
 			'Wraps the UniFi Controller API as MCP tools: list clients, inspect sites, kick a misbehaving device, pull event logs, toggle guest networks. Useful for anyone running UniFi at home or at a small org who wants an LLM-native way to poke at the network.',
 		repo: 'https://github.com/millsmillsymills/unifi-mcp',
+		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'unifi', 'networking', 'python'],
 		install: 'claude mcp add unifi --transport http http://<controller-host>:8766/',
@@ -51,6 +59,7 @@ export const projects: readonly Project[] = [
 		description:
 			'Lets an MCP client manage a Proton Mail account: list/create/delete addresses, add and verify custom domains, edit mail and account settings, inspect encryption keys. Reads are always on; writes opt in via env flag. Built in Go on top of go-proton-api.',
 		repo: 'https://github.com/millsmillsymills/protonmail-mcp',
+		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'protonmail', 'email', 'go'],
 		install: 'claude mcp add protonmail -- protonmail-mcp',
@@ -64,6 +73,7 @@ export const projects: readonly Project[] = [
 		description:
 			'Wraps the Gandi v5 API as 71 MCP tools across domains, LiveDNS, email, billing, organizations, and certificates. Three-tier safety model: readonly by default, opt in to writes, and a separate flag to expose tools that spend money. Defense-in-depth checks at both tool-visibility and runtime.',
 		repo: 'https://github.com/millsmillsymills/gandi-mcp',
+		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'gandi', 'dns', 'domains', 'python'],
 		install: 'claude mcp add gandi -- gandi-mcp',
@@ -77,6 +87,7 @@ export const projects: readonly Project[] = [
 		description:
 			'The source for the site you are looking at. Astro + Terraform + GitHub Actions OIDC. Released under MIT as a community template — fork it for your own Y2K-pink desktop portfolio.',
 		repo: 'https://github.com/millsmillsymills/millsymills.com',
+		icon: '/images/projects/millsmillsymills.png',
 		kind: 'site',
 		tags: ['astro', 'terraform', 'aws', 'mit'],
 	},
