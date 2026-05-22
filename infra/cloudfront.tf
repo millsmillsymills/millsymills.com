@@ -177,6 +177,24 @@ resource "aws_cloudfront_response_headers_policy" "site" {
       override = true
     }
 
+    # Trusted Types — report-only first slice (#130). The enforcing CSP
+    # above stays unchanged; this is a parallel `-Report-Only` header
+    # carrying ONLY the Trusted Types directives. Senders get a 1-2 week
+    # observation window (or however long it takes to see clean reports)
+    # to surface any DOM-XSS sink (innerHTML, outerHTML, etc.) before
+    # promotion. Once reports stay clean, the same two directives fold
+    # into the enforcing CSP above.
+    #
+    # `trusted-types default` means a single policy named `default` is
+    # allowed; Astro's emitted code does not create one today (every
+    # script-emitted output is `textContent`-based, see #130 comment),
+    # so the expected steady-state report stream is empty.
+    items {
+      header   = "Content-Security-Policy-Report-Only"
+      value    = "require-trusted-types-for 'script'; trusted-types default; report-uri /api/csp-report; report-to csp"
+      override = true
+    }
+
     # Permissions-Policy. Strict-deny baseline for every powerful feature the
     # site does not use. The site is a static personal page with zero JS use
     # of geolocation, camera/mic, USB/serial/HID, payments, fullscreen, etc.
@@ -364,6 +382,17 @@ resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
     items {
       header   = "Reporting-Endpoints"
       value    = "csp=\"https://${var.domain}/api/csp-report\""
+      override = true
+    }
+
+    # Trusted Types — report-only (#130). Mirrors the directive shape on
+    # `aws_cloudfront_response_headers_policy.site`. The WebAuthn demo
+    # surface uses standard DOM APIs (`textContent`, `addEventListener`)
+    # for credential UI rendering, so the expected steady-state report
+    # stream here is also empty.
+    items {
+      header   = "Content-Security-Policy-Report-Only"
+      value    = "require-trusted-types-for 'script'; trusted-types default; report-uri /api/csp-report; report-to csp"
       override = true
     }
 
