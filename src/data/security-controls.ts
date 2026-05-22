@@ -432,6 +432,16 @@ export const securityControls: readonly SecurityControl[] = [
 		why: 'Closes the remaining XSS-via-injected-style vector and removes the only weak link in the current CSP allow-list.',
 	},
 	{
+		id: 'trusted-types',
+		title: 'Trusted Types (report-only)',
+		category: 'web',
+		status: 'shipped',
+		what: 'Parallel `Content-Security-Policy-Report-Only: require-trusted-types-for \'script\'; trusted-types default` header. Reports DOM-XSS sink usage (`innerHTML`, `Element.outerHTML`, etc.) to `/api/csp-report` without blocking it.',
+		why: 'Trusted Types kill DOM-XSS sinks at the source; promoted from report-only to enforcing once the report stream stays clean for 1-2 weeks.',
+		tradeoffs: 'Currently report-only — violations are logged but allowed. Enforcing requires no violations from any DOM-sink hot path in the site\'s emitted bundles. The codebase uses `textContent` rather than `innerHTML` throughout, so the report stream should stay empty in steady-state.',
+		code: ['infra/cloudfront.tf'],
+	},
+	{
 		id: 'hsts-preload',
 		title: 'HSTS preload-list submission',
 		category: 'web',
