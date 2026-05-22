@@ -102,10 +102,20 @@ const toolsByCategory = toolCategoryOrder
 	}
 
 	.uses-item__name {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		font-family: var(--font-screen);
 		font-size: 18px;
 		color: var(--ink);
 		margin: 0 0 2px;
+	}
+
+	.uses-item__icon {
+		width: 32px;
+		height: 32px;
+		flex: 0 0 auto;
+		image-rendering: pixelated;
 	}
 
 	.uses-item__detail {
@@ -268,6 +278,17 @@ const toolsByCategory = toolCategoryOrder
 				{g.items.map((item) => (
 					<li class="uses-item">
 						<p class="uses-item__name">
+							{item.icon && (
+								<img
+									class="uses-item__icon"
+									src={item.icon}
+									alt=""
+									width="32"
+									height="32"
+									loading="lazy"
+									decoding="async"
+								/>
+							)}
 							{item.url ? (
 								<a href={item.url} target="_blank" rel="noopener">
 									{item.name}
