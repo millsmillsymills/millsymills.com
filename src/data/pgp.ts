@@ -34,12 +34,13 @@ export const pgp = {
 	/** path where the armored key is served, relative to the origin */
 	downloadPath: '/pgp.asc',
 	/**
-	 * age recipient — undefined until mills generates an age keypair and drops
-	 * the public half into public/age.pub. Consumers conditionally render the
-	 * age block only when this is set, so the surface ships dormant until
-	 * activated.
+	 * age recipient. Must match public/age.pub exactly — `assert-pgp-consistency.sh`
+	 * enforces the match. Generated 2026-05-21; rotate per the header comment.
 	 */
-	age: undefined as AgeKey | undefined,
+	age: {
+		recipient: 'age1m855p6cpw3chaqjvgn94kscs3s4ff5jrpd35sgyc3u8upymylcvs2hsac0',
+		createdAt: '2026-05-21',
+	} as AgeKey | undefined,
 	/** path where the age recipient is served, relative to the origin */
 	ageDownloadPath: '/age.pub',
 } as const;
