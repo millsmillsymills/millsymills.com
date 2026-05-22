@@ -8,6 +8,8 @@ export interface GearItem {
 	readonly detail?: string;
 	readonly url?: string;
 	readonly why?: string;
+	/** Optional pixel-art icon path under `public/`. Rendered at 32px with `image-rendering: pixelated` (#165). */
+	readonly icon?: `/${string}`;
 }
 
 export interface GearGroup {
@@ -113,6 +115,7 @@ export const gear: readonly GearGroup[] = [
 				detail: 'controller + switches + APs',
 				url: 'https://ui.com/',
 				why: 'one pane of glass for the whole /24. great telemetry. hence unifi-mcp.',
+				icon: '/images/icons/uses/unifi-pixel.png',
 			},
 		],
 	},
@@ -124,6 +127,7 @@ export const gear: readonly GearGroup[] = [
 				detail: 'hand-assembled in the Netherlands, 30-year lifespan',
 				url: 'https://us.moccamaster.com/collections/coffee-brewers/products/kbg',
 				why: 'the pour-over of auto-drips. pulls the right temperature and stays out of the way.',
+				icon: '/images/icons/uses/moccamaster-pixel.png',
 			},
 			{
 				name: 'Philips 800 Series',
