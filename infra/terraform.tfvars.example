@@ -1,5 +1,18 @@
 # Copy to infra/terraform.tfvars and fill in real values. The
 # terraform.tfvars file itself is gitignored (see top-level .gitignore).
+#
+# NOTE — this file is auto-loaded by terraform on every run regardless of
+# which stack `scripts/tf.sh` is targeting. Only put values here that are
+# *stack-agnostic* (e.g., github_repo when you operate a single stack).
+#
+# Stack-specific SECRETS — most commonly the per-stack
+# `protonmail_verification_token` — belong in
+# `infra/stacks/<stack>.secrets.tfvars` (also gitignored). That file is
+# auto-loaded last by `scripts/tf.sh` so its values override anything set
+# here. Putting a stack-specific secret in *this* shared file when you
+# operate more than one stack will silently apply one stack's value to
+# the other, rewriting live DNS on apply. See CLAUDE.md "Email
+# (ProtonMail)" and PRs #572 / #574 for the full rationale.
 
 # REQUIRED. GitHub repo (owner/name) allowed to assume the deploy
 # role via OIDC. There is deliberately no default so a fork can't
@@ -35,19 +48,15 @@ github_repo = "owner/repo"
 # ops, export a fine-grained PAT as `TF_VAR_github_token` instead.
 # github_token = ""
 
-# ProtonMail verification token (from Proton admin -> Settings ->
-# Domains -> add <your domain>). Until this is set, the email
-# records deploy in "unspoofable null" mode: null MX + v=spf1 -all.
-# protonmail_verification_token = "proton-verification=abcdef1234567890"
+# ProtonMail verification token: put it in
+# `infra/stacks/<stack>.secrets.tfvars`, NOT here. See CLAUDE.md
+# "Email (ProtonMail)". A single-stack deployer could set it here, but
+# the multi-stack repo layout silently breaks on apply if a token meant
+# for one stack lands in this shared file.
 
-# ProtonMail DKIM selectors, shown in Proton admin after domain
-# verification succeeds. All three selectors must be filled in for
-# Proton's automatic key rotation to work.
-# protonmail_dkim_selectors = {
-#   protonmail  = "protonmail.domainkey.abcdef.domains.proton.ch."
-#   protonmail2 = "protonmail2.domainkey.abcdef.domains.proton.ch."
-#   protonmail3 = "protonmail3.domainkey.abcdef.domains.proton.ch."
-# }
+# ProtonMail DKIM selectors are public-by-virtue-of-DNS, not secret.
+# They live in the committed `infra/stacks/<stack>.tfvars` (see
+# `p41m0n.tfvars` for the existing pattern). Do not duplicate here.
 
 # Mailbox / alias that receives DMARC aggregate reports. Leave blank
 # to default to `dmarc@<var.domain>`.
