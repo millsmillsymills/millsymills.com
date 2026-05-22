@@ -1,0 +1,203 @@
+---
+import statusData from '../../../data/chimera-status.json';
+
+/**
+ * Chimera homelab status card (#60). Reads the daily snapshot at
+ * `src/data/chimera-status.json` written by the self-hosted GH Actions
+ * runner colocated with the unraid-mcp install. If the snapshot's
+ * `generated_at` is null, the card renders in "awaiting first sync"
+ * mode — no broken-data display while the runner gets stood up.
+ */
+
+interface ChimeraStatus {
+	generated_at: string | null;
+	uptime_seconds: number | null;
+	containers: { running: number | null; stopped: number | null };
+	array: { used_tb: number | null; total_tb: number | null; parity_state: string | null };
+	smart_warnings: number | null;
+	last_updated: string;
+}
+
+const status = statusData as unknown as ChimeraStatus;
+const hasData = status.generated_at !== null;
+
+function formatUptime(seconds: number | null): string {
+	if (seconds === null) return '—';
+	const days = Math.floor(seconds / 86400);
+	const hours = Math.floor((seconds % 86400) / 3600);
+	return `${days}d ${hours}h`;
+}
+
+function formatTB(used: number | null, total: number | null): string {
+	if (used === null || total === null) return '—';
+	const pct = Math.round((used / total) * 100);
+	return `${used.toFixed(1)} / ${total.toFixed(1)} TB · ${pct}%`;
+}
+
+function row(severity: 'green' | 'yellow' | 'red' | 'gray', label: string, value: string) {
+	return { severity, label, value };
+}
+
+const rows = hasData
+	? [
+			row('green', 'uptime', formatUptime(status.uptime_seconds)),
+			row(
+				(status.containers.stopped ?? 0) > 0 ? 'yellow' : 'green',
+				'docker containers',
+				`${status.containers.running ?? 0} running · ${status.containers.stopped ?? 0} stopped`,
+			),
+			row('green', 'array fill', formatTB(status.array.used_tb, status.array.total_tb)),
+			row(
+				status.array.parity_state === 'healthy' ? 'green' : 'yellow',
+				'parity',
+				status.array.parity_state ?? '—',
+			),
+			row(
+				(status.smart_warnings ?? 0) > 0 ? 'red' : 'green',
+				'smart warnings',
+				String(status.smart_warnings ?? 0),
+			),
+		]
+	: [];
+---
+
+<article class="status">
+	<h1>chimera.status</h1>
+	<p class="status__intro">
+		live snapshot of the unraid homelab box (`chimera`) — refreshed daily from `unraid-mcp` via the
+		self-hosted GitHub Actions runner colocated with the box. read-only.
+	</p>
+
+	{
+		!hasData && (
+			<div class="status__placeholder">
+				<p>awaiting first sync from chimera.</p>
+				<p class="status__placeholder-detail">
+					the self-hosted runner on chimera writes `src/data/chimera-status.json` on a daily
+					cron (see `.github/workflows/chimera-status.yml`). until the runner is registered
+					and the first cron fires, this card sits idle.
+				</p>
+			</div>
+		)
+	}
+
+	{
+		hasData && (
+			<ul class="status__rows">
+				{rows.map((r) => (
+					<li class={`status__row status__row--${r.severity}`}>
+						<span class="status__row-pill" aria-hidden="true" />
+						<span class="status__row-label">{r.label}</span>
+						<span class="status__row-value">{r.value}</span>
+					</li>
+				))}
+			</ul>
+		)
+	}
+
+	<p class="status__footer">
+		last updated: <code>{status.last_updated}</code>
+	</p>
+</article>
+
+<style>
+	.status {
+		font-family: var(--font-screen);
+		color: var(--ink);
+		padding: 4px 0;
+	}
+
+	.status h1 {
+		font-family: var(--font-pixel);
+		font-size: 18px;
+		margin: 0 0 12px;
+	}
+
+	.status__intro {
+		font-size: 15px;
+		color: var(--ink-soft);
+		margin: 0 0 16px;
+	}
+
+	.status__placeholder {
+		padding: 14px 16px;
+		border: 2px dashed var(--border);
+		border-radius: 6px;
+		background: var(--bg-deep);
+		color: var(--ink-soft);
+	}
+
+	.status__placeholder p {
+		margin: 0;
+	}
+
+	.status__placeholder-detail {
+		margin-top: 8px !important;
+		font-size: 13px;
+	}
+
+	.status__rows {
+		list-style: none;
+		margin: 0 0 16px;
+		padding: 0;
+		display: grid;
+		gap: 8px;
+	}
+
+	.status__row {
+		display: grid;
+		grid-template-columns: 12px 1fr auto;
+		align-items: center;
+		gap: 12px;
+		padding: 10px 14px;
+		background: var(--window-bg);
+		border: 2px solid var(--border);
+		border-radius: 6px;
+		font-family: var(--font-mono);
+		font-size: 14px;
+	}
+
+	.status__row-pill {
+		display: inline-block;
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		border: 2px solid var(--border);
+	}
+
+	.status__row--green .status__row-pill {
+		background: #6cff7d;
+	}
+	.status__row--yellow .status__row-pill {
+		background: #ffd84a;
+	}
+	.status__row--red .status__row-pill {
+		background: #ff4a6b;
+	}
+	.status__row--gray .status__row-pill {
+		background: var(--ink-soft);
+	}
+
+	.status__row-label {
+		color: var(--ink);
+	}
+
+	.status__row-value {
+		color: var(--ink-primary);
+		font-weight: 600;
+	}
+
+	.status__footer {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--ink-soft);
+		margin: 8px 0 0;
+	}
+
+	.status__footer code {
+		font-family: var(--font-mono);
+		background: var(--bg-deep);
+		padding: 1px 5px;
+		border-radius: 3px;
+	}
+</style>

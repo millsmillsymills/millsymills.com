@@ -20,6 +20,7 @@ import Inspector from './apps/Inspector.astro';
 import Incidents from './apps/Incidents.astro';
 import VSCode from './apps/VSCode.astro';
 import Display from './apps/Display.astro';
+import Status from './apps/Status.astro';
 import { apps } from '../../data/apps';
 
 const contentFor = (id: string) => {
@@ -60,6 +61,8 @@ const contentFor = (id: string) => {
 			return VSCode;
 		case 'display':
 			return Display;
+		case 'status':
+			return Status;
 		default:
 			return null;
 	}
