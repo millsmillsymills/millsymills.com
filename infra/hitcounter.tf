@@ -156,6 +156,12 @@ resource "aws_cloudfront_origin_access_control" "hits" {
 # the distribution arn but Terraform doesn't infer a dependency edge.
 # Make the ordering explicit so the permission lands after the
 # distribution rather than racing OAC propagation on first apply.
+#
+# Lambda Function URLs created after AWS's October 2025 authorization
+# change require BOTH permissions below: `InvokeFunctionUrl` authorizes
+# the URL surface, while `InvokeFunction` authorizes the underlying
+# function invocation. Without the second statement CloudFront OAC signs
+# correctly but Lambda rejects the request before invoking the function.
 resource "aws_lambda_permission" "hits_cloudfront" {
   count = var.enable_hitcounter ? 1 : 0
 
@@ -165,6 +171,19 @@ resource "aws_lambda_permission" "hits_cloudfront" {
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.site.arn
   function_url_auth_type = "AWS_IAM"
+
+  depends_on = [aws_cloudfront_distribution.site]
+}
+
+resource "aws_lambda_permission" "hits_cloudfront_invoke" {
+  count = var.enable_hitcounter ? 1 : 0
+
+  statement_id             = "AllowCloudFrontServicePrincipalInvokeFunction"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.hits[0].function_name
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = aws_cloudfront_distribution.site.arn
+  invoked_via_function_url = true
 
   depends_on = [aws_cloudfront_distribution.site]
 }

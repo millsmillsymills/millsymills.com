@@ -126,6 +126,12 @@ resource "aws_cloudfront_origin_access_control" "inspector_tls" {
 # invoke the Function URL. AWS_IAM auth on the URL means an unsigned
 # direct call from the public internet returns 403, so the bypass path
 # the /security/ page implicitly disclaimed is closed.
+#
+# Lambda Function URLs created after AWS's October 2025 authorization
+# change require BOTH permissions below: `InvokeFunctionUrl` authorizes
+# the URL surface, while `InvokeFunction` authorizes the underlying
+# function invocation. Without the second statement CloudFront OAC signs
+# correctly but Lambda rejects the request before invoking the function.
 resource "aws_lambda_permission" "inspector_tls_cloudfront" {
   count = var.enable_inspector_tls ? 1 : 0
 
@@ -135,6 +141,17 @@ resource "aws_lambda_permission" "inspector_tls_cloudfront" {
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.site.arn
   function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_lambda_permission" "inspector_tls_cloudfront_invoke" {
+  count = var.enable_inspector_tls ? 1 : 0
+
+  statement_id             = "AllowCloudFrontServicePrincipalInvokeFunction"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.inspector_tls[0].function_name
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = aws_cloudfront_distribution.site.arn
+  invoked_via_function_url = true
 }
 
 # Strip the `https://` and any trailing slash from the function URL so
