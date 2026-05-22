@@ -224,6 +224,12 @@ resource "aws_cloudfront_origin_access_control" "csp_report" {
 # the distribution; on first apply, CloudFront may finish propagating
 # the OAC change before the permission lands and CloudFront-signed
 # requests get 403 from Lambda for a brief window.
+#
+# Lambda Function URLs created after AWS's October 2025 authorization
+# change require BOTH permissions below: `InvokeFunctionUrl` authorizes
+# the URL surface, while `InvokeFunction` authorizes the underlying
+# function invocation. Without the second statement CloudFront OAC signs
+# correctly but Lambda rejects the request before invoking the function.
 resource "aws_lambda_permission" "csp_report_cloudfront" {
   count = var.enable_csp_report ? 1 : 0
 
@@ -238,6 +244,19 @@ resource "aws_lambda_permission" "csp_report_cloudfront" {
   # that as a string interpolation, not a dependency edge. Make the
   # ordering explicit so the permission lands after the distribution
   # rather than racing the OAC propagation on first apply.
+  depends_on = [aws_cloudfront_distribution.site]
+}
+
+resource "aws_lambda_permission" "csp_report_cloudfront_invoke" {
+  count = var.enable_csp_report ? 1 : 0
+
+  statement_id             = "AllowCloudFrontServicePrincipalInvokeFunction"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.csp_report[0].function_name
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = aws_cloudfront_distribution.site.arn
+  invoked_via_function_url = true
+
   depends_on = [aws_cloudfront_distribution.site]
 }
 
