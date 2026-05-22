@@ -218,9 +218,6 @@ const _APPS_DATA = [
 		iconUrl: '/images/icons/web10/netscape-floppy.png',
 		title: 'mail.exe',
 		ogDescription: 'ways to get in touch with mills.',
-		// Hidden until ProtonMail activates — see #235 + Email runbook in
-		// CLAUDE.md. Flip to `false` once Proton is receiving mail.
-		hidden: true,
 		x: 300,
 		y: 160,
 		width: 460,
