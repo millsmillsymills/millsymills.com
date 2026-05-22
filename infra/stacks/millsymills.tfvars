@@ -2,6 +2,13 @@ aws_region    = "us-west-2"
 domain        = "millsymills.com"
 github_repo   = "millsmillsymills/millsymills.com"
 deploy_branch = "main"
+
+# Rolled back 2026-05-20 — endpoint exposed a missing Lambda Function URL
+# permission in the shared CloudFront OAC pattern. The infra now grants
+# both post-2025 required Lambda permissions (`InvokeFunctionUrl` and
+# `InvokeFunction` via function URL); keep hits disabled until that fix
+# is applied + verified on csp_report / inspector_tls, then re-enable.
+enable_hitcounter = false
 # Set explicitly even though it matches the default — keeps the trust
 # policy's expected value visible in the stack file rather than
 # relying on a default that could shift.
