@@ -445,10 +445,10 @@ export const securityControls: readonly SecurityControl[] = [
 		id: 'hsts-preload',
 		title: 'HSTS preload-list submission',
 		category: 'web',
-		status: 'roadmap',
-		what: 'Submit `millsymills.com` to https://hstspreload.org/ for inclusion in the browser-shipped preload list.',
+		status: 'shipped',
+		what: 'Submitted `millsymills.com` to https://hstspreload.org/ on 2026-05-21 with `includeSubDomains`. The submission was accepted ("pending inclusion") immediately after the eligibility check (`Status: not preloaded; Eligibility: eligible`) confirmed the live header `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` met all requirements.',
 		why: 'Closes the first-visit TLS-stripping window for browsers that haven\'t yet seen the HSTS header.',
-		tradeoffs: 'Submission is a manual one-time step. The header is already shipping with `preload`, so the eligibility check passes.',
+		tradeoffs: 'Chrome propagates the preload list to stable channel via the browser release train — entries typically appear in `chrome://net-internals/#hsts` weeks-to-months after acceptance. Firefox/Safari pull from Chrome\'s list, so they trail. Removal is asymmetric: publish `max-age=0` first, verify live, then file at https://hstspreload.org/removal/ — Chrome propagates removals over ~12 weeks via the same release train. Don\'t flip the header value back without going through the removal process first.',
 		code: ['infra/cloudfront.tf'],
 	},
 ];
