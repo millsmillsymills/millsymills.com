@@ -294,7 +294,7 @@ export const tools: readonly Tool[] = [
 		aiRationale: [
 			'the tool-using agent is the product, not a bolt-on; read/write/run-commands are first-class',
 			'subagent dispatch + task isolation means complex work stays scoped',
-			'plugin ecosystem: superpowers (workflow), compound-engineering (learning loop)',
+			'plugin ecosystem: superpowers adds the brainstorm → plan → TDD → review workflow as skills',
 		],
 		note: 'See ~/.dotfiles/CLAUDE.md for the operating contract between me and claude-code — plugins, guardrails, workflow defaults.',
 	},
@@ -308,17 +308,6 @@ export const tools: readonly Tool[] = [
 			'enforces the workflow before any code: brainstorming before creative work, plans before multi-step implementation',
 			'two-stage review (spec compliance + code quality) catches the "looks right but isn\'t" class of bugs',
 			'shared skills across sessions means my past self and my future self agree on process',
-		],
-	},
-	{
-		id: 'compound-engineering',
-		name: 'compound-engineering (plugin)',
-		category: 'ai-coding',
-		tagline: 'enforces the learning loop — every task teaches future tasks',
-		docsUrl: 'https://github.com/EveryInc/compound-engineering-plugin',
-		aiRationale: [
-			'extracts patterns from sessions and writes them down so knowledge compounds instead of evaporates',
-			'pairs with superpowers: superpowers prescribes workflow, compound-eng prescribes the meta-loop',
 		],
 	},
 	{
