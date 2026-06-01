@@ -525,9 +525,9 @@ resource "aws_cloudfront_distribution" "site" {
   dynamic "origin" {
     for_each = var.enable_hitcounter ? [1] : []
     content {
-      domain_name              = local.hits_origin_host
+      domain_name              = module.hits_lambda.origin_host
       origin_id                = "lambda-${local.hits_name}"
-      origin_access_control_id = aws_cloudfront_origin_access_control.hits[0].id
+      origin_access_control_id = module.hits_lambda.oac_id
 
       custom_origin_config {
         http_port              = 80

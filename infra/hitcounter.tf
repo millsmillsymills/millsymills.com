@@ -2,13 +2,15 @@
 # DynamoDB counter and returns JSON. Backs the web-1.0 hit-counter pixel
 # in the taskbar chrome. Closes #468.
 #
-# Architecture mirrors `infra/csp_report.tf`: a tiny Node.js Lambda
-# behind a Function URL locked to `AWS_IAM` auth + a CloudFront Origin
-# Access Control. The CloudFront cache behavior `/api/hits` (in
-# `infra/cloudfront.tf`) sigv4-signs every origin request, so the only
-# path to the Lambda is through the distribution. Direct calls to the
-# raw `<id>.lambda-url.<region>.on.aws` endpoint return 403, preserving
-# every CloudFront-applied security header on the response.
+# The Lambda-behind-CloudFront-OAC scaffold (archive, role, basic-exec
+# attachment, log group, function, Function URL, OAC, the Oct-2025 dual
+# CloudFront permission pair, and the origin host) lives in
+# `./modules/lambda_cloudfront_origin`; this file wires it up and adds the
+# hits-specific DynamoDB table, IAM policy, and operational alarms. The
+# CloudFront cache behavior `/api/hits` (in `infra/cloudfront.tf`)
+# sigv4-signs every origin request, so the only path to the Lambda is
+# through the distribution; direct calls to the raw Function URL return
+# 403, preserving every CloudFront-applied security header.
 #
 # Storage: single DynamoDB item, atomic `ADD` increment via UpdateItem.
 # Single-item keeps the table at the smallest possible footprint
@@ -52,42 +54,32 @@ resource "aws_dynamodb_table" "hits" {
 }
 
 # --------------------------------------------------------------------
-# Lambda function + Function URL.
+# Lambda function + Function URL (shared scaffold module).
 # --------------------------------------------------------------------
 
-data "archive_file" "hits" {
-  type        = "zip"
-  source_file = "${path.module}/hits.mjs"
-  output_path = "${path.module}/.terraform/hits.zip"
-}
+module "hits_lambda" {
+  source = "./modules/lambda_cloudfront_origin"
 
-resource "aws_iam_role" "hits" {
-  count = var.enable_hitcounter ? 1 : 0
+  name               = local.hits_name
+  enabled            = var.enable_hitcounter
+  source_file        = "${path.module}/hits.mjs"
+  handler            = "hits.handler"
+  distribution_arn   = aws_cloudfront_distribution.site.arn
+  log_retention_days = 30
 
-  name = "${local.hits_name}-lambda"
+  # Bill cap. 10 leaves plenty of headroom for normal taskbar traffic
+  # (one GET per page load); bursts beyond that get throttled, which
+  # is the desired DoS posture.
+  reserved_concurrent_executions = 10
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "hits_basic" {
-  count = var.enable_hitcounter ? 1 : 0
-
-  role       = aws_iam_role.hits[0].name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  environment = var.enable_hitcounter ? { HITS_TABLE = one(aws_dynamodb_table.hits[*].name) } : {}
 }
 
 resource "aws_iam_role_policy" "hits_ddb" {
   count = var.enable_hitcounter ? 1 : 0
 
   name = "ddb-update"
-  role = aws_iam_role.hits[0].id
+  role = module.hits_lambda.role_id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -100,99 +92,6 @@ resource "aws_iam_role_policy" "hits_ddb" {
       Resource = aws_dynamodb_table.hits[0].arn
     }]
   })
-}
-
-resource "aws_cloudwatch_log_group" "hits" {
-  count = var.enable_hitcounter ? 1 : 0
-
-  name              = "/aws/lambda/${local.hits_name}"
-  retention_in_days = 30
-}
-
-resource "aws_lambda_function" "hits" {
-  count = var.enable_hitcounter ? 1 : 0
-
-  function_name    = local.hits_name
-  role             = aws_iam_role.hits[0].arn
-  filename         = data.archive_file.hits.output_path
-  source_code_hash = data.archive_file.hits.output_base64sha256
-  handler          = "hits.handler"
-  runtime          = "nodejs22.x"
-  architectures    = ["arm64"]
-  timeout          = 5
-  memory_size      = 128
-
-  # Bill cap. 10 leaves plenty of headroom for normal taskbar traffic
-  # (one GET per page load); bursts beyond that get throttled, which
-  # is the desired DoS posture.
-  reserved_concurrent_executions = 10
-
-  environment {
-    variables = {
-      HITS_TABLE = aws_dynamodb_table.hits[0].name
-    }
-  }
-
-  depends_on = [aws_cloudwatch_log_group.hits[0]]
-}
-
-resource "aws_lambda_function_url" "hits" {
-  count = var.enable_hitcounter ? 1 : 0
-
-  function_name      = aws_lambda_function.hits[0].function_name
-  authorization_type = "AWS_IAM"
-}
-
-resource "aws_cloudfront_origin_access_control" "hits" {
-  count = var.enable_hitcounter ? 1 : 0
-
-  name                              = local.hits_name
-  origin_access_control_origin_type = "lambda"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
-
-# Same trust-direction caveat as csp_report -- `source_arn` references
-# the distribution arn but Terraform doesn't infer a dependency edge.
-# Make the ordering explicit so the permission lands after the
-# distribution rather than racing OAC propagation on first apply.
-#
-# Lambda Function URLs created after AWS's October 2025 authorization
-# change require BOTH permissions below: `InvokeFunctionUrl` authorizes
-# the URL surface, while `InvokeFunction` authorizes the underlying
-# function invocation. Without the second statement CloudFront OAC signs
-# correctly but Lambda rejects the request before invoking the function.
-resource "aws_lambda_permission" "hits_cloudfront" {
-  count = var.enable_hitcounter ? 1 : 0
-
-  statement_id           = "AllowCloudFrontServicePrincipal"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.hits[0].function_name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = aws_cloudfront_distribution.site.arn
-  function_url_auth_type = "AWS_IAM"
-
-  depends_on = [aws_cloudfront_distribution.site]
-}
-
-resource "aws_lambda_permission" "hits_cloudfront_invoke" {
-  count = var.enable_hitcounter ? 1 : 0
-
-  statement_id             = "AllowCloudFrontServicePrincipalInvokeFunction"
-  action                   = "lambda:InvokeFunction"
-  function_name            = aws_lambda_function.hits[0].function_name
-  principal                = "cloudfront.amazonaws.com"
-  source_arn               = aws_cloudfront_distribution.site.arn
-  invoked_via_function_url = true
-
-  depends_on = [aws_cloudfront_distribution.site]
-}
-
-locals {
-  hits_origin_host = var.enable_hitcounter ? trimsuffix(
-    replace(aws_lambda_function_url.hits[0].function_url, "https://", ""),
-    "/",
-  ) : null
 }
 
 # --------------------------------------------------------------------
@@ -234,7 +133,7 @@ resource "aws_cloudwatch_metric_alarm" "hits_throttles" {
   ok_actions          = [aws_sns_topic.hits_ops[0].arn]
 
   dimensions = {
-    FunctionName = aws_lambda_function.hits[0].function_name
+    FunctionName = module.hits_lambda.function_name
   }
 }
 
@@ -242,7 +141,7 @@ resource "aws_cloudwatch_log_metric_filter" "hits_put_failed" {
   count = var.enable_hitcounter ? 1 : 0
 
   name           = "${local.hits_name}-put-failed"
-  log_group_name = aws_cloudwatch_log_group.hits[0].name
+  log_group_name = module.hits_lambda.log_group_name
   pattern        = "{ $.msg = \"hits ddb update failed\" }"
 
   metric_transformation {
@@ -269,4 +168,51 @@ resource "aws_cloudwatch_metric_alarm" "hits_put_failed" {
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.hits_ops[0].arn]
   ok_actions          = [aws_sns_topic.hits_ops[0].arn]
+}
+
+# moved blocks: relocate the Lambda-origin resources from the flat
+# `*.hits` / `*.hits_*` addresses into the shared module. Source addresses
+# carry the `[0]` index from the original `count = var.enable_hitcounter`
+# gating; the module re-applies the same gate via `var.enabled`, so the
+# index is preserved on both sides and no resource is destroyed/recreated.
+# (data.archive_file is a data source -- no state, no move needed.)
+
+moved {
+  from = aws_iam_role.hits[0]
+  to   = module.hits_lambda.aws_iam_role.this[0]
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.hits_basic[0]
+  to   = module.hits_lambda.aws_iam_role_policy_attachment.basic[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_group.hits[0]
+  to   = module.hits_lambda.aws_cloudwatch_log_group.this[0]
+}
+
+moved {
+  from = aws_lambda_function.hits[0]
+  to   = module.hits_lambda.aws_lambda_function.this[0]
+}
+
+moved {
+  from = aws_lambda_function_url.hits[0]
+  to   = module.hits_lambda.aws_lambda_function_url.this[0]
+}
+
+moved {
+  from = aws_cloudfront_origin_access_control.hits[0]
+  to   = module.hits_lambda.aws_cloudfront_origin_access_control.this[0]
+}
+
+moved {
+  from = aws_lambda_permission.hits_cloudfront[0]
+  to   = module.hits_lambda.aws_lambda_permission.cloudfront[0]
+}
+
+moved {
+  from = aws_lambda_permission.hits_cloudfront_invoke[0]
+  to   = module.hits_lambda.aws_lambda_permission.cloudfront_invoke[0]
 }
