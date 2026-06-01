@@ -68,3 +68,7 @@ playwright-report/
 
 # scripts/analytics/run.sh --save destination (future flag, but reserve the path now)
 .cache/analytics/
+
+# HSTS preload submission screenshots — local proof-of-work for the migration
+# runbook (step 9); the audit trail is the submission itself, not a binary in-repo.
+/hstspreload-submission-*.png
