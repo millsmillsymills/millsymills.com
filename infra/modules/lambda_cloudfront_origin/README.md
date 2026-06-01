@@ -3,8 +3,8 @@
 Shared scaffold for a "tiny Node.js Lambda exposed via a Function URL,
 locked to `AWS_IAM`, reachable only through a CloudFront Origin Access
 Control" endpoint. Replaces the ~120-line copy-paste that was duplicated
-across `inspector_tls.tf`, `csp_report.tf`, and `hitcounter.tf` (#1 in the
-2026-06-01 thermo-nuclear audit).
+across `inspector_tls.tf` and `hitcounter.tf` (`csp_report.tf` shares the
+shape but needs a public POST URL — see Status below).
 
 The module owns: `archive_file`, IAM role + basic-exec attachment,
 CloudWatch log group, the Lambda function, the Function URL, the OAC, and

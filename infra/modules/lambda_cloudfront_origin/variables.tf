@@ -53,21 +53,25 @@ variable "reserved_concurrent_executions" {
 }
 
 variable "runtime" {
-  type    = string
-  default = "nodejs22.x"
+  type        = string
+  default     = "nodejs22.x"
+  description = "Lambda runtime identifier."
 }
 
 variable "memory_size" {
-  type    = number
-  default = 128
+  type        = number
+  default     = 128
+  description = "Function memory in MB. 128 suits these pennies/year micro-Lambdas."
 }
 
 variable "timeout" {
-  type    = number
-  default = 5
+  type        = number
+  default     = 5
+  description = "Function timeout in seconds."
 }
 
 variable "architectures" {
-  type    = list(string)
-  default = ["arm64"]
+  type        = list(string)
+  default     = ["arm64"]
+  description = "Instruction set; arm64 (Graviton) is cheaper for this workload."
 }
