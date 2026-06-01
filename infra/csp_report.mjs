@@ -128,10 +128,10 @@ export const handler = async (event) => {
 
 	// Top-level shape check per content type. The bucket is private, so
 	// no exploit either way, but downstream tooling (CloudWatch Insights,
-	// future analytics) has no schema contract otherwise: the Function URL
-	// is public, so any curl with `application/json` could otherwise
-	// persist arbitrary JSON. Reject anything that isn't the shape the
-	// matching browser format actually emits.
+	// future analytics) has no schema contract otherwise: any curl that
+	// makes it past the OAC + IAM-auth boundary with `application/json`
+	// could persist arbitrary JSON. Reject anything that isn't the shape
+	// the matching browser format actually emits.
 	if (!isWellFormedReport(contentType, parsed)) {
 		return { statusCode: 400, body: '' };
 	}
