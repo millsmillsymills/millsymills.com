@@ -15,8 +15,8 @@ tools are modern where it matters (starship, atuin, eza, ripgrep), classic
 where it doesn't.
 
 the CLAUDE.md file is the interesting one. it's the operating contract
-between me and claude-code — plugins I always load (superpowers +
-compound-engineering), workflow defaults (brainstorm → plan → TDD → review),
+between me and claude-code — plugins I always load (superpowers),
+workflow defaults (brainstorm → plan → TDD → review),
 and guardrails (what claude can do autonomously vs what needs my approval).
 
 no bootstrap script (yet). these live on my laptop and this fake filesystem

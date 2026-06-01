@@ -12,14 +12,9 @@ plugins, skills, workflow, and guardrails.
   verification-before-completion, systematic-debugging, using-git-worktrees,
   requesting-code-review, receiving-code-review. Use for any non-trivial
   work.
-- **[compound-engineering](https://github.com/EveryInc/compound-engineering-plugin)**
-  — every task's output should teach future tasks. Extract patterns, write
-  them down, reuse. The plugin enforces capture loops so knowledge
-  compounds instead of evaporates.
 
-Use both wherever possible. They're not redundant: superpowers prescribes
-the *workflow* (brainstorm → plan → TDD → review), compound engineering
-prescribes the *learning loop* (pattern extraction, reuse).
+superpowers prescribes the *workflow* — brainstorm → plan → TDD → review —
+as skills the AI pair invokes before touching code.
 
 ## Workflow defaults
 
