@@ -1,7 +1,7 @@
 resource "aws_cloudfront_function" "index_rewrite" {
   count = var.enable_index_rewrite ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-index-rewrite"
+  name    = "${local.domain_slug}-index-rewrite"
   runtime = "cloudfront-js-2.0"
   comment = "Rewrite directory URIs to the corresponding index.html"
   publish = true
@@ -25,7 +25,7 @@ resource "aws_cloudfront_function" "index_rewrite" {
 resource "aws_cloudfront_origin_request_policy" "inspector_tls" {
   count = var.enable_inspector_tls ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-inspector-tls-origin-req"
+  name    = "${local.domain_slug}-inspector-tls-origin-req"
   comment = "Forward CloudFront-Viewer-TLS + Origin to the inspector_tls Lambda; let CloudFront rewrite Host"
 
   headers_config {
@@ -60,7 +60,7 @@ resource "aws_cloudfront_origin_request_policy" "inspector_tls" {
 resource "aws_cloudfront_origin_request_policy" "csp_report" {
   count = var.enable_csp_report ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-csp-report-origin-req"
+  name    = "${local.domain_slug}-csp-report-origin-req"
   comment = "Forward whitelisted headers to csp_report Lambda; let CloudFront rewrite Host"
 
   headers_config {
@@ -87,7 +87,7 @@ resource "aws_cloudfront_origin_request_policy" "csp_report" {
 resource "aws_cloudfront_origin_request_policy" "hits" {
   count = var.enable_hitcounter ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-hits-origin-req"
+  name    = "${local.domain_slug}-hits-origin-req"
   comment = "Strip viewer headers en route to hits Lambda; let CloudFront rewrite Host"
 
   headers_config {
@@ -106,7 +106,7 @@ resource "aws_cloudfront_origin_request_policy" "hits" {
 resource "aws_cloudfront_response_headers_policy" "site" {
   count = var.cloudfront_headers_profile == "strict" ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-security-headers"
+  name    = "${local.domain_slug}-security-headers"
   comment = "Security headers for ${var.domain}"
 
   security_headers_config {
@@ -222,7 +222,7 @@ resource "aws_cloudfront_response_headers_policy" "site" {
 resource "aws_cloudfront_response_headers_policy" "site_minimal" {
   count = var.cloudfront_headers_profile == "minimal" ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-security-headers-minimal"
+  name    = "${local.domain_slug}-security-headers-minimal"
   comment = "Minimal security headers for ${var.domain} (HSTS + nosniff + frame-options + Referrer-Policy)"
 
   security_headers_config {
@@ -273,7 +273,7 @@ resource "aws_cloudfront_response_headers_policy" "site_minimal" {
 resource "aws_cloudfront_response_headers_policy" "api" {
   count = var.enable_inspector_tls ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-api-headers"
+  name    = "${local.domain_slug}-api-headers"
   comment = "Security headers for ${var.domain} JSON APIs (CORP cross-origin)"
 
   security_headers_config {
@@ -329,7 +329,7 @@ resource "aws_cloudfront_response_headers_policy" "api" {
 resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
   count = var.cloudfront_headers_profile == "strict" ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-passkey-demo-headers"
+  name    = "${local.domain_slug}-passkey-demo-headers"
   comment = "Security headers for ${var.domain} /demo/passkey/* — strict site bundle with WebAuthn allowed"
 
   security_headers_config {
@@ -428,7 +428,7 @@ resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
 resource "aws_cloudfront_response_headers_policy" "csp_report" {
   count = var.enable_csp_report ? 1 : 0
 
-  name    = "${replace(var.domain, ".", "-")}-csp-report-headers"
+  name    = "${local.domain_slug}-csp-report-headers"
   comment = "Security headers for ${var.domain} /api/csp-report (CORP same-origin)"
 
   security_headers_config {

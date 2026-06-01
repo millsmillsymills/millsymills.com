@@ -17,7 +17,7 @@
 # a runaway demo cannot blow the account budget.
 
 locals {
-  webauthn_demo_name       = "${replace(var.domain, ".", "-")}-webauthn-demo"
+  webauthn_demo_name       = "${local.domain_slug}-webauthn-demo"
   webauthn_demo_lambda_dir = "${path.module}/lambdas/webauthn_demo"
   webauthn_sessions_table  = "${local.webauthn_demo_name}-sessions"
 }

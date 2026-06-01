@@ -23,7 +23,7 @@
 # unboundedly.
 
 locals {
-  csp_report_name        = "${replace(var.domain, ".", "-")}-csp-report"
+  csp_report_name        = "${local.domain_slug}-csp-report"
   csp_report_bucket_name = "${var.domain}-csp-reports"
 }
 

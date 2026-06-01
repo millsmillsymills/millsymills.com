@@ -21,7 +21,7 @@
 # tracks invocation count one-to-one.
 
 locals {
-  hits_name = "${replace(var.domain, ".", "-")}-hits"
+  hits_name = "${local.domain_slug}-hits"
 }
 
 # --------------------------------------------------------------------

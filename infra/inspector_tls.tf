@@ -26,7 +26,7 @@
 # overhead. Pennies/year on traffic — same cost class as ct_monitor.
 
 locals {
-  inspector_tls_name = "${replace(var.domain, ".", "-")}-inspector-tls"
+  inspector_tls_name = "${local.domain_slug}-inspector-tls"
 }
 
 data "archive_file" "inspector_tls" {
