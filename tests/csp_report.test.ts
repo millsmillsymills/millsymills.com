@@ -466,7 +466,7 @@ describe('csp_report handler — rejection observability', () => {
 				headers: { 'content-type': 'application/json' },
 			}),
 		);
-		const serialized = warnSpy.mock.calls.map((c) => String(c[0])).join('\n');
+		const serialized = warnSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
 		expect(serialized).not.toContain('sensitive-value');
 	});
 });
