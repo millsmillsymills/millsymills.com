@@ -401,6 +401,51 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_body_cap_exceeded" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
+# Metric filter + alarm on malformed-report rejections. `csp_report.mjs`
+# emits `{ msg = "csp-report rejected", reason = "malformed-report" }` when
+# a payload passes the content-type + JSON-parse gates but fails the
+# top-level shape check. A trickle is benign (bots, fuzzers); a sustained
+# spike means a browser's report format drifted and legitimate violation
+# reports are being dropped before the S3 write -- a silent failure that no
+# other alarm catches. The pattern matches `reason` too, so the noisier
+# unsupported-content-type / invalid-json rejections (same `msg`) stay out
+# of the metric and remain queryable in Logs Insights without paging.
+resource "aws_cloudwatch_log_metric_filter" "csp_report_malformed" {
+  count = var.enable_csp_report ? 1 : 0
+
+  name           = "${local.csp_report_name}-malformed"
+  log_group_name = aws_cloudwatch_log_group.csp_report[0].name
+  pattern        = "{ $.msg = \"csp-report rejected\" && $.reason = \"malformed-report\" }"
+
+  metric_transformation {
+    name          = "${local.csp_report_name}-malformed"
+    namespace     = "MillsymillsCom/CspReport"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
+}
+
+# why: tuned identically to the body-cap alarm (3 windows, >=5 events per
+# window) so transient client noise doesn't page, but a real format drift
+# -- which would dump a steady stream of malformed reports -- does.
+resource "aws_cloudwatch_metric_alarm" "csp_report_malformed" {
+  count = var.enable_csp_report ? 1 : 0
+
+  alarm_name          = "${local.csp_report_name}-malformed"
+  alarm_description   = "csp_report Lambda rejected well-formed-shape-failing reports at a sustained rate. Likely a browser report-format drift dropping real CSP violations before the S3 write -- inspect recent rejected log lines in CloudWatch Logs Insights."
+  namespace           = aws_cloudwatch_log_metric_filter.csp_report_malformed[0].metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.csp_report_malformed[0].metric_transformation[0].name
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 3
+  threshold           = 5
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
+}
+
 # moved blocks.
 #
 # Resources that STAY flat keep their original unindexed -> [0] moves
