@@ -199,14 +199,14 @@ resource "aws_kms_key" "dnssec" {
 
 resource "aws_kms_alias" "dnssec" {
   provider      = aws.us_east_1
-  name          = "alias/${replace(var.domain, ".", "-")}-dnssec"
+  name          = "alias/${local.domain_slug}-dnssec"
   target_key_id = aws_kms_key.dnssec.key_id
 }
 
 resource "aws_route53_key_signing_key" "ksk" {
   hosted_zone_id             = data.aws_route53_zone.site.zone_id
   key_management_service_arn = aws_kms_key.dnssec.arn
-  name                       = "${replace(var.domain, ".", "-")}-ksk"
+  name                       = "${local.domain_slug}-ksk"
 
   # Same rationale as the KMS key: destroying the KSK while the DS
   # record is still published at the registrar breaks the chain of
@@ -319,14 +319,14 @@ resource "aws_route53_hosted_zone_dnssec" "site" {
 #
 # resource "aws_kms_alias" "dnssec_rotation" {
 #   provider      = aws.us_east_1
-#   name          = "alias/${replace(var.domain, ".", "-")}-dnssec-rotation"
+#   name          = "alias/${local.domain_slug}-dnssec-rotation"
 #   target_key_id = aws_kms_key.dnssec_rotation.key_id
 # }
 #
 # resource "aws_route53_key_signing_key" "ksk_rotation" {
 #   hosted_zone_id             = data.aws_route53_zone.site.zone_id
 #   key_management_service_arn = aws_kms_key.dnssec_rotation.arn
-#   name                       = "${replace(var.domain, ".", "-")}-ksk-rotation"
+#   name                       = "${local.domain_slug}-ksk-rotation"
 #
 #   # Intentionally false until promotion (procedure step 5).
 #   # Step 4's rollback path needs `terraform destroy -target` to work.

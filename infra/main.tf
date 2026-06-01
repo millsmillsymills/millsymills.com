@@ -56,3 +56,11 @@ provider "github" {
 # rather than in cloudfront_logging.tf so it survives any future
 # conditional gating of the cloudfront-logging resources.
 data "aws_caller_identity" "current" {}
+
+# Dotless form of the domain (millsymills.com -> millsymills-com), used as
+# the prefix for resource names that can't contain dots (Lambda functions,
+# IAM roles, CloudFront policies, log groups). Hoisted here so the one
+# transform isn't restated at 20+ call sites across the stack.
+locals {
+  domain_slug = replace(var.domain, ".", "-")
+}

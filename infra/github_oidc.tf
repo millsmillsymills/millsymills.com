@@ -73,7 +73,7 @@ data "aws_iam_policy_document" "github_deploy_trust" {
 resource "aws_iam_role" "github_deploy" {
   count = var.enable_github_deploy_role ? 1 : 0
 
-  name               = "${replace(var.domain, ".", "-")}-github-deploy"
+  name               = "${local.domain_slug}-github-deploy"
   assume_role_policy = data.aws_iam_policy_document.github_deploy_trust[0].json
   description        = "Assumed by GitHub Actions for ${var.github_repo} (${var.deploy_branch}) to deploy ${var.domain}."
 }
