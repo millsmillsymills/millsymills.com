@@ -23,21 +23,30 @@ the CloudFront origin `domain_name`), `function_url`. All are `null` when
 
 ## Status (2026-06-01)
 
-All three OAC-fronted endpoints are migrated and applied against live state:
+Two GET endpoints use this module; the third (csp_report) was migrated in then
+pulled back out because it needs a public, non-OAC URL.
 
-- **`hitcounter.tf`** — first-time feature deploy (hits was never previously
-  applied), so its moved blocks were inert no-ops; `/api/hits` verified live.
-- **`inspector_tls.tf` and `csp_report.tf`** — migrated in commit `fbf184a`.
-  These were in state, so the move was the real test: the plan showed every
-  lambda-core resource (incl. both `aws_lambda_function_url.this[0]`) as
-  `has moved to module…`, `0 destroy`, with only the two lambda `filename`
-  attributes changing in-place (canonical `<name>.zip`; identical
-  `source_code_hash`). Applied; final plan is `No changes`.
+- **`hitcounter.tf`** — uses the module. First-time feature deploy (hits was
+  never previously applied), so its moved blocks were inert no-ops; `/api/hits`
+  verified live.
+- **`inspector_tls.tf`** — uses the module. Migrated in commit `fbf184a`; the
+  plan showed every lambda-core resource (incl. `aws_lambda_function_url.this[0]`)
+  as `has moved to module…`, `0 destroy`, only the lambda `filename` changing
+  in-place (canonical `<name>.zip`, identical `source_code_hash`). Applied.
+- **`csp_report.tf` — does NOT use the module.** It was migrated in `fbf184a`,
+  but `/api/csp-report` takes browser **POSTs**, and OAC + Lambda Function URLs
+  can't accept a browser-supplied POST body (the client would have to send an
+  `x-amz-content-sha256` body hash; Lambda rejects unsigned payloads). So it was
+  moved back out to a flat, public Function URL (`authorization_type = "NONE"`).
+  This module is OAC-only (GET-shaped endpoints); a POST endpoint doesn't fit.
 - **`webauthn_demo.tf` intentionally excluded** — its Function URL is not
   fronted by the shared OAC pattern and it carries two DynamoDB tables +
   an `npm ci` `null_resource`; forcing it through the module would add
-  conditionals that erase the module's simplicity. Rule-of-three is met by
-  the three OAC-fronted endpoints.
+  conditionals that erase the module's simplicity.
+
+The module already encodes the **October 2025 dual-permission** requirement
+(`InvokeFunctionUrl` + `InvokeFunction`); note that a public `NONE` URL needs
+the *same pair* granted to principal `*` — csp_report adds both itself.
 
 The move-safety gate that every migration here must pass: in the plan, **every**
 lambda-core resource shows as `has moved`, never destroy+create. In particular
@@ -56,13 +65,14 @@ Same mechanical transform all three files demonstrate:
    `aws_lambda_function`, `aws_lambda_function_url`,
    `aws_cloudfront_origin_access_control`, both `aws_lambda_permission`,
    and the `*_origin_host` local) with one `module "<name>_lambda"` block.
-   - `inspector_tls`: `log_retention_days = 14`, no `environment`, omit
-     `reserved_concurrent_executions` (defaults to `-1` = unreserved,
-     matching today). No extra inline policy.
-   - `csp_report`: `log_retention_days = 30`,
-     `environment = { REPORT_BUCKET = ... }`,
-     `reserved_concurrent_executions = 5`. Keep the S3 bucket + the
-     `put-reports` inline policy, re-pointed to `module.csp_lambda.role_id`.
+   - `inspector_tls` (in the module): `log_retention_days = 14`, no
+     `environment`, omit `reserved_concurrent_executions` (defaults to `-1` =
+     unreserved, matching today). No extra inline policy.
+   - Endpoints with endpoint-specific resources keep them in the caller file
+     wired to module outputs (`role_id`, `function_name`, `log_group_name`).
+   - The module is for GET-shaped, OAC-fronted endpoints only. A POST endpoint
+     (browser-submitted body) can't use OAC — see csp_report's flat, public
+     (`NONE`) Function URL.
 2. Re-point that file's alarms to `module.<name>_lambda.function_name` and
    `…log_group_name`.
 3. Re-point `cloudfront.tf`'s origin block for that endpoint:

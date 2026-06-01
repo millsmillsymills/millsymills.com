@@ -502,14 +502,16 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   # Lambda Function URL origin for the /api/csp-report endpoint. See
-  # `infra/csp_report.tf` for the function + URL. Same OAC pattern as
-  # inspector_tls — public bypass closed at the AWS_IAM auth boundary.
+  # `infra/csp_report.tf` for the function + URL. NOT OAC-fronted (unlike
+  # inspector_tls/hits): the Function URL is public (authorization_type =
+  # NONE) because OAC SigV4 can't carry a browser-supplied POST body. The
+  # csp_report file header explains the constraint; the endpoint is a
+  # write-only sink so a public origin carries no data-exposure risk.
   dynamic "origin" {
     for_each = var.enable_csp_report ? [1] : []
     content {
-      domain_name              = module.csp_lambda.origin_host
-      origin_id                = "lambda-${local.csp_report_name}"
-      origin_access_control_id = module.csp_lambda.oac_id
+      domain_name = local.csp_report_origin_host
+      origin_id   = "lambda-${local.csp_report_name}"
 
       custom_origin_config {
         http_port              = 80
