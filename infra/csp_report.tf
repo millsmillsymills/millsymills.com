@@ -1,13 +1,27 @@
 # CSP report endpoint — accepts violation reports posted by browsers at
 # /api/csp-report and persists them to S3 with a 30-day lifecycle.
 #
-# Architecture mirrors `infra/inspector_tls.tf`: a tiny Node.js Lambda
-# behind a Function URL locked to `AWS_IAM` auth + a CloudFront Origin
-# Access Control. The CloudFront cache behavior `/api/csp-report` (in
-# `infra/cloudfront.tf`) sigv4-signs every origin request, so the only
-# path to the Lambda is through the distribution. Direct calls to the
-# raw `<id>.lambda-url.<region>.on.aws` endpoint return 403, preserving
-# every CloudFront-applied security header on the response.
+# A tiny Node.js Lambda behind a Function URL, fronted by CloudFront at
+# /api/csp-report. Unlike the inspector_tls and hits endpoints, this one
+# does NOT use the shared lambda_cloudfront_origin (OAC) module: CloudFront
+# Origin Access Control signs origin requests with SigV4, and a Lambda
+# Function URL rejects any PUT/POST whose body isn't covered by an
+# `x-amz-content-sha256` header the *client* must supply (Lambda doesn't
+# accept unsigned payloads — see the "Important" note at
+# https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-lambda.html).
+# Browsers can't add that header, so every CSP report POST through OAC got
+# a 403 at the Function URL (mapped to /404.html by custom_error_response)
+# and never reached the handler. CSP reports are always POST, so OAC is a
+# dead end here.
+#
+# Instead the Function URL is `authorization_type = "NONE"` (public) and
+# CloudFront forwards to it as a plain custom origin. The raw Function URL
+# is internet-reachable, but this is a write-only sink: it returns 204 with
+# no body, validates Content-Type (415), caps the body (413) and JSON shape
+# (400), and is concurrency-capped (reserved_concurrent_executions = 5), so
+# a public surface carries no data-exposure risk and a bounded cost risk.
+# The CloudFront origin-request policy still strips Host so the Function URL
+# accepts the rewritten Host.
 #
 # Browser report formats accepted (see `infra/csp_report.mjs`):
 #   * `application/reports+json` — Reporting API (`Reporting-Endpoints` +
@@ -15,15 +29,12 @@
 #   * `application/csp-report` — legacy `report-uri` directive payload.
 #   * `application/json` — older Firefox quirk for `report-uri`.
 #
-# Cost guard: Lambda is pinned to `reserved_concurrent_executions = 5`
-# so a flood of reports cannot run up the bill. Oversize bodies are
-# rejected at the handler with 413 before the S3 write. Reports older
-# than 30 days are deleted by the bucket's lifecycle rule — well above
-# the 30-day floor in #131 and short enough that the bucket never grows
-# unboundedly.
+# Reports older than 30 days are deleted by the bucket's lifecycle rule —
+# well above the 30-day floor in #131 and short enough that the bucket
+# never grows unboundedly.
 
 locals {
-  csp_report_name        = "${replace(var.domain, ".", "-")}-csp-report"
+  csp_report_name        = "${local.domain_slug}-csp-report"
   csp_report_bucket_name = "${var.domain}-csp-reports"
 }
 
@@ -120,7 +131,7 @@ resource "aws_s3_bucket_policy" "csp_report" {
 }
 
 # --------------------------------------------------------------------
-# Lambda function + Function URL.
+# Lambda function + Function URL (public; see header for why not OAC).
 # --------------------------------------------------------------------
 
 data "archive_file" "csp_report" {
@@ -202,62 +213,44 @@ resource "aws_lambda_function" "csp_report" {
   depends_on = [aws_cloudwatch_log_group.csp_report[0]]
 }
 
+# Public Function URL. authorization_type = "NONE" because the only
+# callers are browsers POSTing CSP reports, and OAC's SigV4 signing can't
+# carry a browser-supplied request body (see file header). Reached via
+# CloudFront at /api/csp-report; the raw URL is public but write-only.
 resource "aws_lambda_function_url" "csp_report" {
   count = var.enable_csp_report ? 1 : 0
 
   function_name      = aws_lambda_function.csp_report[0].function_name
-  authorization_type = "AWS_IAM"
+  authorization_type = "NONE"
 }
 
-resource "aws_cloudfront_origin_access_control" "csp_report" {
+# authorization_type = "NONE" only disables IAM auth; Lambda still denies
+# invocation unless a resource-based policy grants it. The console/SAM add
+# this automatically when you flip a URL to NONE; via Terraform you add it
+# yourself. Since AWS's October 2025 change a function URL requires BOTH
+# `lambda:InvokeFunctionUrl` (the URL surface) AND `lambda:InvokeFunction`
+# (the underlying invoke) — granting only the first 403s with
+# AccessDeniedException. `invoked_via_function_url = true` scopes the
+# principal "*" InvokeFunction grant to URL calls only, so a public caller
+# can't invoke the function through any other path.
+resource "aws_lambda_permission" "csp_report_public" {
   count = var.enable_csp_report ? 1 : 0
 
-  name                              = local.csp_report_name
-  origin_access_control_origin_type = "lambda"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
-
-# Lambda permission scoped to this distribution's ARN. Same caveat as
-# inspector_tls — the trust direction (permission references the
-# distribution arn) means there's no Terraform dependency edge from
-# the distribution; on first apply, CloudFront may finish propagating
-# the OAC change before the permission lands and CloudFront-signed
-# requests get 403 from Lambda for a brief window.
-#
-# Lambda Function URLs created after AWS's October 2025 authorization
-# change require BOTH permissions below: `InvokeFunctionUrl` authorizes
-# the URL surface, while `InvokeFunction` authorizes the underlying
-# function invocation. Without the second statement CloudFront OAC signs
-# correctly but Lambda rejects the request before invoking the function.
-resource "aws_lambda_permission" "csp_report_cloudfront" {
-  count = var.enable_csp_report ? 1 : 0
-
-  statement_id           = "AllowCloudFrontServicePrincipal"
+  statement_id           = "FunctionURLAllowPublicAccess"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.csp_report[0].function_name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = aws_cloudfront_distribution.site.arn
-  function_url_auth_type = "AWS_IAM"
-
-  # source_arn references the distribution arn but Terraform treats
-  # that as a string interpolation, not a dependency edge. Make the
-  # ordering explicit so the permission lands after the distribution
-  # rather than racing the OAC propagation on first apply.
-  depends_on = [aws_cloudfront_distribution.site]
+  principal              = "*"
+  function_url_auth_type = "NONE"
 }
 
-resource "aws_lambda_permission" "csp_report_cloudfront_invoke" {
+resource "aws_lambda_permission" "csp_report_public_invoke" {
   count = var.enable_csp_report ? 1 : 0
 
-  statement_id             = "AllowCloudFrontServicePrincipalInvokeFunction"
+  statement_id             = "FunctionURLAllowPublicInvoke"
   action                   = "lambda:InvokeFunction"
   function_name            = aws_lambda_function.csp_report[0].function_name
-  principal                = "cloudfront.amazonaws.com"
-  source_arn               = aws_cloudfront_distribution.site.arn
+  principal                = "*"
   invoked_via_function_url = true
-
-  depends_on = [aws_cloudfront_distribution.site]
 }
 
 locals {
@@ -408,7 +401,18 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_body_cap_exceeded" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
-# moved blocks: preserve state addresses across the count = ... gating above.
+# moved blocks.
+#
+# Resources that STAY flat keep their original unindexed -> [0] moves
+# (from the earlier count = ... gating); those are state no-ops now.
+#
+# The lambda-core resources were briefly migrated into the shared
+# lambda_cloudfront_origin module (commit c58c149) and are moved back out
+# here, because csp_report needs a public (non-OAC) Function URL. Their
+# current state addresses are `module.csp_lambda.*`; map them back to the
+# flat addresses. The module's OAC + the two AWS_IAM lambda permissions
+# have no destination and are destroyed — intended, the public URL needs
+# neither.
 
 moved {
   from = aws_s3_bucket.csp_report
@@ -441,43 +445,8 @@ moved {
 }
 
 moved {
-  from = aws_iam_role.csp_report
-  to   = aws_iam_role.csp_report[0]
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.csp_report_basic
-  to   = aws_iam_role_policy_attachment.csp_report_basic[0]
-}
-
-moved {
   from = aws_iam_role_policy.csp_report_put
   to   = aws_iam_role_policy.csp_report_put[0]
-}
-
-moved {
-  from = aws_cloudwatch_log_group.csp_report
-  to   = aws_cloudwatch_log_group.csp_report[0]
-}
-
-moved {
-  from = aws_lambda_function.csp_report
-  to   = aws_lambda_function.csp_report[0]
-}
-
-moved {
-  from = aws_lambda_function_url.csp_report
-  to   = aws_lambda_function_url.csp_report[0]
-}
-
-moved {
-  from = aws_cloudfront_origin_access_control.csp_report
-  to   = aws_cloudfront_origin_access_control.csp_report[0]
-}
-
-moved {
-  from = aws_lambda_permission.csp_report_cloudfront
-  to   = aws_lambda_permission.csp_report_cloudfront[0]
 }
 
 moved {
@@ -513,4 +482,31 @@ moved {
 moved {
   from = aws_cloudwatch_metric_alarm.csp_report_body_cap_exceeded
   to   = aws_cloudwatch_metric_alarm.csp_report_body_cap_exceeded[0]
+}
+
+# Lambda-core resources moving back out of module.csp_lambda to flat.
+
+moved {
+  from = module.csp_lambda.aws_iam_role.this[0]
+  to   = aws_iam_role.csp_report[0]
+}
+
+moved {
+  from = module.csp_lambda.aws_iam_role_policy_attachment.basic[0]
+  to   = aws_iam_role_policy_attachment.csp_report_basic[0]
+}
+
+moved {
+  from = module.csp_lambda.aws_cloudwatch_log_group.this[0]
+  to   = aws_cloudwatch_log_group.csp_report[0]
+}
+
+moved {
+  from = module.csp_lambda.aws_lambda_function.this[0]
+  to   = aws_lambda_function.csp_report[0]
+}
+
+moved {
+  from = module.csp_lambda.aws_lambda_function_url.this[0]
+  to   = aws_lambda_function_url.csp_report[0]
 }
