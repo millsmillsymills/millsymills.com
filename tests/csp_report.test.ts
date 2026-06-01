@@ -1,5 +1,5 @@
 import fc from 'fast-check';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // `infra/csp_report.mjs` requires REPORT_BUCKET at import time and
 // constructs an S3Client. Set the env var and mock the SDK before the
@@ -413,5 +413,60 @@ describe('csp_report handler — happy-path persistence', () => {
 		sendMock.mockRejectedValueOnce(Object.assign(new Error('boom'), { name: 'AccessDenied' }));
 		const res = await invoke(postReport());
 		expect(res.statusCode).toBe(500);
+	});
+});
+
+describe('csp_report handler — rejection observability', () => {
+	let warnSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+	});
+
+	afterEach(() => {
+		warnSpy.mockRestore();
+	});
+
+	function lastWarn(): Record<string, unknown> {
+		const call = warnSpy.mock.calls.at(-1);
+		expect(call).toBeDefined();
+		return JSON.parse(call?.[0] as string) as Record<string, unknown>;
+	}
+
+	it('logs reason=unsupported-content-type on 415', async () => {
+		const res = await invoke(postReport({ headers: { 'content-type': 'text/plain' } }));
+		expect(res.statusCode).toBe(415);
+		const log = lastWarn();
+		expect(log.msg).toBe('csp-report rejected');
+		expect(log.reason).toBe('unsupported-content-type');
+		expect(log.contentType).toBe('text/plain');
+	});
+
+	it('logs reason=invalid-json on a JSON parse 400', async () => {
+		const res = await invoke(postReport({ body: '{not json' }));
+		expect(res.statusCode).toBe(400);
+		const log = lastWarn();
+		expect(log.msg).toBe('csp-report rejected');
+		expect(log.reason).toBe('invalid-json');
+		expect(log.contentType).toBe('application/csp-report');
+	});
+
+	it('logs reason=malformed-report on a schema 400 (format-drift signal)', async () => {
+		const res = await invoke(postReport({ body: JSON.stringify({ 'not-csp': {} }) }));
+		expect(res.statusCode).toBe(400);
+		const log = lastWarn();
+		expect(log.msg).toBe('csp-report rejected');
+		expect(log.reason).toBe('malformed-report');
+	});
+
+	it('never includes the raw request body in a rejection log line', async () => {
+		await invoke(
+			postReport({
+				body: JSON.stringify({ secret: 'sensitive-value' }),
+				headers: { 'content-type': 'application/json' },
+			}),
+		);
+		const serialized = warnSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+		expect(serialized).not.toContain('sensitive-value');
 	});
 });
