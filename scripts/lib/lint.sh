@@ -8,7 +8,7 @@
 #   ...
 #
 # Five-script duplication crossed the rule-of-three threshold once
-# assert-llms-txt-completeness.sh landed (#218); ce:review on that PR
+# assert-llms-txt-completeness.sh landed (#218); code review on that PR
 # named the extraction directly. The narrow surface here is deliberate
 # — only the four genuinely-shared concerns are abstracted; per-script
 # extraction logic (grep / sed / awk pipelines, well-known constants,
@@ -23,7 +23,9 @@
 #   a git checkout (acceptable: every entry point is via ci-local.sh
 #   or direct invocation in a working tree).
 lint::cd_to_repo_root() {
-	cd "$(git rev-parse --show-toplevel)"
+	local root
+	root="$(git rev-parse --show-toplevel)" || exit 1
+	cd "$root" || exit 1
 }
 
 # lint::ok "<message>"
