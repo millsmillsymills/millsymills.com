@@ -23,53 +23,33 @@ the CloudFront origin `domain_name`), `function_url`. All are `null` when
 
 ## Status (2026-06-01)
 
-- **`hitcounter.tf` migrated** — the tracer-bullet. `terraform validate`
-  passes (HCL + wiring + no dependency cycle). **Not yet `plan`/`apply`'d
-  against live state** — done offline with a local-backend override
-  because the S3 backend's STS probe fails without AWS auth.
-- **`inspector_tls.tf` and `csp_report.tf` NOT yet migrated** — replicate
-  per the checklist below once the hitcounter `plan` confirms clean moves.
+All three OAC-fronted endpoints are migrated and applied against live state:
+
+- **`hitcounter.tf`** — first-time feature deploy (hits was never previously
+  applied), so its moved blocks were inert no-ops; `/api/hits` verified live.
+- **`inspector_tls.tf` and `csp_report.tf`** — migrated in commit `fbf184a`.
+  These were in state, so the move was the real test: the plan showed every
+  lambda-core resource (incl. both `aws_lambda_function_url.this[0]`) as
+  `has moved to module…`, `0 destroy`, with only the two lambda `filename`
+  attributes changing in-place (canonical `<name>.zip`; identical
+  `source_code_hash`). Applied; final plan is `No changes`.
 - **`webauthn_demo.tf` intentionally excluded** — its Function URL is not
   fronted by the shared OAC pattern and it carries two DynamoDB tables +
   an `npm ci` `null_resource`; forcing it through the module would add
   conditionals that erase the module's simplicity. Rule-of-three is met by
   the three OAC-fronted endpoints.
 
-## Next session — verify the tracer (do this FIRST)
+The move-safety gate that every migration here must pass: in the plan, **every**
+lambda-core resource shows as `has moved`, never destroy+create. In particular
+`…aws_lambda_function_url.this[0]` **must not be recreated** — a recreate
+changes the `<id>.lambda-url…` hostname and breaks the CloudFront origin until
+re-applied. An in-place `filename` update is acceptable (module zip-name change,
+same `source_code_hash`); a destroy+create is not — STOP and fix the `moved`
+mapping before applying.
 
-After `aws-login` / credential refresh:
+## The transform (for any future OAC-fronted Lambda endpoint)
 
-```bash
-./scripts/tf.sh millsymills init     # re-init with the module present
-./scripts/tf.sh millsymills plan
-```
-
-In the plan output, confirm **every** hits Lambda-origin resource shows as
-a `moved`/no-op, NOT destroy+create. Specifically scan for:
-
-- `module.hits_lambda.aws_lambda_function_url.this[0]` — **must not be
-  recreated.** A recreate changes the `<id>.lambda-url…` hostname, which
-  breaks the CloudFront `/api/hits` origin until re-applied.
-- `module.hits_lambda.aws_lambda_function.this[0]`,
-  `...aws_iam_role.this[0]`, `...aws_cloudfront_origin_access_control.this[0]`,
-  the two `...aws_lambda_permission.*[0]`, log group, role attachment.
-
-Expected plan: `0 to add, 0 to change, 0 to destroy` (pure address moves),
-or at most in-place updates to tags. **If anything shows destroy+create,
-STOP** and fix the `moved` mapping before applying.
-
-Run the same check on the rehearsal stack:
-
-```bash
-./scripts/tf.sh p41m0n plan
-```
-
-(Note: `enable_hitcounter` may be `false` on a stack — then the moves are
-state no-ops and the module creates nothing. Still confirm no destroys.)
-
-## Replicating to inspector_tls.tf and csp_report.tf
-
-Same mechanical transform `hitcounter.tf` already demonstrates:
+Same mechanical transform all three files demonstrate:
 
 1. Replace the flat Lambda-core resources (`archive_file`, `aws_iam_role`,
    `aws_iam_role_policy_attachment.*_basic`, `aws_cloudwatch_log_group`,

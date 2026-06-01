@@ -488,9 +488,9 @@ resource "aws_cloudfront_distribution" "site" {
   dynamic "origin" {
     for_each = var.enable_inspector_tls ? [1] : []
     content {
-      domain_name              = local.inspector_tls_origin_host
+      domain_name              = module.inspector_tls_lambda.origin_host
       origin_id                = "lambda-${local.inspector_tls_name}"
-      origin_access_control_id = aws_cloudfront_origin_access_control.inspector_tls[0].id
+      origin_access_control_id = module.inspector_tls_lambda.oac_id
 
       custom_origin_config {
         http_port              = 80
@@ -507,9 +507,9 @@ resource "aws_cloudfront_distribution" "site" {
   dynamic "origin" {
     for_each = var.enable_csp_report ? [1] : []
     content {
-      domain_name              = local.csp_report_origin_host
+      domain_name              = module.csp_lambda.origin_host
       origin_id                = "lambda-${local.csp_report_name}"
-      origin_access_control_id = aws_cloudfront_origin_access_control.csp_report[0].id
+      origin_access_control_id = module.csp_lambda.oac_id
 
       custom_origin_config {
         http_port              = 80

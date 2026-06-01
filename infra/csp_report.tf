@@ -9,6 +9,13 @@
 # raw `<id>.lambda-url.<region>.on.aws` endpoint return 403, preserving
 # every CloudFront-applied security header on the response.
 #
+# The Lambda-behind-CloudFront-OAC scaffold (archive, role, basic-exec
+# attachment, log group, function, Function URL, OAC, the Oct-2025 dual
+# CloudFront permission pair, and the origin host) lives in
+# `./modules/lambda_cloudfront_origin`; this file wires it up and adds the
+# csp-specific S3 bucket, the `put-reports` inline IAM policy, and the
+# operational alarms.
+#
 # Browser report formats accepted (see `infra/csp_report.mjs`):
 #   * `application/reports+json` — Reporting API (`Reporting-Endpoints` +
 #     `report-to csp` in CSP).
@@ -120,42 +127,33 @@ resource "aws_s3_bucket_policy" "csp_report" {
 }
 
 # --------------------------------------------------------------------
-# Lambda function + Function URL.
+# Lambda function + Function URL (shared scaffold module).
 # --------------------------------------------------------------------
 
-data "archive_file" "csp_report" {
-  type        = "zip"
-  source_file = "${path.module}/csp_report.mjs"
-  output_path = "${path.module}/.terraform/csp_report.zip"
-}
+module "csp_lambda" {
+  source = "./modules/lambda_cloudfront_origin"
 
-resource "aws_iam_role" "csp_report" {
-  count = var.enable_csp_report ? 1 : 0
+  name               = local.csp_report_name
+  enabled            = var.enable_csp_report
+  source_file        = "${path.module}/csp_report.mjs"
+  handler            = "csp_report.handler"
+  distribution_arn   = aws_cloudfront_distribution.site.arn
+  log_retention_days = 30
 
-  name = "${local.csp_report_name}-lambda"
+  # Cap concurrent invocations so a flood of reports cannot run up the
+  # bill or starve other functions in the account. 5 leaves plenty of
+  # headroom for normal browser-violation traffic; bursts beyond that
+  # get throttled, which is the desired DoS posture.
+  reserved_concurrent_executions = 5
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "csp_report_basic" {
-  count = var.enable_csp_report ? 1 : 0
-
-  role       = aws_iam_role.csp_report[0].name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  environment = var.enable_csp_report ? { REPORT_BUCKET = one(aws_s3_bucket.csp_report[*].id) } : {}
 }
 
 resource "aws_iam_role_policy" "csp_report_put" {
   count = var.enable_csp_report ? 1 : 0
 
   name = "put-reports"
-  role = aws_iam_role.csp_report[0].id
+  role = module.csp_lambda.role_id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -165,106 +163,6 @@ resource "aws_iam_role_policy" "csp_report_put" {
       Resource = "${aws_s3_bucket.csp_report[0].arn}/reports/*"
     }]
   })
-}
-
-resource "aws_cloudwatch_log_group" "csp_report" {
-  count = var.enable_csp_report ? 1 : 0
-
-  name              = "/aws/lambda/${local.csp_report_name}"
-  retention_in_days = 30
-}
-
-resource "aws_lambda_function" "csp_report" {
-  count = var.enable_csp_report ? 1 : 0
-
-  function_name    = local.csp_report_name
-  role             = aws_iam_role.csp_report[0].arn
-  filename         = data.archive_file.csp_report.output_path
-  source_code_hash = data.archive_file.csp_report.output_base64sha256
-  handler          = "csp_report.handler"
-  runtime          = "nodejs22.x"
-  architectures    = ["arm64"]
-  timeout          = 5
-  memory_size      = 128
-
-  # Cap concurrent invocations so a flood of reports cannot run up the
-  # bill or starve other functions in the account. 5 leaves plenty of
-  # headroom for normal browser-violation traffic; bursts beyond that
-  # get throttled, which is the desired DoS posture.
-  reserved_concurrent_executions = 5
-
-  environment {
-    variables = {
-      REPORT_BUCKET = aws_s3_bucket.csp_report[0].id
-    }
-  }
-
-  depends_on = [aws_cloudwatch_log_group.csp_report[0]]
-}
-
-resource "aws_lambda_function_url" "csp_report" {
-  count = var.enable_csp_report ? 1 : 0
-
-  function_name      = aws_lambda_function.csp_report[0].function_name
-  authorization_type = "AWS_IAM"
-}
-
-resource "aws_cloudfront_origin_access_control" "csp_report" {
-  count = var.enable_csp_report ? 1 : 0
-
-  name                              = local.csp_report_name
-  origin_access_control_origin_type = "lambda"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
-
-# Lambda permission scoped to this distribution's ARN. Same caveat as
-# inspector_tls — the trust direction (permission references the
-# distribution arn) means there's no Terraform dependency edge from
-# the distribution; on first apply, CloudFront may finish propagating
-# the OAC change before the permission lands and CloudFront-signed
-# requests get 403 from Lambda for a brief window.
-#
-# Lambda Function URLs created after AWS's October 2025 authorization
-# change require BOTH permissions below: `InvokeFunctionUrl` authorizes
-# the URL surface, while `InvokeFunction` authorizes the underlying
-# function invocation. Without the second statement CloudFront OAC signs
-# correctly but Lambda rejects the request before invoking the function.
-resource "aws_lambda_permission" "csp_report_cloudfront" {
-  count = var.enable_csp_report ? 1 : 0
-
-  statement_id           = "AllowCloudFrontServicePrincipal"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.csp_report[0].function_name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = aws_cloudfront_distribution.site.arn
-  function_url_auth_type = "AWS_IAM"
-
-  # source_arn references the distribution arn but Terraform treats
-  # that as a string interpolation, not a dependency edge. Make the
-  # ordering explicit so the permission lands after the distribution
-  # rather than racing the OAC propagation on first apply.
-  depends_on = [aws_cloudfront_distribution.site]
-}
-
-resource "aws_lambda_permission" "csp_report_cloudfront_invoke" {
-  count = var.enable_csp_report ? 1 : 0
-
-  statement_id             = "AllowCloudFrontServicePrincipalInvokeFunction"
-  action                   = "lambda:InvokeFunction"
-  function_name            = aws_lambda_function.csp_report[0].function_name
-  principal                = "cloudfront.amazonaws.com"
-  source_arn               = aws_cloudfront_distribution.site.arn
-  invoked_via_function_url = true
-
-  depends_on = [aws_cloudfront_distribution.site]
-}
-
-locals {
-  csp_report_origin_host = var.enable_csp_report ? trimsuffix(
-    replace(aws_lambda_function_url.csp_report[0].function_url, "https://", ""),
-    "/",
-  ) : null
 }
 
 # --------------------------------------------------------------------
@@ -325,7 +223,7 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_throttles" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 
   dimensions = {
-    FunctionName = aws_lambda_function.csp_report[0].function_name
+    FunctionName = module.csp_lambda.function_name
   }
 }
 
@@ -337,7 +235,7 @@ resource "aws_cloudwatch_log_metric_filter" "csp_report_put_failed" {
   count = var.enable_csp_report ? 1 : 0
 
   name           = "${local.csp_report_name}-put-failed"
-  log_group_name = aws_cloudwatch_log_group.csp_report[0].name
+  log_group_name = module.csp_lambda.log_group_name
   pattern        = "{ $.msg = \"csp-report s3 put failed\" }"
 
   metric_transformation {
@@ -379,7 +277,7 @@ resource "aws_cloudwatch_log_metric_filter" "csp_report_body_cap_exceeded" {
   count = var.enable_csp_report ? 1 : 0
 
   name           = "${local.csp_report_name}-body-cap-exceeded"
-  log_group_name = aws_cloudwatch_log_group.csp_report[0].name
+  log_group_name = module.csp_lambda.log_group_name
   pattern        = "{ $.msg = \"csp-report body cap exceeded\" }"
 
   metric_transformation {
@@ -408,7 +306,16 @@ resource "aws_cloudwatch_metric_alarm" "csp_report_body_cap_exceeded" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
-# moved blocks: preserve state addresses across the count = ... gating above.
+# moved blocks.
+#
+# Resources that STAY in this file keep their original
+# unindexed -> [0] moves (from the earlier count = ... gating); those are
+# state no-ops now but preserved per the module README.
+#
+# Resources that move INTO the shared scaffold module go from their
+# current `*.csp_report*[0]` address to the module address. The `[0]`
+# index is preserved on both sides (caller gate == module `var.enabled`),
+# so no resource is destroyed/recreated.
 
 moved {
   from = aws_s3_bucket.csp_report
@@ -441,43 +348,8 @@ moved {
 }
 
 moved {
-  from = aws_iam_role.csp_report
-  to   = aws_iam_role.csp_report[0]
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.csp_report_basic
-  to   = aws_iam_role_policy_attachment.csp_report_basic[0]
-}
-
-moved {
   from = aws_iam_role_policy.csp_report_put
   to   = aws_iam_role_policy.csp_report_put[0]
-}
-
-moved {
-  from = aws_cloudwatch_log_group.csp_report
-  to   = aws_cloudwatch_log_group.csp_report[0]
-}
-
-moved {
-  from = aws_lambda_function.csp_report
-  to   = aws_lambda_function.csp_report[0]
-}
-
-moved {
-  from = aws_lambda_function_url.csp_report
-  to   = aws_lambda_function_url.csp_report[0]
-}
-
-moved {
-  from = aws_cloudfront_origin_access_control.csp_report
-  to   = aws_cloudfront_origin_access_control.csp_report[0]
-}
-
-moved {
-  from = aws_lambda_permission.csp_report_cloudfront
-  to   = aws_lambda_permission.csp_report_cloudfront[0]
 }
 
 moved {
@@ -513,4 +385,46 @@ moved {
 moved {
   from = aws_cloudwatch_metric_alarm.csp_report_body_cap_exceeded
   to   = aws_cloudwatch_metric_alarm.csp_report_body_cap_exceeded[0]
+}
+
+# Lambda-core resources moving into ./modules/lambda_cloudfront_origin.
+
+moved {
+  from = aws_iam_role.csp_report[0]
+  to   = module.csp_lambda.aws_iam_role.this[0]
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.csp_report_basic[0]
+  to   = module.csp_lambda.aws_iam_role_policy_attachment.basic[0]
+}
+
+moved {
+  from = aws_cloudwatch_log_group.csp_report[0]
+  to   = module.csp_lambda.aws_cloudwatch_log_group.this[0]
+}
+
+moved {
+  from = aws_lambda_function.csp_report[0]
+  to   = module.csp_lambda.aws_lambda_function.this[0]
+}
+
+moved {
+  from = aws_lambda_function_url.csp_report[0]
+  to   = module.csp_lambda.aws_lambda_function_url.this[0]
+}
+
+moved {
+  from = aws_cloudfront_origin_access_control.csp_report[0]
+  to   = module.csp_lambda.aws_cloudfront_origin_access_control.this[0]
+}
+
+moved {
+  from = aws_lambda_permission.csp_report_cloudfront[0]
+  to   = module.csp_lambda.aws_lambda_permission.cloudfront[0]
+}
+
+moved {
+  from = aws_lambda_permission.csp_report_cloudfront_invoke[0]
+  to   = module.csp_lambda.aws_lambda_permission.cloudfront_invoke[0]
 }
