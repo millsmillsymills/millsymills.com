@@ -9,7 +9,7 @@ resource "aws_cloudwatch_log_delivery_source" "cloudfront_access" {
   count = var.enable_access_logging ? 1 : 0
 
   provider     = aws.us_east_1
-  name         = "${replace(var.domain, ".", "-")}-cloudfront-access"
+  name         = "${local.domain_slug}-cloudfront-access"
   log_type     = "ACCESS_LOGS"
   resource_arn = aws_cloudfront_distribution.site.arn
 }
@@ -18,7 +18,7 @@ resource "aws_cloudwatch_log_delivery_destination" "cloudfront_access_s3" {
   count = var.enable_access_logging ? 1 : 0
 
   provider      = aws.us_east_1
-  name          = "${replace(var.domain, ".", "-")}-cloudfront-access-s3"
+  name          = "${local.domain_slug}-cloudfront-access-s3"
   output_format = "parquet"
 
   delivery_destination_configuration {

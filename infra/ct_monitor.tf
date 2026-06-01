@@ -12,7 +12,7 @@
 
 locals {
   ct_alert_email = var.ct_monitor_alert_address != "" ? var.ct_monitor_alert_address : "security@${var.domain}"
-  ct_name        = "${replace(var.domain, ".", "-")}-ct-monitor"
+  ct_name        = "${local.domain_slug}-ct-monitor"
 }
 
 resource "aws_sns_topic" "ct_monitor" {
