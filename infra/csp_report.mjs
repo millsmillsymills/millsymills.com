@@ -58,6 +58,23 @@ function isPlainObject(value) {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// Structured single-line log for pre-write rejections. The endpoint is a
+// public Function URL, so a steady trickle of bot/fuzzer junk is expected
+// and stays queryable in Logs Insights without paging. The one path worth
+// alarming on is `reason = "malformed-report"`: a sustained spike there
+// means a browser's report format drifted and legitimate violation reports
+// are now being dropped before the S3 write -- the silent failure the
+// bucket-cap and put-failed alarms exist to prevent. Never logs the raw
+// body, only the (bounded, allow-listed) content type.
+function logRejection(reason, contentType) {
+	console.warn(JSON.stringify({
+		level: 'warn',
+		msg: 'csp-report rejected',
+		reason,
+		contentType,
+	}));
+}
+
 // Top-level shape per accepted content type:
 //   * `application/reports+json`  — Reporting API: array of report objects.
 //   * `application/csp-report`    — legacy report-uri: { "csp-report": {...} }.
@@ -101,6 +118,7 @@ export const handler = async (event) => {
 		.trim()
 		.toLowerCase();
 	if (!ACCEPTED_CONTENT_TYPES.has(contentType)) {
+		logRejection('unsupported-content-type', contentType);
 		return { statusCode: 415, body: '' };
 	}
 
@@ -123,16 +141,18 @@ export const handler = async (event) => {
 	try {
 		parsed = JSON.parse(body);
 	} catch {
+		logRejection('invalid-json', contentType);
 		return { statusCode: 400, body: '' };
 	}
 
 	// Top-level shape check per content type. The bucket is private, so
 	// no exploit either way, but downstream tooling (CloudWatch Insights,
-	// future analytics) has no schema contract otherwise: any curl that
-	// makes it past the OAC + IAM-auth boundary with `application/json`
-	// could persist arbitrary JSON. Reject anything that isn't the shape
-	// the matching browser format actually emits.
+	// future analytics) has no schema contract otherwise: the Function URL
+	// is public, so any curl with `application/json` could otherwise
+	// persist arbitrary JSON. Reject anything that isn't the shape the
+	// matching browser format actually emits.
 	if (!isWellFormedReport(contentType, parsed)) {
+		logRejection('malformed-report', contentType);
 		return { statusCode: 400, body: '' };
 	}
 
