@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>unifi-mcp · live demo — millsy.lan</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ════ STATUS BAR ════ -->
+  <header class="statusbar">
+    <a class="brand" href="#">
+      <img src="assets/unifi-transparent.svg" alt="">
+      <span class="wm">unifi<b>-mcp</b></span>
+    </a>
+    <span class="sep"></span>
+    <span class="net"><b>millsy.lan</b> · 192.168.1.0/24</span>
+    <span class="counts">
+      <span>DEV <b id="cDev">4</b></span>
+      <span>CLI <b id="cCli">8</b></span>
+      <span>SSID <b id="cSsid">2</b></span>
+    </span>
+    <span class="spacer"></span>
+    <span class="online"><span class="dot"></span>STATUS: ONLINE</span>
+    <span class="sep"></span>
+    <div class="modeswitch" id="modeswitch" title="toggle readonly / readwrite">
+      <span class="ml" id="mlRo">READONLY</span>
+      <span class="track"><span class="knob"></span></span>
+      <span class="ml" id="mlRw">READWRITE</span>
+    </div>
+  </header>
+
+  <!-- ════ STAGE / TOPOLOGY ════ -->
+  <main class="stage" id="stage">
+    <svg class="wires" id="wires" xmlns="http://www.w3.org/2000/svg"></svg>
+    <!-- nodes injected by app.js -->
+    <div class="ssidbar" id="ssidbar"></div>
+
+    <!-- floating chat console -->
+    <section class="console" id="console">
+      <div class="chead" id="chead">
+        <span class="tt">ASSISTANT</span>
+        <span class="sd">· unifi-mcp</span>
+        <span class="spc"></span>
+        <div class="winbtns">
+          <span class="wb" id="wbMin" title="minimize">▁</span>
+          <span class="wb" id="wbClose" title="close">✕</span>
+        </div>
+      </div>
+      <div class="cbody" id="cbody"></div>
+      <div class="cfoot">
+        <div class="chiplabel">TRY ▸ tap a command</div>
+        <div class="chipscroll">
+          <div class="chipgroup net">
+            <div class="grouphd">NETWORK <span class="count">· 66 tools</span><span class="chev">▾</span></div>
+            <div class="chips">
+              <span class="chip" data-cmd="who's online?">who's online?</span>
+              <span class="chip" data-cmd="network health">network health</span>
+              <span class="chip" data-cmd="list devices">list devices</span>
+              <span class="chip" data-cmd="list wifi networks">list wifi</span>
+              <span class="chip" data-cmd="block the kids ipad">block the kids ipad</span>
+              <span class="chip" data-cmd="let the ipad back on">unblock the ipad</span>
+              <span class="chip" data-cmd="kick the living-room tv">kick the living-room tv</span>
+              <span class="chip" data-cmd="blink the living-room ap">blink the living-room AP</span>
+              <span class="chip" data-cmd="restart the office ap">restart the office ap</span>
+              <span class="chip" data-cmd="authorize the guest for 2h">authorize guest · 2h</span>
+              <span class="chip" data-cmd="turn off the guest wifi">turn off guest wifi</span>
+              <span class="chip" data-cmd="turn on the guest wifi">turn on guest wifi</span>
+            </div>
+          </div>
+          <div class="chipgroup pro collapsed">
+            <div class="grouphd">PROTECT <span class="count">· 13 tools</span><span class="chev">▾</span></div>
+            <div class="chips">
+              <span class="chip" data-cmd="list cameras">list cameras</span>
+              <span class="chip" data-cmd="snapshot the front door">snapshot front door</span>
+              <span class="chip" data-cmd="set the driveway to privacy mode">driveway privacy mode</span>
+            </div>
+          </div>
+          <div class="chipgroup site collapsed">
+            <div class="grouphd">SITE MANAGER <span class="count">· 3 tools</span><span class="chev">▾</span></div>
+            <div class="chips">
+              <span class="chip" data-cmd="list my sites">list my sites</span>
+              <span class="chip" data-cmd="ISP metrics">ISP metrics</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div class="relaunch" id="relaunch">▸ ASSISTANT</div>
+  </main>
+
+  <!-- ════ CALL LOG TICKER ════ -->
+  <footer class="ticker">
+    <span class="tlbl">MCP CALL LOG <b>▸</b></span>
+    <div class="tlog"><span class="trow" id="trow"></span></div>
+  </footer>
+
+</div>
+
+<div class="scanlines"></div>
+<div class="sweep"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

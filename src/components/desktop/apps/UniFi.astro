@@ -1,0 +1,69 @@
+---
+// unifi-mcp live demo.
+//
+// The demo is a self-contained vanilla HTML/CSS/JS app that lives under
+// `public/apps/unifi-demo/` and is embedded here in an iframe so its own
+// styles + scripts stay isolated from the desktop shell. It makes NO
+// third-party requests — the one webfont it used (JetBrains Mono via
+// Google Fonts) was swapped for a self-hosted/system monospace stack so
+// the app stays within the site's no-third-party / strict-CSP posture.
+//
+// The iframe is loaded lazily on first window-open (same MutationObserver
+// pattern Inspector.astro uses) so the demo's scripts don't run for every
+// visitor who never opens the window.
+---
+
+<div class="unifi-demo">
+	<iframe
+		class="unifi-demo__frame"
+		data-unifi-src="/apps/unifi-demo/index.html"
+		title="unifi-mcp live demo"
+		loading="lazy"
+	></iframe>
+</div>
+
+<style>
+	.unifi-demo {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		background: var(--bg-void);
+	}
+
+	.unifi-demo__frame {
+		flex: 1 1 auto;
+		width: 100%;
+		height: 100%;
+		border: 0;
+		display: block;
+	}
+</style>
+
+<script>
+	function init(): void {
+		const win = document.querySelector<HTMLElement>('[data-window-id="unifi"]');
+		const frame = document.querySelector<HTMLIFrameElement>('.unifi-demo__frame');
+		if (!win || !frame) return;
+
+		// Load the demo the first time the window becomes visible. The
+		// window-manager flips the `hidden` attribute on open — the same
+		// "this window just opened" signal Inspector.astro keys off.
+		let loaded = false;
+		const maybeLoad = (): void => {
+			if (loaded || win.hidden) return;
+			loaded = true;
+			const src = frame.dataset.unifiSrc;
+			if (src) frame.src = src;
+		};
+
+		const observer = new MutationObserver(maybeLoad);
+		observer.observe(win, { attributes: true, attributeFilter: ['hidden'] });
+		maybeLoad();
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+</script>
