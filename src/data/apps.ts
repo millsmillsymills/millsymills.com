@@ -164,6 +164,22 @@ const _APPS_DATA = [
 		height: 520,
 	},
 	{
+		id: 'unifi',
+		label: 'unifi-mcp',
+		glyph: '📡',
+		title: 'unifi-mcp.exe',
+		ogDescription:
+			'a live, simulated unifi-mcp demo — drive a fake network with an AI assistant calling real MCP tools across network, protect, and site manager.',
+		// Embeds the self-contained demo from public/apps/unifi-demo/ in an
+		// iframe (UniFi.astro). Desktop-only: the floating console + topology
+		// map want pointer input and width the mobile shell can't give.
+		desktopOnly: true,
+		x: 130,
+		y: 70,
+		width: 980,
+		height: 680,
+	},
+	{
 		id: 'uses',
 		label: 'uses',
 		glyph: '🧰',
