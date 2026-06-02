@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 #
 # Assert the SLSA generator pin in deploy.yml has moved off a Node 20
-# release before GitHub flips the runner default to Node 24 (2026-06-02).
-# After that date, Node-20-based actions are not guaranteed to keep working;
-# on 2026-09-16, Node 20 is removed from the runner image entirely.
+# release before GitHub removes Node 20 from the runner image entirely
+# on 2026-09-16. The 2026-06-02 default-flip date came and went with no
+# Node-24 upstream release to bump to (latest is still v2.1.0); the flip
+# only auto-bumps Node-20 actions to the Node-24 runtime, it does not
+# break them, so the tripwire is set to the hard-removal date — the point
+# at which a still-Node-20 pin genuinely stops working.
 #
 # Why a guardrail and not a bump:
 #   The fix is upstream — slsa-framework/slsa-github-generator's
@@ -29,7 +32,7 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-readonly DEADLINE="2026-06-02"
+readonly DEADLINE="2026-09-16"
 readonly UPSTREAM_ISSUE="https://github.com/slsa-framework/slsa-github-generator/issues/4490"
 readonly LOCAL_ISSUE="#389"
 readonly USES_PATTERN='slsa-framework/slsa-github-generator/\.github/workflows/generator_generic_slsa3\.yml@v[0-9]+\.[0-9]+\.[0-9]+'
@@ -90,9 +93,9 @@ if ! ${is_node20}; then
 fi
 
 # Strict less-than: the deadline date itself flips us into the FAIL
-# branch. That matches GitHub's own framing — 2026-06-02 IS the day
-# Node 24 becomes the runner default, so any Node-20 pin still in place
-# on the deadline date is already a regression risk.
+# branch. 2026-09-16 IS the day Node 20 is removed from the runner
+# image, so any Node-20 pin still in place on that date is already
+# broken, not merely at risk.
 if [[ "${today}" < "${DEADLINE}" ]]; then
 	# Pin both sides of the subtraction to UTC so the countdown can't drift
 	# by ±1 day across timezones; macOS `date -j` defaults to local time.
