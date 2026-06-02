@@ -51,7 +51,7 @@ export const copy = {
 	},
 	whatsOnTheWire: {
 		heading: "what's on the wire",
-		body: 'when you load a page: html, css, images, four self-hosted webfonts (Tahoma, Franklin Gothic ITC, Press Start 2P, VT323), and the javascript bundle for the desktop ui. that\'s it. zero third-party fetches. no google fonts, no cdn libraries, no analytics beacons. the content security policy pins `default-src`, `script-src`, `connect-src`, `img-src`, and `font-src` to `\'self\'`, so the browser refuses any cross-origin fetch even if one slipped past code review.',
+		body: 'when you load a page: html, css, images, self-hosted webfonts, and the javascript bundle for the desktop ui. the desktop shell ships four fonts (Tahoma, Franklin Gothic ITC, Press Start 2P, VT323); the embedded unifi-mcp demo loads a few more of its own — all self-hosted, all same-origin. zero third-party fetches either way. no google fonts, no cdn libraries, no analytics beacons. the content security policy pins `default-src`, `script-src`, `connect-src`, `img-src`, and `font-src` to `\'self\'`, so the browser refuses any cross-origin fetch even if one slipped past code review.',
 		citations: [
 			{ label: 'src/styles/desktop.css (font @font-face declarations)', path: 'src/styles/desktop.css' },
 			{ label: 'infra/cloudfront.tf (CSP response-headers policy)', path: 'infra/cloudfront.tf' },

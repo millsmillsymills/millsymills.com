@@ -487,9 +487,6 @@ function init(){
   relaunch.onclick=()=>{ con.style.display='flex'; con.classList.remove('min'); relaunch.style.display='none'; };
   makeDraggable(con, document.getElementById('chead'));
 
-  // hint dismiss
-  setTimeout(()=>document.getElementById('hint')?.classList.add('hide'), 6000);
-
   // seed ticker
   logCall('unifi_network_list_devices','ok','4 devices');
   logCall('unifi_network_list_clients','ok','8 clients');
