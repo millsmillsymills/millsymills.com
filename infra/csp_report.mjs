@@ -18,13 +18,19 @@
 // 30d bucket would over-collect for the same diagnostic value.
 // No CORS — reports are same-origin POSTs.
 //
+// The Function URL is public (authorization_type = NONE) because OAC SigV4
+// can't carry a browser-supplied POST body. To close the direct-bypass path,
+// CloudFront injects a high-entropy `x-origin-secret` custom_header and this
+// handler rejects (403) any request whose header doesn't match the
+// `ORIGIN_SECRET` env var. So only CloudFront-proxied reports reach S3.
+//
 // Cost guards:
 //   * `aws_lambda_function.csp_report` ships with `reserved_concurrent_executions = 5`
 //     in `infra/csp_report.tf` so a flood of reports cannot blow the bill.
 //   * `MAX_BODY_BYTES = 16384` rejects oversize payloads at 413 before
 //     the S3 write.
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
@@ -33,6 +39,11 @@ const BUCKET = process.env.REPORT_BUCKET;
 if (!BUCKET) {
 	throw new Error('REPORT_BUCKET env var is required');
 }
+const ORIGIN_SECRET = process.env.ORIGIN_SECRET;
+if (!ORIGIN_SECRET) {
+	throw new Error('ORIGIN_SECRET env var is required');
+}
+const ORIGIN_SECRET_BYTES = Buffer.from(ORIGIN_SECRET, 'utf-8');
 const MAX_BODY_BYTES = 16_384;
 
 const ACCEPTED_CONTENT_TYPES = new Set([
@@ -50,6 +61,17 @@ function header(headers, name) {
 	return undefined;
 }
 
+// Constant-time comparison of the CloudFront-injected origin secret. The
+// length check short-circuits before timingSafeEqual (which throws on
+// length mismatch), and the actual byte compare is timing-safe so a direct
+// caller can't recover the secret one character at a time.
+function secretMatches(candidate) {
+	if (typeof candidate !== 'string') return false;
+	const candidateBytes = Buffer.from(candidate, 'utf-8');
+	if (candidateBytes.length !== ORIGIN_SECRET_BYTES.length) return false;
+	return timingSafeEqual(candidateBytes, ORIGIN_SECRET_BYTES);
+}
+
 function pad2(n) {
 	return String(n).padStart(2, '0');
 }
@@ -64,15 +86,29 @@ function isPlainObject(value) {
 // alarming on is `reason = "malformed-report"`: a sustained spike there
 // means a browser's report format drifted and legitimate violation reports
 // are now being dropped before the S3 write -- the silent failure the
-// bucket-cap and put-failed alarms exist to prevent. Never logs the raw
-// body, only the (bounded, allow-listed) content type.
-function logRejection(reason, contentType) {
+// bucket-cap and put-failed alarms exist to prevent. `shapeHint` is an
+// allow-listed structural summary (top-level type / key names), never the
+// raw body, so a report-format drift can be diagnosed without persisting or
+// logging viewer-supplied content.
+function logRejection(reason, contentType, shapeHint) {
 	console.warn(JSON.stringify({
 		level: 'warn',
 		msg: 'csp-report rejected',
 		reason,
 		contentType,
+		shapeHint: shapeHint ?? null,
 	}));
+}
+
+// Bounded structural summary of a parsed body for the malformed-report log
+// line: the top-level JSON type plus, for objects, the sorted key names
+// (capped). Values are never included, so no viewer-supplied content leaks
+// into the logs -- only the shape that drifted.
+function shapeHintOf(parsed) {
+	if (Array.isArray(parsed)) return `array[${parsed.length}]`;
+	if (parsed === null) return 'null';
+	if (typeof parsed !== 'object') return typeof parsed;
+	return `object{${Object.keys(parsed).sort().slice(0, 8).join(',')}}`.slice(0, 200);
 }
 
 // Top-level shape per accepted content type:
@@ -113,6 +149,11 @@ export const handler = async (event) => {
 	}
 
 	const headers = event?.headers ?? {};
+	if (!secretMatches(header(headers, 'x-origin-secret'))) {
+		logRejection('origin-secret-mismatch', null);
+		return { statusCode: 403, body: '' };
+	}
+
 	const contentType = String(header(headers, 'content-type') ?? '')
 		.split(';')[0]
 		.trim()
@@ -145,14 +186,15 @@ export const handler = async (event) => {
 		return { statusCode: 400, body: '' };
 	}
 
-	// Top-level shape check per content type. The bucket is private, so
-	// no exploit either way, but downstream tooling (CloudWatch Insights,
-	// future analytics) has no schema contract otherwise: the Function URL
-	// is public, so any curl with `application/json` could otherwise
-	// persist arbitrary JSON. Reject anything that isn't the shape the
-	// matching browser format actually emits.
+	// Top-level shape check per content type. The Function URL is public;
+	// the origin shared-secret check above is the primary gate, and this
+	// shape check is the secondary one -- together they keep anything that
+	// isn't a real browser report from persisting. Downstream tooling
+	// (CloudWatch Insights, future analytics) also relies on the shape
+	// contract, so reject anything that isn't the shape the matching
+	// browser format actually emits.
 	if (!isWellFormedReport(contentType, parsed)) {
-		logRejection('malformed-report', contentType);
+		logRejection('malformed-report', contentType, shapeHintOf(parsed));
 		return { statusCode: 400, body: '' };
 	}
 
