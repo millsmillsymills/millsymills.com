@@ -1,12 +1,15 @@
 import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// `infra/csp_report.mjs` requires REPORT_BUCKET at import time and
-// constructs an S3Client. Set the env var and mock the SDK before the
-// module loads -- both happen via `vi.hoisted` which runs before any
-// import.
-vi.hoisted(() => {
+// `infra/csp_report.mjs` requires REPORT_BUCKET and ORIGIN_SECRET at
+// import time and constructs an S3Client. Set the env vars and mock the
+// SDK before the module loads -- both happen via `vi.hoisted` which runs
+// before any import.
+const { TEST_ORIGIN_SECRET } = vi.hoisted(() => {
 	process.env.REPORT_BUCKET = 'test-bucket';
+	const TEST_ORIGIN_SECRET = 'test-origin-secret';
+	process.env.ORIGIN_SECRET = TEST_ORIGIN_SECRET;
+	return { TEST_ORIGIN_SECRET };
 });
 
 const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn() }));
@@ -49,12 +52,17 @@ function invoke(event: LambdaEvent): Promise<LambdaResponse> {
 }
 
 function postReport(overrides: Partial<LambdaEvent> = {}): LambdaEvent {
+	const { headers: headerOverrides, ...rest } = overrides;
 	return {
 		body: JSON.stringify({ 'csp-report': { 'violated-directive': 'script-src' } }),
 		isBase64Encoded: false,
-		headers: { 'content-type': 'application/csp-report' },
+		headers: {
+			'content-type': 'application/csp-report',
+			'x-origin-secret': TEST_ORIGIN_SECRET,
+			...headerOverrides,
+		},
 		requestContext: { requestId: 'req-1', http: { method: 'POST' } },
-		...overrides,
+		...rest,
 	};
 }
 
@@ -87,6 +95,39 @@ describe('csp_report handler — method gate', () => {
 	it('treats missing method as non-POST and rejects', async () => {
 		const res = await invoke({});
 		expect(res.statusCode).toBe(405);
+	});
+});
+
+describe('csp_report handler — origin-secret gate', () => {
+	it('rejects 403 when the x-origin-secret header is absent', async () => {
+		const res = await invoke({
+			body: JSON.stringify({ 'csp-report': { 'violated-directive': 'script-src' } }),
+			headers: { 'content-type': 'application/csp-report' },
+			requestContext: { http: { method: 'POST' } },
+		});
+		expect(res.statusCode).toBe(403);
+		expect(sendMock).not.toHaveBeenCalled();
+	});
+
+	it('rejects 403 when the x-origin-secret header is wrong', async () => {
+		const res = await invoke(
+			postReport({
+				headers: { 'content-type': 'application/csp-report', 'x-origin-secret': 'wrong-secret' },
+			}),
+		);
+		expect(res.statusCode).toBe(403);
+		expect(sendMock).not.toHaveBeenCalled();
+	});
+
+	it('rejects 403 when the secret has the right length but wrong bytes', async () => {
+		const sameLengthWrong = 'x'.repeat(TEST_ORIGIN_SECRET.length);
+		const res = await invoke(
+			postReport({
+				headers: { 'content-type': 'application/csp-report', 'x-origin-secret': sameLengthWrong },
+			}),
+		);
+		expect(res.statusCode).toBe(403);
+		expect(sendMock).not.toHaveBeenCalled();
 	});
 });
 
