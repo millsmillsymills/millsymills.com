@@ -518,8 +518,10 @@ resource "aws_cloudfront_distribution" "site" {
   # `infra/csp_report.tf` for the function + URL. NOT OAC-fronted (unlike
   # inspector_tls/hits): the Function URL is public (authorization_type =
   # NONE) because OAC SigV4 can't carry a browser-supplied POST body. The
-  # csp_report file header explains the constraint; the endpoint is a
-  # write-only sink so a public origin carries no data-exposure risk.
+  # csp_report file header explains the constraint. Since the URL is public,
+  # CloudFront injects a high-entropy shared secret as a custom_header and
+  # the handler rejects any request lacking it -- closing the direct
+  # Function-URL bypass so only CloudFront-proxied reports reach S3.
   dynamic "origin" {
     for_each = var.enable_csp_report ? [1] : []
     content {
@@ -531,6 +533,11 @@ resource "aws_cloudfront_distribution" "site" {
         https_port             = 443
         origin_protocol_policy = "https-only"
         origin_ssl_protocols   = ["TLSv1.2"]
+      }
+
+      custom_header {
+        name  = "x-origin-secret"
+        value = random_password.csp_report_origin_secret[0].result
       }
     }
   }
