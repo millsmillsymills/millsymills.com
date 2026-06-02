@@ -286,24 +286,6 @@
 /* motifs — opt-in texture utilities                                  */
 /* ------------------------------------------------------------------ */
 
-/* CRT scanline overlay. Apply to any positioned surface; adds a
- * fixed pseudo-element with horizontal stripes. Default is full
- * strength; the --soft variant dims to 25% for subtle chrome. */
-.motif-scanlines {
-	position: relative;
-}
-.motif-scanlines::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background: var(--scanlines);
-	pointer-events: none;
-	z-index: 2;
-}
-.motif-scanlines--soft::after {
-	opacity: 0.25;
-}
-
 /* Grain overlay element — mounted once in DesktopLayout, sits above
  * windows (z-index 9998) but below the taskbar (9999) so grain
  * textures all surfaces without fuzzing out chrome labels. */
@@ -1515,10 +1497,6 @@ body:not([data-flags-unlocked='true']) [data-flags-gated] {
 		--titlebar-bg: var(--neon-pink);
 	}
 	.motif-grain {
-		opacity: 0 !important;
-	}
-	.motif-scanlines::after,
-	.motif-scanlines--soft::after {
 		opacity: 0 !important;
 	}
 	.motif-chrom:hover,
