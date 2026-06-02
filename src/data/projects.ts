@@ -15,7 +15,7 @@ export interface Project {
 	readonly describe?: string;
 	/**
 	 * Path to a logo asset under `public/`, e.g. `/images/projects/foo.png`.
-	 * Default for repos under `millsmillsymills/` is the owner avatar
+	 * Default for repos under `millsymills-com/` is the owner avatar
 	 * (`/images/projects/millsmillsymills.png`) — a placeholder until each
 	 * repo gets a custom logo upstream. Override per-project once a repo
 	 * ships its own icon.
@@ -30,7 +30,7 @@ export const projects: readonly Project[] = [
 		tagline: 'MCP server for Unraid — talk to your array from your LLM',
 		description:
 			'Exposes an Unraid server (array status, docker containers, VMs, shares, parity, SMART) as tools to any MCP client. Built for homelab operators who want to debug or automate their box from a chat interface. Runs as a container on the Unraid host.',
-		repo: 'https://github.com/millsmillsymills/unraid-mcp',
+		repo: 'https://github.com/millsymills-com/unraid-mcp',
 		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'unraid', 'homelab', 'python'],
@@ -44,7 +44,7 @@ export const projects: readonly Project[] = [
 		tagline: 'MCP server for UniFi — network state and control',
 		description:
 			'Wraps the UniFi Controller API as MCP tools: list clients, inspect sites, kick a misbehaving device, pull event logs, toggle guest networks. Useful for anyone running UniFi at home or at a small org who wants an LLM-native way to poke at the network.',
-		repo: 'https://github.com/millsmillsymills/unifi-mcp',
+		repo: 'https://github.com/millsymills-com/unifi-mcp',
 		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'unifi', 'networking', 'python'],
@@ -58,7 +58,7 @@ export const projects: readonly Project[] = [
 		tagline: 'MCP server for Proton Mail — addresses, domains, keys',
 		description:
 			'Lets an MCP client manage a Proton Mail account: list/create/delete addresses, add and verify custom domains, edit mail and account settings, inspect encryption keys. Reads are always on; writes opt in via env flag. Built in Go on top of go-proton-api.',
-		repo: 'https://github.com/millsmillsymills/protonmail-mcp',
+		repo: 'https://github.com/millsymills-com/protonmail-mcp',
 		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'protonmail', 'email', 'go'],
@@ -72,13 +72,27 @@ export const projects: readonly Project[] = [
 		tagline: 'MCP server for Gandi — domains, DNS, email, certificates',
 		description:
 			'Wraps the Gandi v5 API as 71 MCP tools across domains, LiveDNS, email, billing, organizations, and certificates. Three-tier safety model: readonly by default, opt in to writes, and a separate flag to expose tools that spend money. Defense-in-depth checks at both tool-visibility and runtime.',
-		repo: 'https://github.com/millsmillsymills/gandi-mcp',
+		repo: 'https://github.com/millsymills-com/gandi-mcp',
 		icon: '/images/projects/millsmillsymills.png',
 		kind: 'mcp',
 		tags: ['mcp', 'gandi', 'dns', 'domains', 'python'],
 		install: 'claude mcp add gandi -- gandi-mcp',
 		describe:
 			'Gandi MCP server. 71 tools for domains, DNS, email, billing, certs. Writes and purchases are gated.',
+	},
+	{
+		id: 'shortcut-mcp',
+		name: 'shortcut-mcp',
+		tagline: 'MCP server for Shortcut — full read/write/destructive surface',
+		description:
+			'Wraps the Shortcut REST API as 137 MCP tools across 26 resource modules (65 read, 51 write, 21 destructive). Three-tier safety model: read-only by default, writes opt in via SHORTCUT_MODE=readwrite, and deletes/workspace-wide toggles require a separate SHORTCUT_ALLOW_DESTRUCTIVE flag. Built in Python on FastMCP.',
+		repo: 'https://github.com/millsymills-com/shortcut-mcp',
+		icon: '/images/projects/millsmillsymills.png',
+		kind: 'mcp',
+		tags: ['mcp', 'shortcut', 'project-management', 'python'],
+		install: 'uv tool install git+https://github.com/millsymills-com/shortcut-mcp',
+		describe:
+			'Shortcut MCP server. 137 tools across 26 modules for stories, epics, iterations, workflows. Writes and deletes are gated.',
 	},
 	{
 		id: 'millsymills.com',
