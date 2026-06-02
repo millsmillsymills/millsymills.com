@@ -20,8 +20,13 @@
 # no body, validates Content-Type (415), caps the body (413) and JSON shape
 # (400), and is concurrency-capped (reserved_concurrent_executions = 5), so
 # a public surface carries no data-exposure risk and a bounded cost risk.
-# The CloudFront origin-request policy still strips Host so the Function URL
-# accepts the rewritten Host.
+# CloudFront also injects a high-entropy `x-origin-secret` custom_header
+# (random_password.csp_report_origin_secret, also passed to the Lambda as
+# the ORIGIN_SECRET env var); the handler rejects (403) any request lacking
+# the matching secret, closing the direct Function-URL bypass so only
+# CloudFront-proxied reports reach the handler. The CloudFront
+# origin-request policy still strips Host so the Function URL accepts the
+# rewritten Host.
 #
 # Browser report formats accepted (see `infra/csp_report.mjs`):
 #   * `application/reports+json` — Reporting API (`Reporting-Endpoints` +
@@ -140,6 +145,19 @@ data "archive_file" "csp_report" {
   output_path = "${path.module}/.terraform/csp_report.zip"
 }
 
+# Shared secret threaded to BOTH the CloudFront origin (as a custom_header)
+# and the Lambda (as an env var). The handler rejects any request whose
+# x-origin-secret header doesn't match, so the public Function URL can't be
+# invoked directly -- only CloudFront, which injects the header, gets past
+# the gate. `special = false` keeps the value header-safe: no quoting or
+# escaping concerns in the CloudFront custom_header value.
+resource "random_password" "csp_report_origin_secret" {
+  count = var.enable_csp_report ? 1 : 0
+
+  length  = 48
+  special = false
+}
+
 resource "aws_iam_role" "csp_report" {
   count = var.enable_csp_report ? 1 : 0
 
@@ -207,6 +225,7 @@ resource "aws_lambda_function" "csp_report" {
   environment {
     variables = {
       REPORT_BUCKET = aws_s3_bucket.csp_report[0].id
+      ORIGIN_SECRET = random_password.csp_report_origin_secret[0].result
     }
   }
 
