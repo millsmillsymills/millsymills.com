@@ -9,9 +9,10 @@ export const profile = {
 	currentEmployer: 'Trail of Bits',
 	email: 'mills@millsymills.com',
 	github: 'https://github.com/millsmillsymills',
+	githubOrg: 'https://github.com/millsymills-com',
 	certifications: ['A+', 'Network+', 'Security+', 'CEH'],
 	summary:
-		'Corporate Security Engineer with 10+ years of experience in IT and security, specializing in identity and access management, endpoint security, and security automation. Replaces costly vendor functionality with in-house automations, hardens fleets at scale, and tests every internal security tool personally before rollout — files bugs, gives feedback, breaks things on purpose.',
+		'Corporate Security Engineer with 10+ years of experience in IT and security, specializing in identity and access management, endpoint security, and security automation. Increasingly focused on replacing costly vendor functionality with infrastructure-as-code, supply-chain hardening, and AI/agent tooling: managing cloud and a GitHub org with Terraform/OpenTofu, publishing an open-source MCP server suite, and administering enterprise Claude Code — config hardening, guardrail hooks, and authored skills.',
 } as const;
 
 export const coreSkills = [
@@ -50,6 +51,44 @@ export const coreSkills = [
 			'AWS Lambda',
 		],
 	},
+	{
+		group: 'Infrastructure-as-Code',
+		items: [
+			'Terraform / OpenTofu',
+			'GitHub org-as-code',
+			'GitHub Actions OIDC',
+			'S3 / CloudFront / Route53 / ACM',
+			'DNSSEC',
+			'MTA-STS',
+			'Ruleset-as-code',
+			'tofu test',
+		],
+	},
+	{
+		group: 'Supply Chain & Dependency Security',
+		items: [
+			'Release-age cooldowns',
+			'Exact version pinning',
+			'Hash-verified installs',
+			'Blocked install-time scripts',
+			'Dependabot cooldowns',
+			'OCP-SAFE',
+		],
+	},
+	{
+		group: 'AI & Agent Tooling',
+		items: [
+			'Claude Code (enterprise admin + dev)',
+			'Codex',
+			'Gemini',
+			'Cursor',
+			'LM Studio (local models)',
+			'MCP server development',
+			'Skill authoring',
+			'Agent guardrails / hooks',
+			'Cross-repo consistency auditing',
+		],
+	},
 ] as const;
 
 export const experience = [
@@ -62,12 +101,15 @@ export const experience = [
 			'Planned and executed migration of 150+ host fleet from SimpleMDM to Jamf.',
 			'Built identity lifecycle workflows (onboarding, offboarding, access auditing) in Bash, Python, and Slack.',
 			'Replaced a $50k/year SOC-as-a-service vendor with n8n automations, enriched Slack alerts, and one-click incident response.',
+			'Hardened the software supply chain across internal tooling: release-age cooldowns, exact version pinning, hash-verified installs, blocked install-time scripts, and cooldown-gated, grouped Dependabot updates.',
+			'Administer Claude Code for the organization: usage and rate-limit monitoring, enterprise configuration hardening, and privacy/security reviews of plugins, connectors, and new features before rollout.',
+			'Authored PreToolUse guardrail hooks for the agent fleet that block dangerous commands (e.g. rm -rf) and prevent sensitive-information disclosure.',
 			'Managed intelligence sharing between organizations targeted by ELUSIVE COMET; hardened endpoints against Zoom remote-control social-engineering attacks and authored the public blog post.',
 			'Maintained compliance frameworks for Microsoft SSPA, CMMC, UK Cyber Essentials, and OCP-SAFE.',
 			'Administered Tailscale ZTNA — tailnets, exit nodes, access policies for remote connectivity.',
 			'Tested every internal security tool personally before fleet rollout — package security scanners, NIST 800-88 cryptographic erasure tools — through staged environments. Filed bugs, gave feedback, broke things on purpose.',
 			'Provided billable corporate IT and security consultancy directly to clients.',
-			'Used Terraform for internal infrastructure projects.',
+			'Administered Google Workspace and CrowdStrike Falcon, and managed internal infrastructure as code with Terraform.',
 		],
 	},
 	{
