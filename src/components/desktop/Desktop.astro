@@ -13,6 +13,7 @@ import Memes from './apps/Memes.astro';
 import Minesweeper from './apps/Minesweeper.astro';
 import Trash from './apps/Trash.astro';
 import Projects from './apps/Projects.astro';
+import UniFi from './apps/UniFi.astro';
 import Uses from './apps/Uses.astro';
 import Privacy from './apps/Privacy.astro';
 import Security from './apps/Security.astro';
@@ -47,6 +48,8 @@ const contentFor = (id: string) => {
 			return Trash;
 		case 'projects':
 			return Projects;
+		case 'unifi':
+			return UniFi;
 		case 'uses':
 			return Uses;
 		case 'privacy':
