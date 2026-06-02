@@ -19,8 +19,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.9",
+    "@mills/graphics-tools": "github:millsmillsymills/graphics-tools#3a41cb10d8cc5cdeec98033ebc3f0a7860651f5d",
     "@playwright/test": "1.60.0",
-    "@resvg/resvg-js": "2.6.2",
     "@types/node": "22.19.19",
     "fast-check": "4.8.0",
     "happy-dom": "20.9.0",
