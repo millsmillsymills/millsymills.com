@@ -55,6 +55,25 @@ const jsonLd = {
 // U+2028, U+2029 to JSON unicode escapes so the JSON-LD blob can't be turned
 // into a parser-confusion XSS sink by a future careless content edit).
 const jsonLdSerialized = serializeJsonForScript(jsonLd);
+
+// Pre-paint flag-unlock bootstrap (#588). The CSS in desktop.css gates every
+// flag-related surface behind `body[data-flags-unlocked='true']`. The bundled
+// flags.ts sets that attribute, but only once its deferred module runs — so
+// returning users with a capture saw the gated UI flash absent then reappear.
+// This inline script reads the same localStorage key flags.ts persists to and
+// sets the attribute synchronously, before the gated markup below it paints.
+// try/catch so a localStorage failure (privacy mode, partitioned storage)
+// can't throw and block paint. It only ever sets the unlocked state to true —
+// pre-capture visitors keep the locked state.
+//
+// `script-src` in the CloudFront CSP (infra/cloudfront.tf) is 'self', which
+// forbids inline scripts; the SHA-256 of these exact bytes is pinned there as
+// the one allowed inline source. Editing this string changes the hash —
+// scripts/assert-flags-init-csp.sh recomputes it from dist/ and fails CI if
+// cloudfront.tf drifts. Keep it on one line with no trailing newline so the
+// hashed bytes match what Astro emits.
+const flagsInitInline =
+	"try{var s=localStorage.getItem('mills.flags.v1');if(s){var o=JSON.parse(s);if(o&&typeof o==='object'&&Object.keys(o).length>0)document.body.dataset.flagsUnlocked='true';}}catch(e){}";
 ---
 
 <html lang="en">
@@ -102,6 +121,7 @@ const jsonLdSerialized = serializeJsonForScript(jsonLd);
 		<title>{title}</title>
 	</head>
 	<body data-initial-open={initialOpen}>
+		<script is:inline set:html={flagsInitInline} />
 		<!-- flag{html_comments_have_no_secrets} -->
 		<div class="motif-grain" aria-hidden="true"></div>
 		<slot />
