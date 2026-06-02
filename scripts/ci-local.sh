@@ -67,6 +67,10 @@ section "node: build"
 npm run build
 ok "npm run build"
 
+section "node: assert flag-unlock inline-script CSP hash in sync"
+./scripts/assert-flags-init-csp.sh
+ok "DesktopLayout inline flag-unlock script hash pinned in cloudfront.tf"
+
 section "node: playwright e2e"
 # Install the chromium binary if the local cache is empty (idempotent — a
 # warm cache makes this a no-op). `--with-deps` is skipped locally because

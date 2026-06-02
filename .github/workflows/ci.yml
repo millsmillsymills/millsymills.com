@@ -93,6 +93,9 @@ jobs:
         run: npm run test:e2e
 
       # ---- post-build asserts (consume dist/) ----
+      - name: Assert flag-unlock inline-script CSP hash in sync
+        run: ./scripts/assert-flags-init-csp.sh
+
       - name: Assert fonts present + no Google Fonts leakage
         run: ./scripts/assert-fonts-csp.sh
 
