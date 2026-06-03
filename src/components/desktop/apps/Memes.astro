@@ -52,7 +52,7 @@ function hasTape(index: number): boolean {
 
 	.memes__polaroid {
 		background: var(--ink-primary);
-		padding: 8px 8px 28px;
+		padding: 8px;
 		border: 1px solid var(--bg-void);
 		box-shadow: 4px 4px 0 var(--neon-cyan), 0 0 0 1px var(--bg-void) inset;
 		transform: rotate(var(--r, -2deg));
@@ -115,19 +115,6 @@ function hasTape(index: number): boolean {
 		display: none;
 	}
 
-	.memes__cap {
-		position: absolute;
-		bottom: 6px;
-		left: 0;
-		right: 0;
-		text-align: center;
-		font-family: var(--font-pixel);
-		font-size: 8px;
-		color: var(--bg-void);
-		letter-spacing: 1px;
-		text-transform: lowercase;
-	}
-
 	@media (prefers-reduced-motion: reduce) {
 		.memes__polaroid,
 		.memes__polaroid:hover {
@@ -152,7 +139,6 @@ function hasTape(index: number): boolean {
 							{m.id}.jpg — image missing
 						</div>
 					</div>
-					<div class="memes__cap">{m.caption ?? m.id}</div>
 				</div>
 			</li>
 		))
