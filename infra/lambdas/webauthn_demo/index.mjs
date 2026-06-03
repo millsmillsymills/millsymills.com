@@ -579,17 +579,21 @@ export const handler = async (event) => {
 	const rawPath = event?.rawPath ?? event?.requestContext?.http?.path ?? '/';
 	const path = normalizePath(rawPath);
 
-	if (method !== 'POST') {
-		return { statusCode: 405, headers: { allow: 'POST' }, body: '' };
-	}
-
 	// The Function URL is public (authorization_type = NONE) because OAC
 	// SigV4 can't carry a browser POST body — see infra/csp_report.tf for the
 	// same constraint. CloudFront injects a high-entropy x-origin-secret
 	// custom header; reject anything lacking the match so the direct
 	// Function-URL bypass is closed and only CloudFront-proxied requests run.
+	// This gate runs before the method check so the raw Function URL answers
+	// any request lacking the secret with a uniform 403 regardless of method —
+	// a direct caller can't tell a method mismatch (405) from a missing secret
+	// and so can't learn that POST is the expected method.
 	if (!secretMatches(header(event?.headers, 'x-origin-secret'))) {
 		return { statusCode: 403, body: '' };
+	}
+
+	if (method !== 'POST') {
+		return { statusCode: 405, headers: { allow: 'POST' }, body: '' };
 	}
 
 	const route = ROUTES.get(path);

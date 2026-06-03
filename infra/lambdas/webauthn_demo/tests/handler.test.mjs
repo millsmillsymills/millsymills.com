@@ -90,6 +90,17 @@ test('POST with a wrong origin secret returns 403', async () => {
 	assert.equal(res.statusCode, 403);
 });
 
+test('non-POST without the secret returns a uniform 403, not 405', async () => {
+	// The secret gate runs before the method check, so a direct caller
+	// hitting the raw Function URL with the wrong method but no secret gets
+	// 403 — it can't distinguish a method mismatch from a missing secret and
+	// so can't learn that POST is the expected method.
+	for (const method of ['GET', 'PUT', 'DELETE']) {
+		const res = await handler(eventOf({ method, path: '/registration/options', secret: null }));
+		assert.equal(res.statusCode, 403);
+	}
+});
+
 test('CloudFront /api/passkey/* prefix is stripped to the route key', async () => {
 	const res = await handler(eventOf({ path: '/api/passkey/registration/options', body: {} }));
 	assert.equal(res.statusCode, 200);
