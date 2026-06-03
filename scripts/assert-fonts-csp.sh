@@ -1,23 +1,31 @@
 #!/usr/bin/env bash
 #
-# Assert every `/fonts/<file>` URL referenced in src/ ships as a real
-# asset, and that the CSP `font-src 'self'` claim isn't quietly being
-# undermined by a stray Google Fonts reference in the build output.
+# Assert every `/fonts/<file>` URL referenced in src/ + public/ ships as
+# a real asset, and that the CSP `font-src 'self'` claim isn't quietly
+# being undermined by a cross-origin font reference in the build output.
 #
 # Why this matters:
 #   - If a referenced WOFF2 is missing (sparse checkout, accidental
 #     .gitignore, lfs mis-fetch), the browser silently falls back to
 #     `'Courier New', monospace`. No error, no CSP violation, no
 #     telemetry — just "the site looks different."
-#   - The privacy page claims "two self-hosted fonts ... zero third-
-#     party fetches." A stray `fonts.googleapis.com` or `fonts.gstatic.com`
-#     reference would silently 404 against `font-src 'self'`, but it
-#     would also make the privacy page wrong. Catch the second case
-#     here so the first doesn't matter.
+#   - The privacy page claims the site self-hosts its fonts with zero
+#     third-party fetches. Any cross-origin font reference — a Google
+#     Fonts `<link>`, or an `@font-face src: url(https://cdn/...)` to
+#     any other host — would silently 404 against `font-src 'self'` and
+#     would also make the privacy page wrong. Catch it here so the
+#     first failure mode never matters.
 #
-# Source set is auto-derived from src/ — adding a new @font-face URL
-# doesn't require updating this script. Removing the last reference to
-# a font also fails (refuse to ship blind).
+# The cross-origin scan runs over dist/, which mirrors public/ verbatim
+# (static assets like the unifi-demo's own HTML/CSS ship from there), so
+# a re-introduced third-party font under public/ is caught the same as
+# one emitted from src/. The scan is host-agnostic: it flags Google
+# Fonts hosts AND any absolute/protocol-relative URL pointing at a font
+# file, so a non-Google CDN doesn't slip through.
+#
+# Source set is auto-derived from src/ + public/ — adding a new
+# @font-face URL doesn't require updating this script. Removing the last
+# reference to a font also fails (refuse to ship blind).
 #
 # Run after `npm run build` so dist/ exists. Wired into ci-local.sh.
 
@@ -28,24 +36,24 @@ lint::cd_to_repo_root
 PUBLIC_FONTS=public/fonts
 DIST=dist
 
-# Extract every `/fonts/<file>` URL referenced in src/. Catches
+# Extract every `/fonts/<file>` URL referenced in src/ + public/. Catches
 # `url('/fonts/x.woff2')`, `url("/fonts/x.ttf")`, and bare
-# `url(/fonts/x.woff2)` — CSS, Astro, and JS all parsed the same way.
+# `url(/fonts/x.woff2)` — CSS, Astro, HTML, and JS all parsed the same way.
 # Uses `while read` instead of `mapfile` for bash 3.2 (macOS) compat.
 REFERENCED=()
 while IFS= read -r line; do
 	REFERENCED+=("$line")
 done < <(
-	grep -rhoE "url\\(['\"]?/fonts/[A-Za-z0-9_.-]+['\"]?\\)" src/ \
+	grep -rhoE "url\\(['\"]?/fonts/[A-Za-z0-9_.-]+['\"]?\\)" src/ public/ \
 		| sed -E "s|url\\(['\"]?/fonts/([A-Za-z0-9_.-]+)['\"]?\\)|\\1|" \
 		| sort -u
 )
 
 if [ "${#REFERENCED[@]}" -eq 0 ]; then
-	lint::refuse_blind "no /fonts/ references found in src/"
+	lint::refuse_blind "no /fonts/ references found in src/ or public/"
 fi
 
-printf 'fonts referenced in src/: %d\n' "${#REFERENCED[@]}"
+printf 'fonts referenced in src/ + public/: %d\n' "${#REFERENCED[@]}"
 for f in "${REFERENCED[@]}"; do printf '  /fonts/%s\n' "$f"; done
 
 # 1. Source files exist + are non-empty + carry the right magic bytes
@@ -115,8 +123,21 @@ if [ -d "$DIST" ]; then
 		printf '  Fix: self-host the offending font under public/fonts/ and update the @font-face src.\n' >&2
 		lint::fatal "CSP drift: $DIST/ contains Google Fonts URLs"
 	fi
+
+	# 3b. Any OTHER cross-origin font file. Google Fonts loads via a CSS
+	#     `<link>` whose URL carries no font extension (caught above);
+	#     a direct `@font-face src: url(https://cdn/x.woff2)` to any host
+	#     does. `font-src 'self'` permits only same-origin fonts, so an
+	#     absolute or protocol-relative URL ending in a font extension is
+	#     a third-party fetch the CSP would block. A self-hosted ref is
+	#     root-relative (`/fonts/x.woff2`) — single leading slash, no
+	#     host — so it can't match the `//host/` form required here.
+	if grep -rInIE "(https?:)?//[A-Za-z0-9_.-]+/[^\"')[:space:]]*\.(woff2?|ttf|otf|eot)\b" "$DIST" >&2; then
+		printf '  Fix: self-host the offending font under public/fonts/ and reference it as /fonts/<file>.\n' >&2
+		lint::fatal "CSP drift: $DIST/ references a cross-origin font file"
+	fi
 else
 	printf '(dist/ not present — skipping post-build checks; run `npm run build` first)\n'
 fi
 
-lint::ok "all referenced fonts ship; no Google Fonts leakage"
+lint::ok "all referenced fonts ship; no cross-origin font leakage"
