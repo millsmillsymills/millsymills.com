@@ -72,9 +72,12 @@ beforeEach(() => {
 });
 
 describe('csp_report handler — method gate', () => {
+	// The method gate sits behind the origin-secret gate, so these events
+	// carry a valid secret to reach the 405 path. A non-POST WITHOUT the
+	// secret is a uniform 403 instead -- covered in the origin-secret block.
 	it('rejects GET with 405 and Allow: POST', async () => {
 		const res = await invoke({
-			headers: { 'content-type': 'application/csp-report' },
+			headers: { 'content-type': 'application/csp-report', 'x-origin-secret': TEST_ORIGIN_SECRET },
 			requestContext: { http: { method: 'GET' } },
 		});
 		expect(res.statusCode).toBe(405);
@@ -85,7 +88,10 @@ describe('csp_report handler — method gate', () => {
 	it('rejects PUT/PATCH/DELETE with 405', async () => {
 		for (const method of ['PUT', 'PATCH', 'DELETE']) {
 			const res = await invoke({
-				headers: { 'content-type': 'application/csp-report' },
+				headers: {
+					'content-type': 'application/csp-report',
+					'x-origin-secret': TEST_ORIGIN_SECRET,
+				},
 				requestContext: { http: { method } },
 			});
 			expect(res.statusCode).toBe(405);
@@ -93,7 +99,9 @@ describe('csp_report handler — method gate', () => {
 	});
 
 	it('treats missing method as non-POST and rejects', async () => {
-		const res = await invoke({});
+		const res = await invoke({
+			headers: { 'x-origin-secret': TEST_ORIGIN_SECRET },
+		});
 		expect(res.statusCode).toBe(405);
 	});
 });
@@ -128,6 +136,21 @@ describe('csp_report handler — origin-secret gate', () => {
 		);
 		expect(res.statusCode).toBe(403);
 		expect(sendMock).not.toHaveBeenCalled();
+	});
+
+	it('returns a uniform 403 (not 405) for a non-POST request lacking the secret', async () => {
+		// The secret gate runs before the method check, so a direct caller
+		// hitting the raw Function URL with the wrong method but no secret
+		// gets 403 -- it can't distinguish a method mismatch from a missing
+		// secret and so can't learn that POST is the expected method.
+		for (const method of ['GET', 'PUT', 'DELETE']) {
+			const res = await invoke({
+				headers: { 'content-type': 'application/csp-report' },
+				requestContext: { http: { method } },
+			});
+			expect(res.statusCode).toBe(403);
+			expect(sendMock).not.toHaveBeenCalled();
+		}
 	});
 });
 
