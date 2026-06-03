@@ -266,6 +266,34 @@ resource "aws_lambda_function_url" "webauthn_demo" {
   authorization_type = "NONE"
 }
 
+# authorization_type = "NONE" only disables IAM auth; Lambda still denies
+# invocation unless a resource-based policy grants it. Since AWS's October
+# 2025 change a Function URL requires BOTH `lambda:InvokeFunctionUrl` (the
+# URL surface) AND `lambda:InvokeFunction` (the underlying invoke) — granting
+# only the first 403s with AccessDeniedException before CloudFront's request
+# ever reaches the x-origin-secret gate. `invoked_via_function_url = true`
+# scopes the principal "*" InvokeFunction grant to URL calls only. Mirrors
+# the csp_report Function URL (see infra/csp_report.tf).
+resource "aws_lambda_permission" "webauthn_demo_public" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.webauthn_demo[0].function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+resource "aws_lambda_permission" "webauthn_demo_public_invoke" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  statement_id             = "FunctionURLAllowPublicInvoke"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.webauthn_demo[0].function_name
+  principal                = "*"
+  invoked_via_function_url = true
+}
+
 output "webauthn_demo_url" {
   description = "Raw Function URL of the WebAuthn demo Lambda. Internal origin only — CloudFront fronts it at https://<domain>/api/passkey/* and the browser never calls this directly. The raw URL is internet-reachable but returns 403 to any request lacking the CloudFront-injected x-origin-secret header. Null on stacks with `enable_webauthn_demo = false`; `terraform output -raw` errors loudly on null, `terraform output -json` returns JSON null."
   value       = var.enable_webauthn_demo ? aws_lambda_function_url.webauthn_demo[0].function_url : null
