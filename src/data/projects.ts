@@ -103,6 +103,16 @@ export const projects: readonly Project[] = [
 			'Flipper Zero MCP server. Protobuf RPC over USB or WiFi; tools for connection health, reconnect, system info.',
 	},
 	{
+		id: 'millsymills-com-org',
+		name: 'millsymills-com-org',
+		tagline: 'GitHub org-as-code — OpenTofu, OIDC, ruleset-as-code',
+		description:
+			'Manages the millsymills-com GitHub org as code with OpenTofu: org and per-repo baselines plus default-branch and tag-protection rulesets, all as reusable modules with native tofu test coverage. PR-driven and OIDC-enforced — plan on PR, scheduled drift detection, apply gated behind a verified-commits check, no long-lived credentials. Ships its own CI security stack: CodeQL, gitleaks, OSSF Scorecard, zizmor, and actionlint.',
+		repo: 'https://github.com/millsymills-com/millsymills-com-org',
+		kind: 'tool',
+		tags: ['terraform', 'opentofu', 'github', 'oidc', 'iac'],
+	},
+	{
 		id: 'millsymills.com',
 		name: 'millsymills.com',
 		tagline: 'this site — portfolio + community template',
