@@ -2,6 +2,21 @@ function handler(event) {
   var req = event.request;
   var uri = req.uri;
 
+  // Framed deep-link: the bare /apps/<assetSlug> URL boots the desktop with
+  // the demo window auto-opened, by 302-ing to the app's canonical permalink
+  // (/unifi/ renders DesktopLayout with initialOpen). Only the bare path and
+  // its trailing-slash form redirect -- /apps/unifi-demo/index.html must fall
+  // through so the desktop window can iframe the raw asset (catching it here
+  // would iframe the whole desktop into itself: infinite recursion).
+  // One embedded demo today; promote to an assetSlug->appId table if more land.
+  if (uri === '/apps/unifi-demo' || uri === '/apps/unifi-demo/') {
+    return {
+      statusCode: 302,
+      statusDescription: 'Found',
+      headers: { location: { value: '/unifi/' } }
+    };
+  }
+
   if (uri.endsWith('/')) {
     req.uri = uri + 'index.html';
   } else if (!uri.split('/').pop().includes('.')) {
