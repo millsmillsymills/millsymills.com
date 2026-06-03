@@ -96,6 +96,9 @@ jobs:
       - name: Assert flag-unlock inline-script CSP hash in sync
         run: ./scripts/assert-flags-init-csp.sh
 
+      - name: Assert no stray inline scripts outside the CSP allowlist
+        run: node scripts/assert-no-stray-inline-scripts.mjs
+
       - name: Assert fonts present + no Google Fonts leakage
         run: ./scripts/assert-fonts-csp.sh
 
