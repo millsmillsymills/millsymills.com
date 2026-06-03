@@ -7,6 +7,7 @@ Personal/portfolio website. Currently hosted on Squarespace; this repo is the re
 - **Frontend**: Astro 6 (static output) — `src/` contains pages and components
 - **Hosting**: AWS S3 + CloudFront + Route53 + ACM — `infra/` contains Terraform
 - **IaC**: Terraform 1.10+
+- **OG share-card rendering**: `@mills/graphics-tools` — a private cross-repo git dependency, SHA-pinned in `package.json` (`github:millsmillsymills/graphics-tools#<sha>`). `src/pages/og/[app].png.ts` is a thin adapter over its `renderCard()`. Bump the pin by editing the `#<sha>` and running `npm install` to refresh the lockfile. Because it's private, CI/deploy fetch it via the `GRAPHICS_TOOLS_READ_TOKEN` secret (see PAT-rotation table).
 
 ## Documented solutions
 
@@ -169,11 +170,12 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
 
 ### Secrets and PAT rotation
 
-Two human-rotated PATs / tokens live outside Terraform:
+Three human-rotated PATs / tokens live outside Terraform:
 
 | Where | Name | Scope | Used by | Rotation |
 |---|---|---|---|---|
 | Production env secret | `BRANCH_PROTECTION_READ_TOKEN` | Fine-grained PAT, this repo only, `Administration: Read` | `deploy.yml` signed-commits drift check | Yearly; on PAT expiry the next deploy fails loudly with HTTP 403 — mint a replacement and re-paste |
+| Repo secret | `GRAPHICS_TOOLS_READ_TOKEN` | Fine-grained PAT, `millsmillsymills/graphics-tools` only, `Contents: Read` | "Authenticate private git dependency" step in `ci.yml` + `deploy.yml` — rewrites the `@mills/graphics-tools` ssh dep to token-https so `npm ci` can fetch it | Yearly; on expiry both CI and deploy fail loudly at the auth step (`GRAPHICS_TOOLS_READ_TOKEN is unset/empty`). Must be a **repo-level** secret so the no-environment `ci.yml` job sees it too |
 | Local shell | `TF_VAR_github_token` (or `gh auth token`) | Whatever your `gh auth login` carries (broad) | `infra/main.tf` GitHub provider for `terraform apply` | When `gh auth status` says expired |
 
 PAT mint flow (BRANCH_PROTECTION_READ_TOKEN):

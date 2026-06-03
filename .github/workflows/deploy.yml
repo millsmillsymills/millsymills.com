@@ -133,6 +133,22 @@ jobs:
           node-version: 22
           cache: npm
 
+      # @mills/graphics-tools is a private cross-repo git dependency; the
+      # lockfile pins it as ssh://. Rewrite to token-authenticated https so
+      # npm ci can fetch it without an SSH key on the runner.
+      - name: Authenticate private git dependency
+        env:
+          GRAPHICS_TOOLS_READ_TOKEN: ${{ secrets.GRAPHICS_TOOLS_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GRAPHICS_TOOLS_READ_TOKEN}" ]; then
+            echo "::error::GRAPHICS_TOOLS_READ_TOKEN is unset/empty — set it as a repo secret (fine-grained PAT, millsmillsymills/graphics-tools, Contents: Read)." >&2
+            exit 1
+          fi
+          git config --global \
+            url."https://x-access-token:${GRAPHICS_TOOLS_READ_TOKEN}@github.com/".insteadOf \
+            "ssh://git@github.com/"
+
       - name: Install dependencies
         run: npm ci
 
