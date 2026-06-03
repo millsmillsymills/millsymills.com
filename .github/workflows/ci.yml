@@ -51,6 +51,11 @@ jobs:
         env:
           GRAPHICS_TOOLS_READ_TOKEN: ${{ secrets.GRAPHICS_TOOLS_READ_TOKEN }}
         run: |
+          set -euo pipefail
+          if [ -z "${GRAPHICS_TOOLS_READ_TOKEN}" ]; then
+            echo "::error::GRAPHICS_TOOLS_READ_TOKEN is unset/empty — set it as a repo secret (fine-grained PAT, millsmillsymills/graphics-tools, Contents: Read)." >&2
+            exit 1
+          fi
           git config --global \
             url."https://x-access-token:${GRAPHICS_TOOLS_READ_TOKEN}@github.com/".insteadOf \
             "ssh://git@github.com/"
