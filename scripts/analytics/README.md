@@ -18,7 +18,7 @@ already exist in S3. Design:
 ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--csv] [--save]
 ```
 
-- `<stack>` — `millsymills` or `p41m0n`.
+- `<stack>` — `millsymills`.
 - `<query-name>` — basename (no `.sql`) of a file under `queries/`. Run with
   just `<stack>` to list the available queries.
 - `[days]` — lookback window. Default `30`. Capped at `90` (current-retention

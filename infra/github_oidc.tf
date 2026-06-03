@@ -11,12 +11,12 @@
 # When a job declares `environment:`, GitHub overrides the OIDC sub
 # claim from the ref form (`repo:owner/name:ref:refs/heads/main`) to
 # the environment form (`repo:owner/name:environment:<env_name>`).
-# Both deploy workflows in this repo target an environment, so the
-# trust policy matches the environment form. The branch is still
-# pinned via `job_workflow_ref` (`@refs/heads/${deploy_branch}`).
-# Surfaced by the p41m0n rehearsal: a ref-form trust policy returned
-# `Not authorized to perform sts:AssumeRoleWithWebIdentity` even when
-# the workflow file and branch were correct.
+# The deploy workflow targets an environment, so the trust policy
+# matches the environment form. The branch is still pinned via
+# `job_workflow_ref` (`@refs/heads/${deploy_branch}`). A ref-form
+# trust policy returned `Not authorized to perform
+# sts:AssumeRoleWithWebIdentity` even when the workflow file and
+# branch were correct, so the environment form is load-bearing.
 #
 # Rotate `var.github_repo`, `var.deploy_branch`, `var.deploy_workflow`,
 # or `var.deploy_environment` if any of those change.

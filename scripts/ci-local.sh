@@ -120,14 +120,14 @@ if ./scripts/tf.sh definitely-not-a-stack plan >/dev/null 2>&1; then
 fi
 # Missing marker (no init yet) must exit 3.
 rm -rf infra/.terraform
-if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
+if ./scripts/tf.sh millsymills plan >/dev/null 2>&1; then
 	printf '\033[1;31m✗ tf.sh did not catch missing init\033[0m\n' >&2
 	exit 1
 fi
 # Wrong-stack marker must exit 4.
 mkdir -p infra/.terraform
-printf 'millsymills\n' > infra/.terraform/.stack
-if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
+printf 'stale-stack\n' > infra/.terraform/.stack
+if ./scripts/tf.sh millsymills plan >/dev/null 2>&1; then
 	printf '\033[1;31m✗ tf.sh did not catch wrong-stack marker\033[0m\n' >&2
 	exit 1
 fi
@@ -137,7 +137,7 @@ fi
 # (no such lock id), masking a real guard regression. Capture stderr into a
 # variable rather than piping so `pipefail` doesn't conflate tf.sh's expected
 # nonzero exit (4) with a pipeline failure.
-unlock_stderr=$(./scripts/tf.sh p41m0n force-unlock fake-id 2>&1 1>/dev/null || true)
+unlock_stderr=$(./scripts/tf.sh millsymills force-unlock fake-id 2>&1 1>/dev/null || true)
 if ! grep -q 'refusing:' <<<"$unlock_stderr"; then
 	printf '\033[1;31m✗ tf.sh did not guard force-unlock against wrong stack\033[0m\n' >&2
 	exit 1
@@ -263,7 +263,7 @@ ok "zizmor (medium+) clean"
 
 section "post-deploy: inspector_tls Function URL 403 (opt-in)"
 # Off by default — requires AWS creds + a deployed stack. Set
-# MMS_SMOKE_STACK=<stack> (e.g. p41m0n) to run after `tf.sh apply`. The
+# MMS_SMOKE_STACK=<stack> (e.g. millsymills) to run after `tf.sh apply`. The
 # OAC + IAM-auth combo on the inspector_tls Lambda Function URL is the
 # load-bearing protection for /api/tls/* (issue #354 / PR #343); the
 # script asserts the raw URL still returns 403 to unsigned requests.

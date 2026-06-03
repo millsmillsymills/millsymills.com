@@ -2,13 +2,13 @@ import type { APIRoute } from 'astro';
 import { pgp } from '../../data/pgp';
 
 // RFC 9116 security.txt — served from /.well-known/security.txt.
-// All URLs derive from Astro.site so the file works across prod + rehearsal
-// stacks (millsymills.com + p41m0n.com) without hardcoding.
+// All URLs derive from Astro.site so the file stays correct without
+// hardcoding the canonical domain.
 
 export const GET: APIRoute = ({ site }) => {
 	const origin = (site?.origin ?? 'https://millsymills.com').replace(/\/$/, '');
-	// Derive Contact email domain from origin so rehearsal builds don't emit
-	// a mixed-domain doc (Canonical: p41m0n.com, Contact: millsymills.com).
+	// Derive the Contact email domain from the origin so the doc never
+	// emits a mixed-domain pair (Canonical vs Contact on different hosts).
 	const hostname = new URL(origin).hostname;
 
 	// 12 months out from build time — use Date.UTC to avoid local-timezone drift

@@ -56,7 +56,7 @@ github_repo = "owner/repo"
 
 # ProtonMail DKIM selectors are public-by-virtue-of-DNS, not secret.
 # They live in the committed `infra/stacks/<stack>.tfvars` (see
-# `p41m0n.tfvars` for the existing pattern). Do not duplicate here.
+# `millsymills.tfvars` for the existing pattern). Do not duplicate here.
 
 # Mailbox / alias that receives DMARC aggregate reports. Leave blank
 # to default to `dmarc@<var.domain>`.

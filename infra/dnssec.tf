@@ -11,7 +11,7 @@
 #   2. dig +dnssec @ns-XXX.awsdns-XX.com ${var.domain}
 #                             confirm RRSIGs present at the AWS side
 #   3. Paste `terraform output -raw dnssec_ds_record` into registrar
-#                             (Squarespace for millsymills, Gandi for p41m0n)
+#                             (Squarespace for millsymills)
 #   4. Wait for parent-zone TTL (.com is ~24-48h)
 #   5. https://dnsviz.net/d/${var.domain}/dnssec/
 #                             confirm green (no warnings)
@@ -267,8 +267,7 @@ resource "aws_route53_hosted_zone_dnssec" "site" {
 #     aws_route53_key_signing_key.ksk
 #
 # Then `terraform apply` — should be a no-op diff since the
-# resource state matches the file. Repeat per stack (millsymills,
-# p41m0n).
+# resource state matches the file.
 #
 # Apply cost: ~$1/month while the second KMS key is active. Free
 # while commented out.

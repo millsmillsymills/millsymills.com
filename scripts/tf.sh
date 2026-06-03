@@ -3,7 +3,7 @@
 # Stack-aware Terraform wrapper. Usage:
 #   ./scripts/tf.sh <stack> <terraform-args...>
 #
-# Valid stacks: millsymills, p41m0n.
+# Valid stacks: millsymills.
 # The wrapper enforces:
 #   - per-stack backend-config at init
 #   - per-stack -var-file on plan/apply/destroy/refresh
@@ -17,9 +17,9 @@ STACK="${1:-}"
 shift || true
 
 case "$STACK" in
-	millsymills|p41m0n) ;;
+	millsymills) ;;
 	*)
-		printf '\033[1;31mrefusing: stack must be one of [millsymills, p41m0n], got %q\033[0m\n' "$STACK" >&2
+		printf '\033[1;31mrefusing: stack must be one of [millsymills], got %q\033[0m\n' "$STACK" >&2
 		exit 2
 		;;
 esac
@@ -65,41 +65,18 @@ case "$SUBCMD" in
 		;;
 	plan|apply|destroy|refresh)
 		stale_state_guard
-		# Per-stack secrets file. Listed LAST so it overrides any matching
-		# key from `stacks/${STACK}.tfvars` and from the auto-loaded root
-		# `infra/terraform.tfvars` (terraform applies `-var-file` flags in
-		# CLI order, last write wins).
-		#
-		# Stacks in `secrets_required_stacks` MUST have the file present.
-		# For those stacks, the file is the only configured source of
-		# `protonmail_verification_token`; a missing file would silently
-		# fall back to the empty default (apply tears down live Proton
-		# DNS records) OR to the auto-loaded root `infra/terraform.tfvars`
-		# (apply rewrites the verification TXT with another stack's token,
-		# breaking Proton domain verification). Both are silent and
-		# destructive — refuse to plan/apply instead.
-		secrets_required_stacks=(p41m0n)
+		# Per-stack secrets file (gitignored). Listed LAST so it overrides any
+		# matching key from `stacks/${STACK}.tfvars` and from the auto-loaded
+		# root `infra/terraform.tfvars` (terraform applies `-var-file` flags in
+		# CLI order, last write wins). Optional: load it when present, else
+		# plan/apply with the committed tfvars alone.
 		secrets_file="infra/stacks/${STACK}.secrets.tfvars"
-		secrets_required=false
-		for s in "${secrets_required_stacks[@]}"; do
-			[[ "$s" == "$STACK" ]] && secrets_required=true
-		done
 		if [[ -f "$secrets_file" ]]; then
 			if [[ ! -r "$secrets_file" ]]; then
 				printf '\033[1;31mrefusing: %s exists but is not readable\033[0m\n' "$secrets_file" >&2
 				exit 5
 			fi
 			terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" -var-file="stacks/${STACK}.secrets.tfvars" "${@:2}"
-		elif [[ "$secrets_required" == true ]]; then
-			cat >&2 <<-ERR
-				$(printf '\033[1;31m')refusing: $secrets_file missing.$(printf '\033[0m')
-				Stack $STACK requires it as the source of \`protonmail_verification_token\`.
-				Without it, apply would either tear down live Proton DNS records (empty token
-				falls through to the default) or rewrite the verification TXT with another
-				stack's token (auto-loaded \`infra/terraform.tfvars\` leaks across stacks).
-				Create the file with the stack's Proton domain-verification token, then retry.
-			ERR
-			exit 5
 		else
 			terraform -chdir=infra "$SUBCMD" -var-file="stacks/${STACK}.tfvars" "${@:2}"
 		fi

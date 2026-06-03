@@ -6,7 +6,6 @@
 # computes the DS internally). The `terraform output -raw
 # dnssec_ds_record` value matches Gandi's computed digest exactly,
 # but is for parent-zone verification only, not direct submission.
-# Surfaced by the p41m0n rehearsal.
 #
 # Usage:
 #   GANDI_API_KEY=... ./scripts/gandi-submit-ds.sh <fqdn> <stack>
