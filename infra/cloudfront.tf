@@ -706,6 +706,10 @@ resource "aws_cloudfront_distribution" "site" {
   dynamic "ordered_cache_behavior" {
     for_each = var.enable_webauthn_demo ? [1] : []
     content {
+      # MUST stay in sync with ROUTE_PREFIX in
+      # infra/lambdas/webauthn_demo/index.mjs — the handler strips this
+      # prefix to map onto its route table; drift silently 404s every
+      # forwarded request.
       path_pattern           = "/api/passkey/*"
       target_origin_id       = "lambda-${local.webauthn_demo_name}"
       allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]

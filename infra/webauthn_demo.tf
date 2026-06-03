@@ -418,6 +418,31 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_session_miss" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
+# Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` on the
+# 403 origin-secret gate. Every legitimate request arrives via CloudFront
+# carrying the injected x-origin-secret, so a mismatch means a caller found
+# the raw *.lambda-url host and is hitting it directly. Sustained volume is
+# the direct-call brute-force signal; Lambda's built-in Errors metric only
+# counts uncaught exceptions, not handler-returned 403s. Same 50/5min
+# tolerance as SessionMiss — a stray scanner won't page, sustained probing
+# will.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_origin_secret_mismatch" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  alarm_name          = "${local.webauthn_demo_name}-origin-secret-mismatch"
+  alarm_description   = "webauthn_demo rejected requests lacking CloudFront's x-origin-secret at a sustained rate. A caller is hitting the raw Function URL directly — check request volume on the *.lambda-url host."
+  namespace           = "MillsymillsCom/WebauthnDemo"
+  metric_name         = "OriginSecretMismatch"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 50
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
+}
+
 # Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` on
 # the GENUINE-regression branch of updateCredentialCounter's catch only
 # (TTL race + counter=0 deliberately don't emit so this alarm reflects

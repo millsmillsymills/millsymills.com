@@ -63,6 +63,9 @@ const ORIGIN_SECRET_BYTES = Buffer.from(requireEnv('ORIGIN_SECRET'), 'utf-8');
 // URL receives that full path. Strip the prefix so the route table keys
 // (/registration/options, …) match whether the request arrives via
 // CloudFront (prefixed) or a direct test/rehearsal call (unprefixed).
+// MUST stay in sync with the CloudFront cache behavior's path_pattern in
+// infra/cloudfront.tf ("/api/passkey/*") — if one moves, the other must
+// too or every CloudFront-forwarded request silently 404s.
 const ROUTE_PREFIX = '/api/passkey';
 
 const RP_NAME = 'millsymills passkey demo';
@@ -202,6 +205,32 @@ function parseBody(event) {
 		const wrapped = new Error('body is not valid JSON');
 		wrapped.statusCode = 400;
 		throw wrapped;
+	}
+}
+
+// EMF metric for the origin-secret-mismatch alarm in webauthn_demo.tf.
+// Fired on the 403 gate when a request reaches the raw Function URL
+// without CloudFront's injected x-origin-secret. Sustained volume is the
+// direct-call brute-force signal; like SessionMiss, Lambda's built-in
+// Errors metric can't see a handler-returned 403. Wrapped so a
+// stringify/log failure can't turn the gate into an uncaught exception.
+function emitOriginSecretMismatchMetric() {
+	try {
+		console.warn(JSON.stringify({
+			_aws: {
+				Timestamp: Date.now(),
+				CloudWatchMetrics: [{
+					Namespace: 'MillsymillsCom/WebauthnDemo',
+					Dimensions: [[]],
+					Metrics: [{ Name: 'OriginSecretMismatch', Unit: 'Count' }],
+				}],
+			},
+			level: 'warn',
+			msg: 'webauthn-demo origin-secret mismatch',
+			OriginSecretMismatch: 1,
+		}));
+	} catch (emfErr) {
+		console.error('emf emit failed', { err: emfErr?.message });
 	}
 }
 
@@ -467,8 +496,11 @@ async function registrationVerifyHandler(body) {
 	return jsonResponse(200, { verified: true, userHandle: session.userHandle });
 }
 
-async function authenticationOptionsHandler(body) {
-	const { userHandle } = body;
+async function authenticationOptionsHandler() {
+	// Discoverable credentials (allowCredentials: []) — the authenticator
+	// surfaces which credential to use, so no caller-supplied userHandle is
+	// needed here. The verified userHandle comes from the stored credential
+	// looked up by response.id in authenticationVerifyHandler.
 	const options = await generateAuthenticationOptions({
 		rpID: RP_ID,
 		userVerification: 'preferred',
@@ -479,7 +511,6 @@ async function authenticationOptionsHandler(body) {
 	await putSession(sessionId, {
 		type: 'authentication',
 		challenge: options.challenge,
-		userHandle: typeof userHandle === 'string' ? userHandle : '',
 	});
 
 	return jsonResponse(200, { sessionId, options });
@@ -589,6 +620,15 @@ export const handler = async (event) => {
 	// a direct caller can't tell a method mismatch (405) from a missing secret
 	// and so can't learn that POST is the expected method.
 	if (!secretMatches(header(event?.headers, 'x-origin-secret'))) {
+		// Direct-to-Function-URL probing is the signal this logs/meters:
+		// every legitimate request arrives via CloudFront with the secret,
+		// so a mismatch means someone found the raw *.lambda-url host and
+		// is calling it directly. Mirrors csp_report's logged rejection.
+		console.warn(JSON.stringify({
+			level: 'warn',
+			msg: 'webauthn-demo origin-secret mismatch',
+		}));
+		emitOriginSecretMismatchMetric();
 		return { statusCode: 403, body: '' };
 	}
 
