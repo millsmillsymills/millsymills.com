@@ -5,9 +5,9 @@
 
 ## Why
 
-The cutover is open (project memory note `project_deploy_scope.md`, dated 2026-05-12) and the DNS half of the migration already landed. `millsymills.com` is currently in the "safe pre-Proton" posture: `MX 0 .`, `v=spf1 -all`, `p=reject`. That posture is correct as a holding state but it's a no-mail state — the domain has no usable inbox. Activating Proton finishes the cutover and validates the runbook in `CLAUDE.md` against the real domain (the [p41m0n rehearsal spec](./2026-05-01-p41m0n-proton-mail-migration-design.md) proved the basic Proton activation against a low-traffic domain; this cycle repeats it against production and adds MTA-STS).
+The cutover is open (project memory note `project_deploy_scope.md`, dated 2026-05-12) and the DNS half of the migration already landed. `millsymills.com` is currently in the "safe pre-Proton" posture: `MX 0 .`, `v=spf1 -all`, `p=reject`. That posture is correct as a holding state but it's a no-mail state — the domain has no usable inbox. Activating Proton finishes the cutover and validates the runbook in `CLAUDE.md` against the real domain, and adds MTA-STS.
 
-Coupling MTA-STS testing into this PR is cheap because the infra already exists in `infra/mta_sts.tf` and is already running in testing mode on the p41m0n rehearsal stack (CLAUDE.md § "MTA-STS rollout" — Phase 1). millsymills is the Phase 2 promotion: same module, same Astro page, only the per-stack tfvars flip. Reversal in testing mode is free.
+Coupling MTA-STS testing into this PR is cheap because the infra already exists in `infra/mta_sts.tf` (CLAUDE.md § "MTA-STS rollout"). millsymills picks it up by flipping the per-stack tfvars; same module, same Astro page. Reversal in testing mode is free.
 
 Coupling the `security.txt` + `/security/` updates into this PR preserves the project invariant that every claim on `/security/` cites the implementation (`CLAUDE.md` § "Security controls"). Leaving the page claiming "MTA-STS roadmap" after MTA-STS ships, or leaving `security.txt` Contact pointing at `mills@` after `security@` becomes a routable alias, is exactly the drift the project explicitly disallows.
 
@@ -23,9 +23,9 @@ Probed via `dig @8.8.8.8` and the Proton MCP server:
   - `default._bimi` `TXT` = `v=BIMI1; l=https://millsymills.com/bimi/logo.svg`.
   - DNSSEC chain live (parent DS lodged at registrar).
 - **Proton account `overm1nd@pm.me`:**
-  - Three existing addresses: `overm1nd@pm.me`, `overm1nd@protonmail.com`, `mills@p41m0n.com`.
+  - Three existing addresses: `overm1nd@pm.me`, `overm1nd@protonmail.com`, and an existing custom-domain address.
   - Storage usage ~91 MiB of 510 GiB.
-  - Plan does not grant the `organization` API scope (probed by `proton_list_custom_domains` returning HTTP 403 `MissingScopes: organization`). This is an individual paid plan, not Business. Single-domain provisioning still works (proven by `mills@p41m0n.com`).
+  - Plan does not grant the `organization` API scope (probed by `proton_list_custom_domains` returning HTTP 403 `MissingScopes: organization`). This is an individual paid plan, not Business. Single-domain provisioning still works (proven by the existing custom-domain address).
 - **Terraform scaffold for `millsymills.com` stack:** `infra/email.tf` and `infra/mta_sts.tf` already implement every record this spec needs; only `infra/stacks/millsymills.tfvars` values change. `enable_mta_sts` defaults to `false` and is currently false for mills.
 - **Site code:**
   - `src/pages/.well-known/security.txt.ts` line 22 emits `Contact: mailto:mills@${hostname}` (i.e., `mailto:mills@millsymills.com` on prod).
@@ -180,7 +180,7 @@ No calendar date is set here. File a follow-up issue when TLS-RPT data warrants 
 
 ## Tooling caveats
 
-- **Proton MCP scope.** `proton_list_custom_domains` returns HTTP 403 `MissingScopes: organization` on this account — the `organization` scope is a Business-tier feature. Individual-tier calls (`proton_add_custom_domain`, `proton_create_address`, `proton_set_catchall`) appear to work (proven by the existing `mills@p41m0n.com` address on the same account, and by `proton_list_addresses` which succeeds). The plan: attempt each MCP call in Stage 2; on `MissingScopes` failure, fall back to web UI for that specific operation and continue. Document any MCP failures in the implementation plan's verification step so a fix can be filed against `protonmail-mcp`.
+- **Proton MCP scope.** `proton_list_custom_domains` returns HTTP 403 `MissingScopes: organization` on this account — the `organization` scope is a Business-tier feature. Individual-tier calls (`proton_add_custom_domain`, `proton_create_address`, `proton_set_catchall`) appear to work (proven by the existing custom-domain address on the same account, and by `proton_list_addresses` which succeeds). The plan: attempt each MCP call in Stage 2; on `MissingScopes` failure, fall back to web UI for that specific operation and continue. Document any MCP failures in the implementation plan's verification step so a fix can be filed against `protonmail-mcp`.
 - **Address-count ceiling.** Account currently has 3 addresses. This PR adds 7 more for a total of 10. Proton Mail Plus caps at 10 addresses; Unlimited / Family / Business support more. Confirm the plan tier before Stage 2 begins; if at the ceiling, either prune (fold `hello@` and / or `postmaster@`/`abuse@` into the catchall) or upgrade plan.
 - **Verification token leakage.** The verification TXT is publicly visible in DNS (`dig TXT millsymills.com`) once Stage 1 lands — that's by design. The token itself is not a credential; it only proves DNS control to Proton during the verification window. Still, do not commit the live token to `infra/stacks/millsymills.tfvars` (which is in git); use environment-variable override or a gitignored `terraform.tfvars` overlay.
 - **STS-token expiry during apply.** Stage 1 and Stage 3 applies are short (~1–2 min each) so the STS-token-expiry gotcha from the migration runbook (CLAUDE.md step 5) is unlikely to bite — but the recovery path (`tf force-unlock`, re-export creds, re-run) still applies if it does.
@@ -198,5 +198,3 @@ None at spec time. All decisions made in brainstorming.
 - `src/pages/.well-known/security.txt.ts` — security.txt source.
 - `src/pages/.well-known/mta-sts.txt.ts` — MTA-STS policy file source.
 - `src/data/security-controls.ts` — `/security/` page source of truth.
-- [`docs/superpowers/specs/2026-05-01-p41m0n-proton-mail-migration-design.md`](./2026-05-01-p41m0n-proton-mail-migration-design.md) — prior rehearsal spec.
-- [`docs/superpowers/specs/2026-04-19-p41m0n-dress-rehearsal-design.md`](./2026-04-19-p41m0n-dress-rehearsal-design.md) — original rehearsal plan.

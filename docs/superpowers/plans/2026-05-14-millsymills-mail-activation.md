@@ -28,12 +28,12 @@ proton_whoami
 proton_list_addresses
 ```
 
-Expected: `name=overm1nd`, `max_space_bytes >= 5e10` (50+ GiB indicates paid plan, not Free), and an `addresses` list with three entries (`overm1nd@pm.me`, `overm1nd@protonmail.com`, `mills@p41m0n.com`).
+Expected: `name=overm1nd`, `max_space_bytes >= 5e10` (50+ GiB indicates paid plan, not Free), and an `addresses` list with three entries (`overm1nd@pm.me`, `overm1nd@protonmail.com`, and an existing custom-domain address).
 
 - [ ] **Step 2: Confirm plan ceiling is ≥10 addresses**
 
 The MCP cannot read plan tier directly (`organization` scope unavailable). Decide based on observed capacity:
-- If account has been adding addresses freely (e.g. `mills@p41m0n.com` exists alongside two stock ones) and storage shows the high-tier `547608330240` bytes (~510 GiB), the plan is Unlimited or Family — supports 15 addresses for Unlimited, 90 for Family. Proceed.
+- If account has been adding addresses freely (e.g. an existing custom-domain address exists alongside two stock ones) and storage shows the high-tier `547608330240` bytes (~510 GiB), the plan is Unlimited or Family — supports 15 addresses for Unlimited, 90 for Family. Proceed.
 - If unsure: log into `account.proton.me` → Settings → Plans, confirm "Mail Plus" shows 10 addresses (would be at ceiling after this work) vs "Unlimited" / "Family" / "Visionary" (plenty of headroom).
 
 Decision rule: if Mail Plus, choose ONE of the following before continuing:
@@ -238,14 +238,14 @@ Proton shows three rows, one per selector (`protonmail`, `protonmail2`, `protonm
 
 Copy each target verbatim — including the trailing dot — into a scratch file. Format must end with `.domains.proton.ch.` (no path, no `https://`).
 
-Compare format against the p41m0n example for sanity:
+Compare format against this shape for sanity:
 ```
 protonmail  = "protonmail.domainkey.<id>.domains.proton.ch."
 protonmail2 = "protonmail2.domainkey.<id>.domains.proton.ch."
 protonmail3 = "protonmail3.domainkey.<id>.domains.proton.ch."
 ```
 
-The `<id>` segment will be a unique 22-char alphanumeric token specific to this domain (different from p41m0n's).
+The `<id>` segment will be a unique 22-char alphanumeric token specific to this domain.
 
 - [ ] **Step 3: No commit**
 
@@ -360,10 +360,9 @@ protonmail_dkim_selectors = {
   protonmail3 = "<paste-protonmail3-target-from-task-6>"
 }
 
-# Phase 2 MTA-STS promotion to production stack per #134. p41m0n is
-# Phase 1 (rehearsal); millsymills picks up the same policy file
-# (src/pages/.well-known/mta-sts.txt.ts, mode: testing) by flipping
-# the per-stack discovery-TXT switch.
+# MTA-STS promotion to the production stack per #134. millsymills
+# picks up the policy file (src/pages/.well-known/mta-sts.txt.ts,
+# mode: testing) by flipping the per-stack discovery-TXT switch.
 enable_mta_sts = true
 mta_sts_id     = "20260514000000"
 ```
@@ -490,7 +489,7 @@ Replace with:
 		`Contact: mailto:security@${hostname}`,
 ```
 
-This works for both stacks because `hostname` derives from `Astro.site` — rehearsal builds emit `security@p41m0n.com` (which is a separate question; if p41m0n doesn't have `security@` aliased, file a follow-up — out of scope here).
+`hostname` derives from `Astro.site`, so the production build emits `security@millsymills.com`.
 
 - [ ] **Step 2: Typecheck**
 
@@ -578,7 +577,7 @@ After:
 
 Also update `code:` to include both stack tfvars:
 ```typescript
-		code: ['infra/email.tf', 'infra/stacks/millsymills.tfvars', 'infra/stacks/p41m0n.tfvars'],
+		code: ['infra/email.tf', 'infra/stacks/millsymills.tfvars'],
 ```
 
 - [ ] **Step 4: Update the `dmarc` entry tradeoffs**
@@ -618,7 +617,7 @@ Before:
 		status: 'roadmap',
 		what: 'Publishes `_mta-sts.<domain> TXT "v=STSv1; id=…"` and serves a policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt` listing the Proton MX hosts as the only valid SMTP endpoints. Sending MTAs that respect MTA-STS upgrade opportunistic TLS to enforced TLS for inbound mail.',
 		why: 'MTA-STS blocks passive downgrade attacks on inbound SMTP that DNSSEC + DANE alone don\'t cover for senders that don\'t implement DANE (most large providers ship MTA-STS; DANE adoption is narrower). Visible control that peer MTAs can observe via HTTPS, complementing the DNSSEC-rooted DANE chain.',
-		tradeoffs: 'Phase 1 ships `mode: testing` on the rehearsal stack (`p41m0n.com`) so senders log policy mismatches via TLS-RPT but still deliver; reversible. Phase 2 promotes to `mode: enforce` after 2-4 weeks of clean TLS-RPT reports show `policy-type: sts`, and to `millsymills.com` after the cutover. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
+		tradeoffs: 'Ships `mode: testing` so senders log policy mismatches via TLS-RPT but still deliver; reversible. Promotes to `mode: enforce` after 2-4 weeks of clean TLS-RPT reports show `policy-type: sts`. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
 		code: ['infra/mta_sts.tf', 'src/pages/.well-known/mta-sts.txt.ts'],
 ```
 
@@ -627,8 +626,8 @@ After:
 		status: 'shipped',
 		what: 'Publishes `_mta-sts.<domain> TXT "v=STSv1; id=…"` and serves a policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt` listing the Proton MX hosts as the only valid SMTP endpoints. Sending MTAs that respect MTA-STS upgrade opportunistic TLS to enforced TLS for inbound mail.',
 		why: 'MTA-STS blocks passive downgrade attacks on inbound SMTP that DNSSEC + DANE alone don\'t cover for senders that don\'t implement DANE (most large providers ship MTA-STS; DANE adoption is narrower). Visible control that peer MTAs can observe via HTTPS, complementing the DNSSEC-rooted DANE chain.',
-		tradeoffs: 'Currently in `mode: testing` (`max_age: 86400`) on both stacks: senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Promotion to `mode: enforce` follows 2-4 weeks of clean TLS-RPT reports showing `policy-type: sts` — see `docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md` § Future. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
-		code: ['infra/mta_sts.tf', 'infra/stacks/millsymills.tfvars', 'infra/stacks/p41m0n.tfvars', 'src/pages/.well-known/mta-sts.txt.ts'],
+		tradeoffs: 'Currently in `mode: testing` (`max_age: 86400`): senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Promotion to `mode: enforce` follows 2-4 weeks of clean TLS-RPT reports showing `policy-type: sts` — see `docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md` § Future. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
+		code: ['infra/mta_sts.tf', 'infra/stacks/millsymills.tfvars', 'src/pages/.well-known/mta-sts.txt.ts'],
 ```
 
 - [ ] **Step 7: Typecheck**
@@ -702,9 +701,8 @@ CNAME targets and flips enable_mta_sts=true so the _mta-sts
 discovery TXT publishes. MX + SPF + verification TXT were flipped
 in Stage 1 via TF_VAR_protonmail_verification_token (not committed).
 
-Phase 2 of MTA-STS rollout per #134 — same policy file as p41m0n
-(testing mode, 24h max_age). Promotion to enforce gated on 2-4
-weeks of clean TLS-RPT.
+MTA-STS rollout per #134 (testing mode, 24h max_age). Promotion
+to enforce gated on 2-4 weeks of clean TLS-RPT.
 
 See docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md.
 

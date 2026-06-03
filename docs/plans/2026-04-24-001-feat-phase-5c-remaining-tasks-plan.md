@@ -70,7 +70,7 @@ plan steps.
 ### Relevant Code and Patterns
 
 - **PGP data:** `src/data/pgp.ts` — single source of truth, 23 lines, well-shaped already. Consumers: `src/components/desktop/apps/About.astro`, `src/components/desktop/apps/Mail.astro`, `src/scripts/terminal/commands/basic.ts` (`pubkey`), `src/pages/.well-known/security.txt.ts`
-- **CI guards:** `scripts/ci-local.sh` already runs `assert-no-url-leakage.sh`, `assert-icon-assets-exist.sh`, `assert-no-rehearsal-leakage.sh` — there is a clear pattern for adding new assert scripts. New PGP consistency check (#152) follows the same shape
+- **CI guards:** `scripts/ci-local.sh` already runs `assert-no-url-leakage.sh`, `assert-icon-assets-exist.sh` — there is a clear pattern for adding new assert scripts. New PGP consistency check (#152) follows the same shape
 - **Build-time secrets/derived values:** `astro.config.mjs` reads `PUBLIC_GIT_SHA` via `execFileSync` (no shell) and exposes via Vite `define`. Same machinery is used for `PUBLIC_GIT_LOG` (built for vscode SCM panel #180). Pattern is well-established
 - **Vite snippet scrubber:** `astro.config.mjs:57-74` has `scrubVscodeSnippets` plugin with hardcoded `snippetTargets` list — #161 unifies this with `src/scripts/vscode/file-tree.ts` `?raw` imports
 - **Design tokens:** `src/styles/desktop.css :root` defines neon-noir tokens (`--ink-primary`, `--bg-edge`, `--bg-raised`, `--bg-void`, `--neon-pink-*`, `--neon-cyan`, `--neon-lilac`). Legacy aliases (`--ink`, `--cream`, `--pink-*`) still work but are repointed; #162 finishes the migration in `src/styles/vscode.css`
@@ -440,7 +440,6 @@ plan steps.
 
 **Patterns to follow:**
 - `.github/workflows/deploy.yml` — the build + deploy step shape, OIDC `AssumeRoleWithWebIdentity`, the `production` environment.
-- `.github/workflows/deploy-rehearsal.yml` — the parallel-workflow-pinned-to-different-stack pattern.
 
 **Test scenarios:**
 - Happy path: manually triggering `scheduled-rebuild.yml` via `workflow_dispatch` produces a successful build, sync, and CloudFront invalidation.

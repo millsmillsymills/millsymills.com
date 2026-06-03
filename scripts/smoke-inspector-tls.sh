@@ -10,7 +10,7 @@
 #
 # Usage:
 #   ./scripts/smoke-inspector-tls.sh <stack>
-#   # e.g. ./scripts/smoke-inspector-tls.sh p41m0n
+#   # e.g. ./scripts/smoke-inspector-tls.sh millsymills
 #
 # Requires: aws CLI configured for the target account, curl.
 # Resolves the Lambda function name from `var.domain` exactly the way

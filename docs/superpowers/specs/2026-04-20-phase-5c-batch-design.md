@@ -535,5 +535,5 @@ None.
 
 ## Related
 
-- Existing spec patterns: `docs/superpowers/specs/2026-04-19-p41m0n-dress-rehearsal-design.md`, `docs/superpowers/specs/2026-04-20-clippy-companion-design.md`, `docs/superpowers/specs/2026-04-20-icon-pack-wire-up-design.md`
+- Existing spec patterns: `docs/superpowers/specs/2026-04-20-clippy-companion-design.md`, `docs/superpowers/specs/2026-04-20-icon-pack-wire-up-design.md`
 - Issues: #41, #42, #43, #44, #45

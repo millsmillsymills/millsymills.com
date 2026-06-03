@@ -6,9 +6,8 @@ Date: 2026-05-17
 ## Goal
 
 Give the operator a way to answer ordinary "who's hitting what" questions
-about millsymills.com (and the p41m0n rehearsal stack while it still exists)
-without breaking the published privacy claim that the site ships no
-analytics beacon, no third-party scripts, and no cookies.
+about millsymills.com without breaking the published privacy claim that the
+site ships no analytics beacon, no third-party scripts, and no cookies.
 
 Concrete questions the tool should answer cheaply:
 
@@ -102,9 +101,9 @@ Single entry point. Stack-aware, matching the convention from
 ./scripts/analytics/run.sh <stack> <query-name> [days=30]
 ```
 
-- `<stack>` — `millsymills` or `p41m0n`. Maps to the bucket
-  `<domain>-logs` and the corresponding `.tfvars`-derived domain. The
-  script refuses any other value, same posture as `tf.sh`.
+- `<stack>` — `millsymills`. Maps to the bucket `<domain>-logs` and the
+  corresponding `.tfvars`-derived domain. The script refuses any other
+  value, same posture as `tf.sh`.
 - `<query-name>` — basename (no `.sql`) of a file in
   `scripts/analytics/queries/`. Lists available queries when called with
   no `<query-name>` argument or with `--help`.
@@ -245,13 +244,11 @@ of the tool:
 1. Run `./scripts/analytics/run.sh millsymills top-urls 30` against
    prod. Output is a sensible table with the homepage at or near the
    top.
-2. Run the same against `p41m0n` for completeness. Confirm the
-   stack-routing logic works even if traffic is sparse.
-3. Verify partition pruning is happening: a 7-day query reads
+2. Verify partition pruning is happening: a 7-day query reads
    substantially less from S3 than a 90-day one. Spot-check via
    DuckDB's `EXPLAIN` output or `aws cloudwatch get-metric-statistics`
    on `BytesDownloaded` for the logs bucket.
-4. `shellcheck`, `shfmt`, and the `--lint` self-check all pass in
+3. `shellcheck`, `shfmt`, and the `--lint` self-check all pass in
    `ci-local.sh`.
 
 ## Out of scope (deferred until needed)
@@ -282,7 +279,6 @@ None at design time. Resolved during brainstorming:
 
 - Architectural boundary for Cloudflare adoption → AWS-only.
 - Analytics vs. privacy claim → preserve the claim; skip CF Analytics.
-- Stack scope → both stacks supported by the script via the
-  `<stack>` argument.
+- Stack scope → selected by the script via the `<stack>` argument.
 - Geo enrichment → skip in v1.
 - Cloudflare protections issue → dropped.

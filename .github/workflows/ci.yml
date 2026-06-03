@@ -163,7 +163,7 @@ jobs:
       - name: tf.sh refuses missing init
         run: |
           rm -rf infra/.terraform
-          if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
+          if ./scripts/tf.sh millsymills plan >/dev/null 2>&1; then
             echo "tf.sh did not catch missing init" >&2
             exit 1
           fi
@@ -171,8 +171,8 @@ jobs:
       - name: tf.sh refuses wrong-stack marker
         run: |
           mkdir -p infra/.terraform
-          printf 'millsymills\n' > infra/.terraform/.stack
-          if ./scripts/tf.sh p41m0n plan >/dev/null 2>&1; then
+          printf 'stale-stack\n' > infra/.terraform/.stack
+          if ./scripts/tf.sh millsymills plan >/dev/null 2>&1; then
             echo "tf.sh did not catch wrong-stack marker" >&2
             rm -rf infra/.terraform
             exit 1
@@ -183,7 +183,10 @@ jobs:
         run: |
           # Capture stderr separately so pipefail doesn't conflate
           # tf.sh's expected nonzero exit (4) with a pipeline failure.
-          unlock_stderr=$(./scripts/tf.sh p41m0n force-unlock fake-id 2>&1 1>/dev/null || true)
+          mkdir -p infra/.terraform
+          printf 'stale-stack\n' > infra/.terraform/.stack
+          unlock_stderr=$(./scripts/tf.sh millsymills force-unlock fake-id 2>&1 1>/dev/null || true)
+          rm -rf infra/.terraform
           if ! grep -q 'refusing:' <<<"$unlock_stderr"; then
             echo "tf.sh did not guard force-unlock against wrong stack" >&2
             exit 1

@@ -226,7 +226,7 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'Three CNAMEs at `<selector>._domainkey.<domain>` (selectors `protonmail`, `protonmail2`, `protonmail3`) point at Proton-hosted DKIM keys. CNAMEs are gated on `proton_enabled` (derived from `protonmail_verification_token`) so an apply without the verification token tears them down alongside the MX/SPF flip — never orphaned.',
 		why: 'Aligned DKIM is half of the DMARC strict-reject contract: receivers verify the message signature against a key Proton publishes, and the `d=` domain alignment prevents replay against unrelated senders. Three selectors give Proton room to rotate keys without breaking signing.',
 		tradeoffs: 'CNAME targets carry the Proton tenant identifier in the public DNS — anyone correlating DKIM CNAMEs across domains can see they share a Proton account. Acceptable for a single-operator portfolio.',
-		code: ['infra/email.tf', 'infra/stacks/millsymills.tfvars', 'infra/stacks/p41m0n.tfvars'],
+		code: ['infra/email.tf', 'infra/stacks/millsymills.tfvars'],
 	},
 	{
 		id: 'dmarc',
@@ -256,7 +256,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Publishes `_mta-sts.<domain> TXT "v=STSv1; id=…"` and serves a policy at `https://mta-sts.<domain>/.well-known/mta-sts.txt` listing the Proton MX hosts as the only valid SMTP endpoints. Sending MTAs that respect MTA-STS upgrade opportunistic TLS to enforced TLS for inbound mail.',
 		why: 'MTA-STS blocks passive downgrade attacks on inbound SMTP that DNSSEC + DANE alone don\'t cover for senders that don\'t implement DANE (most large providers ship MTA-STS; DANE adoption is narrower). Visible control that peer MTAs can observe via HTTPS, complementing the DNSSEC-rooted DANE chain.',
-		tradeoffs: 'Currently in `mode: testing` (`max_age: 604800`, RFC 8461 §3.2 SHOULD floor) on millsymills.com (the only stack with MTA-STS enabled after the p41m0n teardown): senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Promotion to `mode: enforce` follows 2-4 weeks of clean TLS-RPT reports showing `policy-type: sts` — see `docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md` § Future. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
+		tradeoffs: 'Currently in `mode: testing` (`max_age: 604800`, RFC 8461 §3.2 SHOULD floor) on millsymills.com: senders log policy mismatches via TLS-RPT but still deliver, so the rollout is reversible. Promotion to `mode: enforce` follows 2-4 weeks of clean TLS-RPT reports showing `policy-type: sts` — see `docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md` § Future. Reversal in enforce mode is asymmetric: publish `mode: none` AND wait `max_age` BEFORE removing the discovery TXT, otherwise enforcing senders refuse delivery during the rollback window.',
 		code: ['infra/mta_sts.tf', 'infra/stacks/millsymills.tfvars', 'src/pages/.well-known/mta-sts.txt.ts'],
 	},
 	{
@@ -312,7 +312,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Both `aws_s3_bucket_policy.site` and `aws_s3_bucket_policy.logs` carry an explicit `Deny` on `aws:SecureTransport = false`, alongside the existing CloudFront-OAC and log-delivery allows.',
 		why: 'CloudFront OAC, S3 server access logging, and CloudFront log delivery already use TLS, so the realistic failure mode this guards against is a future IAM principal — compromised or overbroad — reaching the buckets over plain HTTP. Industry-baseline finding flagged by most AWS scanners.',
-		tradeoffs: 'Same posture applies to both stacks — `tf.sh millsymills` and `tf.sh p41m0n` plans must both show the bucket-policy update before merging changes here.',
+		tradeoffs: 'A `tf.sh millsymills` plan must show the bucket-policy update before merging changes here.',
 		code: ['infra/s3.tf'],
 	},
 

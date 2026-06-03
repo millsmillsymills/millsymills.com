@@ -1,7 +1,7 @@
 # Bootstrap state bucket
 
 Codifies the S3 bucket that holds Terraform state for every site
-stack (`millsymills`, `p41m0n`). Closes #283: the bucket was
+stack (`millsymills`). Closes #283: the bucket was
 previously created by hand from the AWS console, with no
 Terraform plan or audit trail behind its required controls
 (versioning, SSE, public-access-block, TLS-only policy,
@@ -123,13 +123,11 @@ bucket cover the realistic recovery scenarios.
 
 ## Future: fully destroying a stack
 
-The standard teardown (e.g. p41m0n per
-`docs/superpowers/specs/2026-05-15-p41m0n-teardown-and-static-image-design.md`)
-slims a stack down -- the state key stays active because Proton
-catchall + Route53 zone + the account-wide IAM OIDC provider stay
-live. If a stack is ever fully destroyed (domain expiry, rename,
-account-level cleanup), the state object becomes an orphan: a
-non-empty JSON in S3 with no live resources behind it.
+A standard teardown only slims a stack down -- the state key stays
+active because Proton catchall + Route53 zone + the account-wide IAM
+OIDC provider stay live. If a stack is ever fully destroyed (domain
+expiry, rename, account-level cleanup), the state object becomes an
+orphan: a non-empty JSON in S3 with no live resources behind it.
 
 ```bash
 # 1. Destroy whatever's left in the stack. Idempotent on an
