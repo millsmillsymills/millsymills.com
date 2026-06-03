@@ -42,7 +42,7 @@ usage() {
 	cat <<'EOF'
 usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--csv] [--save]
 
-  <stack>       millsymills | p41m0n
+  <stack>       millsymills
   <query-name>  basename (no .sql) of a file under scripts/analytics/queries/
                 run with just <stack> to list available queries
   [days]        lookback window. Default 30. Capped at 90 (current-retention
@@ -68,13 +68,13 @@ STACK="${1:-}"
 shift || true
 
 case "$STACK" in
-	millsymills | p41m0n) ;;
+	millsymills) ;;
 	"" | help)
 		usage
 		exit 0
 		;;
 	*)
-		printf '\033[1;31mrefusing: stack must be one of [millsymills, p41m0n], got %q\033[0m\n' "$STACK" >&2
+		printf '\033[1;31mrefusing: stack must be one of [millsymills], got %q\033[0m\n' "$STACK" >&2
 		exit 2
 		;;
 esac

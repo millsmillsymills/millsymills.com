@@ -37,7 +37,7 @@ infra/bootstrap-state/errored.tfstate
 # remote state and reconciles. Never commit it.
 infra/errored.tfstate
 # NB: non-recursive glob is intentional — infra/stacks/*.tfvars carry per-stack
-# config (millsymills, p41m0n) and ARE committed. If a future change makes this
+# config (millsymills) and ARE committed. If a future change makes this
 # recursive (e.g. **/*.tfvars), it would silently start ignoring those files.
 infra/*.tfvars
 !infra/terraform.tfvars.example

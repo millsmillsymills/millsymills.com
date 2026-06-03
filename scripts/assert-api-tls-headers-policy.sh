@@ -23,7 +23,7 @@ fi
 
 # Walk every `ordered_cache_behavior { ... }` block in cloudfront.tf —
 # both the static form and the `dynamic "ordered_cache_behavior" { ... }`
-# wrapper introduced by the p41m0n teardown toggle PR. Brace-depth
+# wrapper used by the toggle-gated behaviors. Brace-depth
 # tracking handles either shape: the dynamic wrapper closes at the same
 # depth the static block would, so its inner `content { ... }` attrs
 # (path_pattern, response_headers_policy_id) are visible during the scan.

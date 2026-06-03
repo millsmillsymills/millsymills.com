@@ -16,8 +16,7 @@
 #     the CloudFront alias (`infra/cloudfront.tf`), and the A + AAAA
 #     records below as one unit. Default true so the host is always
 #     reachable on stacks that intend to serve mail; flip to false on
-#     stacks that don't (e.g. static-image rehearsal targets) to shrink
-#     the cert and free the alias slot.
+#     stacks that don't to shrink the cert and free the alias slot.
 #   * `var.enable_mta_sts` gates ONLY the `_mta-sts.<domain>` TXT
 #     discovery record. Default false because MTA-STS only makes sense
 #     once the policy file has been observed in production. The TXT

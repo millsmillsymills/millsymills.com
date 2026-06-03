@@ -29,7 +29,7 @@ terraform {
   # Remote backend in the very bucket this module manages. Keyed
   # under `bootstrap-state/` so it cohabits cleanly with the site
   # stacks' state objects (`millsymills.com/terraform.tfstate`,
-  # `p41m0n/terraform.tfstate`, etc.). The chicken-and-egg is
+  # etc.). The chicken-and-egg is
   # broken by the declarative `import { ... }` block below: on a
   # green-field account, comment the backend out, run an initial
   # local-backend apply to create the bucket, then re-enable the

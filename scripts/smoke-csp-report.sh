@@ -10,7 +10,7 @@
 #
 # Usage:
 #   ./scripts/smoke-csp-report.sh <stack>
-#   # e.g. ./scripts/smoke-csp-report.sh p41m0n
+#   # e.g. ./scripts/smoke-csp-report.sh millsymills
 #
 # Requires: aws CLI configured for the target account, curl.
 # Resolves the Lambda function name from `var.domain` exactly the way

@@ -660,7 +660,6 @@ Expected: empty status; 0 errors; build succeeds.
 
 ```bash
 ./scripts/assert-no-url-leakage.sh
-./scripts/assert-no-rehearsal-leakage.sh
 ```
 
 Expected: both exit 0 (or warn in a way consistent with `main`).
@@ -727,7 +726,7 @@ Closes #43.
 - [ ] \`grep -r fonts.googleapis dist/\` → empty
 - [ ] \`terraform plan\` shows exactly one diff: CSP string
 - [ ] Terminal: \`privacy\` prints TL;DR
-- [ ] \`./scripts/assert-no-url-leakage.sh\` and \`assert-no-rehearsal-leakage.sh\` pass
+- [ ] \`./scripts/assert-no-url-leakage.sh\` passes
 
 ## Notes for reviewer
 - CloudFront log retention is documented as 90 days in the page (matches \`infra/s3.tf:137\`). Spec initially assumed 30 — decided to match reality over aspirational copy.

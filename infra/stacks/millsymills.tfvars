@@ -28,10 +28,9 @@ protonmail_dkim_selectors = {
   protonmail3 = "protonmail3.domainkey.dhh3t4m67q73jisy4m2k6bsy3jdpjx3se76rhatc5245appg2ip3q.domains.proton.ch."
 }
 
-# Phase 2 MTA-STS promotion to production stack per #134. p41m0n is
-# Phase 1 (rehearsal); millsymills picks up the same policy file
-# (src/pages/.well-known/mta-sts.txt.ts, mode: testing) by flipping
-# the per-stack discovery-TXT switch.
+# MTA-STS on the production stack per #134. millsymills serves the
+# policy file (src/pages/.well-known/mta-sts.txt.ts, mode: testing)
+# with the per-stack discovery-TXT switch enabled.
 enable_mta_sts = true
 # Bumped 2026-05-17 alongside the mta-sts.txt.ts max_age 86400 -> 604800
 # change (RFC 8461 §3.2). Senders refresh their cached policy when this

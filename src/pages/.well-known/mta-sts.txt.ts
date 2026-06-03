@@ -22,10 +22,8 @@ import type { APIRoute } from 'astro';
 //     `_mta-sts` TXT record in Terraform, otherwise enforcing senders
 //     refuse delivery during the rollback window.
 //
-// `mx:` lines are Proton standard for the millsymills + p41m0n stacks
+// `mx:` lines are the Proton standard hosts for the millsymills stack
 // (Mail Plus and up; see https://proton.me/support/custom-domain).
-// Both stacks point MX at the same Proton hosts so a single static
-// policy works for both.
 
 export const GET: APIRoute = () => {
 	const body = [
