@@ -416,7 +416,7 @@ class WindowManager {
 
 	private renderTaskbar() {
 		if (!this.taskbarItems) return;
-		this.taskbarItems.innerHTML = '';
+		this.taskbarItems.replaceChildren();
 		const top = this.state.open[this.state.open.length - 1];
 		this.state.open.forEach((id) => {
 			const el = this.windows.get(id);

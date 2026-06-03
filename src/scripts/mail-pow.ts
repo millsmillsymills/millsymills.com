@@ -15,6 +15,7 @@
  */
 
 import { sha256, leadingZeroBits } from './util/sha256';
+import { installDefaultTrustedTypesPolicy } from './util/trusted-types';
 import MailPowWorker from './mail-pow.worker?worker';
 
 interface Manifest {
@@ -90,6 +91,7 @@ export function initMailPow(): void {
 	let worker: Worker | null = null;
 	let timeoutId: number | null = null;
 	try {
+		installDefaultTrustedTypesPolicy();
 		worker = new MailPowWorker();
 	} catch (err) {
 		console.warn('[mail-pow] worker spawn failed; offering manual fallback', err);
