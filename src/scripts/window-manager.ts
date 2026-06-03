@@ -426,7 +426,7 @@ class WindowManager {
 			btn.type = 'button';
 			btn.className = 'taskbar-item';
 			if (id === top) btn.classList.add('taskbar-item--active');
-			btn.textContent = title;
+			btn.textContent = title.replace(/\.exe$/, '');
 			btn.addEventListener('click', () => this.focus(id));
 			this.taskbarItems!.appendChild(btn);
 		});

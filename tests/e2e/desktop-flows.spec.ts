@@ -42,7 +42,7 @@ test.describe('desktop shell tracer bullets', () => {
 		const aboutWindow = windowFor(page, 'about');
 		await page.locator('[data-open-window="about"]').first().click();
 		await expect(aboutWindow).toBeVisible();
-		await expect(page.locator('.taskbar-item', { hasText: 'about.exe' })).toBeVisible();
+		await expect(page.locator('.taskbar-item', { hasText: 'about' })).toBeVisible();
 
 		await aboutWindow.getByRole('button', { name: 'maximize' }).click();
 		await expect(aboutWindow).toHaveClass(/window--maximized/);
@@ -52,7 +52,7 @@ test.describe('desktop shell tracer bullets', () => {
 
 		await aboutWindow.getByRole('button', { name: 'hide' }).click();
 		await expect(aboutWindow).toBeHidden();
-		await expect(page.locator('.taskbar-item', { hasText: 'about.exe' })).toHaveCount(0);
+		await expect(page.locator('.taskbar-item', { hasText: 'about' })).toHaveCount(0);
 
 		await page.locator('[data-open-window="about"]').first().click();
 		await expect(aboutWindow).toBeVisible();
