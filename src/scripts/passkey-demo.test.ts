@@ -58,9 +58,14 @@ describe('postJSON', () => {
 		await expect(postJSON('/x', {}, identity)).rejects.toThrow('forbidden');
 	});
 
-	it('falls back to a status message when a non-2xx body has no error field', async () => {
+	it('falls back to a status message when a non-2xx body is unparsable', async () => {
 		vi.stubGlobal('fetch', vi.fn(async () => unparsableResponse(502)));
 		await expect(postJSON('/x', {}, identity)).rejects.toThrow('request failed (502)');
+	});
+
+	it('falls back to a status message when a parsed non-2xx body has no error field', async () => {
+		vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(500, { message: 'oops' })));
+		await expect(postJSON('/x', {}, identity)).rejects.toThrow('request failed (500)');
 	});
 
 	it('rejects a 2xx response with an unreadable body', async () => {
