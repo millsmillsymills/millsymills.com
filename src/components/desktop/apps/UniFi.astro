@@ -8,9 +8,11 @@
 // Google Fonts) was swapped for a self-hosted/system monospace stack so
 // the app stays within the site's no-third-party / strict-CSP posture.
 //
-// The iframe is loaded lazily on first window-open (same MutationObserver
-// pattern Inspector.astro uses) so the demo's scripts don't run for every
-// visitor who never opens the window.
+// The iframe src is assigned on first window-open so the demo's scripts
+// don't run for every visitor who never opens the window. The trigger is
+// the window-manager's canonical `mills:window-open` event, which fires on
+// every open path (launcher click, session restore, ?open= deep-link), so
+// the load can't be missed.
 ---
 
 <div class="unifi-demo">
@@ -45,20 +47,21 @@
 		const frame = document.querySelector<HTMLIFrameElement>('.unifi-demo__frame');
 		if (!win || !frame) return;
 
-		// Load the demo the first time the window becomes visible. The
-		// window-manager flips the `hidden` attribute on open — the same
-		// "this window just opened" signal Inspector.astro keys off.
 		let loaded = false;
-		const maybeLoad = (): void => {
-			if (loaded || win.hidden) return;
+		const load = (): void => {
+			if (loaded) return;
 			loaded = true;
 			const src = frame.dataset.unifiSrc;
 			if (src) frame.src = src;
 		};
 
-		const observer = new MutationObserver(maybeLoad);
-		observer.observe(win, { attributes: true, attributeFilter: ['hidden'] });
-		maybeLoad();
+		// Subscribe to the window-manager's open event for future opens; the
+		// initial !hidden check covers a window restored open before this
+		// listener registers, where the event has already fired.
+		window.addEventListener('mills:window-open', (event) => {
+			if (event.detail.id === 'unifi') load();
+		});
+		if (!win.hidden) load();
 	}
 
 	if (document.readyState === 'loading') {
