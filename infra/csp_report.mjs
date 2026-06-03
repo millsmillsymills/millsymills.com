@@ -143,15 +143,20 @@ function objectKey(now, requestId) {
 }
 
 export const handler = async (event) => {
-	const method = event?.requestContext?.http?.method ?? 'GET';
-	if (method !== 'POST') {
-		return { statusCode: 405, headers: { allow: 'POST' }, body: '' };
-	}
-
 	const headers = event?.headers ?? {};
+	// Secret gate runs before the method check so the public Function URL
+	// answers any request lacking the CloudFront-injected secret with a
+	// uniform 403, regardless of method. A direct caller hitting the raw
+	// *-lambda-url endpoint can't tell "wrong method" (405) from "no secret"
+	// and so can't learn that POST is the expected method.
 	if (!secretMatches(header(headers, 'x-origin-secret'))) {
 		logRejection('origin-secret-mismatch', null);
 		return { statusCode: 403, body: '' };
+	}
+
+	const method = event?.requestContext?.http?.method ?? 'GET';
+	if (method !== 'POST') {
+		return { statusCode: 405, headers: { allow: 'POST' }, body: '' };
 	}
 
 	const contentType = String(header(headers, 'content-type') ?? '')
