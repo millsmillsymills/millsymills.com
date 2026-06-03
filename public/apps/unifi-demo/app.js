@@ -222,7 +222,7 @@ const PROTECT={ cameras:[
   { name:'garage',     model:'G3 Flex',    rec:'motion' },
 ]};
 const SITES=[
-  { name:'millsy.lan', role:'this site', devices:4, status:'online'  },
+  { name:'mills-net.lan', role:'this site', devices:4, status:'online'  },
   { name:'the-cabin',  role:'remote',    devices:2, status:'online'  },
   { name:'mom-house',  role:'remote',    devices:3, status:'offline' },
 ];
@@ -430,11 +430,11 @@ const COMMANDS = [
     test:/isp|carrier|wan metrics|uplink/i,
     async run(){
       await botType('reading ISP metrics from Site Manager…',500);
-      const done=addToolCard({name:'unifi_site_manager_get_isp_metrics',write:false,args:'site="millsy.lan" · window=24h'});
+      const done=addToolCard({name:'unifi_site_manager_get_isp_metrics',write:false,args:'site="mills-net.lan" · window=24h'});
       logCall('unifi_site_manager_get_isp_metrics','',''); await delay(750);
       done('ok','[OK] 268ms'); logCall('unifi_site_manager_get_isp_metrics','ok','99.98% up');
       await delay(200);
-      addBot('<b>millsy.lan</b> wan — carrier: fiber · <b>412↓ / 41↑ Mbps</b> · 8 ms · 99.98% uptime (24h) · 0 outages.');
+      addBot('<b>mills-net.lan</b> wan — carrier: fiber · <b>412↓ / 41↑ Mbps</b> · 8 ms · 99.98% uptime (24h) · 0 outages.');
     }},
 ];
 
@@ -492,7 +492,7 @@ function init(){
   logCall('unifi_network_list_clients','ok','8 clients');
 
   // boot greeting
-  setTimeout(()=>addBot('booted — i\'m wired to <b>millsy.lan</b> through unifi-mcp. 4 devices, 8 clients, 3 ssids. ask me to look around or make a change. <span class="c-dim">(start in READONLY; flip the switch for writes.)</span>'), 400);
+  setTimeout(()=>addBot('booted — i\'m wired to <b>mills-net.lan</b> through unifi-mcp. 4 devices, 8 clients, 3 ssids. ask me to look around or make a change. <span class="c-dim">(start in READONLY; flip the switch for writes.)</span>'), 400);
 }
 
 /* draggable console */
