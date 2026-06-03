@@ -14,6 +14,10 @@
  */
 
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
+import type {
+	PublicKeyCredentialCreationOptionsJSON,
+	PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser';
 
 const STORAGE_KEY = 'mills.passkey-demo.v1';
 const API_BASE = '/api/passkey';
@@ -24,12 +28,51 @@ interface StoredCredential {
 	readonly createdAt: string;
 }
 
-async function postJSON<T>(path: string, body: unknown): Promise<T> {
-	const res = await fetch(`${API_BASE}${path}`, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify(body ?? {}),
-	});
+interface OptionsResponse<TOptions> {
+	readonly sessionId: string;
+	readonly options: TOptions;
+}
+
+interface VerifyResult {
+	readonly verified: boolean;
+	readonly userHandle?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
+function parseOptionsResponse<TOptions>(data: unknown): OptionsResponse<TOptions> {
+	if (isRecord(data) && typeof data.sessionId === 'string' && isRecord(data.options)) {
+		return { sessionId: data.sessionId, options: data.options as TOptions };
+	}
+	throw new Error('server returned a malformed options response.');
+}
+
+function parseVerifyResult(data: unknown): VerifyResult {
+	if (isRecord(data) && typeof data.verified === 'boolean') {
+		return {
+			verified: data.verified,
+			userHandle: typeof data.userHandle === 'string' ? data.userHandle : undefined,
+		};
+	}
+	throw new Error('server returned a malformed verification response.');
+}
+
+async function postJSON<T>(path: string, body: unknown, parse: (data: unknown) => T): Promise<T> {
+	let res: Response;
+	try {
+		res = await fetch(`${API_BASE}${path}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify(body ?? {}),
+		});
+	} catch {
+		// A rejected fetch is a transport failure (offline, DNS, connection
+		// refused, CloudFront mid-deploy), not a rejected passkey — surface
+		// it as something the user can act on rather than "Failed to fetch".
+		throw new Error('could not reach the passkey service — check your connection and retry.');
+	}
 	let data: unknown = null;
 	try {
 		data = await res.json();
@@ -43,7 +86,10 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
 				: `request failed (${res.status})`;
 		throw new Error(reason);
 	}
-	return data as T;
+	if (data == null) {
+		throw new Error('server returned an unreadable response.');
+	}
+	return parse(data);
 }
 
 function loadStored(): StoredCredential | null {
@@ -62,8 +108,9 @@ function loadStored(): StoredCredential | null {
 
 function persistStored(cred: StoredCredential): boolean {
 	// Safari private-mode and some locked-down WebViews throw QuotaExceededError
-	// even on first write — surface the failure rather than letting it bubble
-	// through a misleading "register failed" message.
+	// even on first write. The credential is already registered server-side at
+	// this point; localStorage only backs the local label panel, so catch the
+	// failure and let registration still report success rather than crashing it.
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(cred));
 		return true;
@@ -101,19 +148,15 @@ async function handleRegister(displayName: string, status: HTMLElement): Promise
 	}
 	writeStatus(status, 'busy', 'requesting options…');
 	try {
-		const { sessionId, options } = await postJSON<{
-			sessionId: string;
-			options: Parameters<typeof startRegistration>[0]['optionsJSON'];
-		}>('/registration/options', {});
+		const { sessionId, options } = await postJSON('/registration/options', {}, (data) =>
+			parseOptionsResponse<PublicKeyCredentialCreationOptionsJSON>(data),
+		);
 
 		writeStatus(status, 'busy', 'awaiting authenticator…');
 		const response = await startRegistration({ optionsJSON: options });
 
 		writeStatus(status, 'busy', 'verifying…');
-		const result = await postJSON<{ verified: boolean }>('/registration/verify', {
-			sessionId,
-			response,
-		});
+		const result = await postJSON('/registration/verify', { sessionId, response }, parseVerifyResult);
 		if (!result.verified) {
 			writeStatus(status, 'err', 'server rejected the registration.');
 			return;
@@ -141,19 +184,15 @@ async function handleAuthenticate(status: HTMLElement): Promise<void> {
 	}
 	writeStatus(status, 'busy', 'requesting challenge…');
 	try {
-		const { sessionId, options } = await postJSON<{
-			sessionId: string;
-			options: Parameters<typeof startAuthentication>[0]['optionsJSON'];
-		}>('/authentication/options', {});
+		const { sessionId, options } = await postJSON('/authentication/options', {}, (data) =>
+			parseOptionsResponse<PublicKeyCredentialRequestOptionsJSON>(data),
+		);
 
 		writeStatus(status, 'busy', 'awaiting authenticator…');
 		const response = await startAuthentication({ optionsJSON: options });
 
 		writeStatus(status, 'busy', 'verifying…');
-		const result = await postJSON<{ verified: boolean }>('/authentication/verify', {
-			sessionId,
-			response,
-		});
+		const result = await postJSON('/authentication/verify', { sessionId, response }, parseVerifyResult);
 		if (!result.verified) {
 			writeStatus(status, 'err', 'server rejected the assertion.');
 			return;
@@ -227,4 +266,13 @@ if (typeof window !== 'undefined') {
 	}
 }
 
-export {};
+export {
+	STORAGE_KEY,
+	postJSON,
+	loadStored,
+	persistStored,
+	clearStored,
+	parseOptionsResponse,
+	parseVerifyResult,
+};
+export type { StoredCredential, OptionsResponse, VerifyResult };

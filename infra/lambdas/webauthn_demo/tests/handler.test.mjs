@@ -123,6 +123,26 @@ test('secretMatches is constant-time-safe and rejects wrong/short input', () => 
 	assert.equal(__test.secretMatches(undefined), false);
 });
 
+test('secretMatches rejects a same-length-but-wrong secret (timingSafeEqual branch)', () => {
+	// The length short-circuit can't catch this: same byte length as the real
+	// secret, differing only in the final byte. Exercises the timingSafeEqual
+	// comparison itself, not the length guard, so a regression that dropped the
+	// constant-time compare (e.g. `return true` after the length check) fails here.
+	const sameLengthWrong = `${TEST_ORIGIN_SECRET.slice(0, -1)}X`;
+	assert.equal(sameLengthWrong.length, TEST_ORIGIN_SECRET.length);
+	assert.notEqual(sameLengthWrong, TEST_ORIGIN_SECRET);
+	assert.equal(__test.secretMatches(sameLengthWrong), false);
+});
+
+test('header() resolves case-insensitively and null-guards missing input', () => {
+	// Function URLs lowercase header keys, but a direct invoke/test may not;
+	// the lookup must match defensively so a mixed-case secret header still gates.
+	assert.equal(__test.header({ 'X-Origin-Secret': 'v' }, 'x-origin-secret'), 'v');
+	assert.equal(__test.header({ 'x-origin-secret': 'v' }, 'x-origin-secret'), 'v');
+	assert.equal(__test.header({}, 'x-origin-secret'), undefined);
+	assert.equal(__test.header(undefined, 'x-origin-secret'), undefined);
+});
+
 test('body larger than 4 KB is rejected with 413', async () => {
 	const oversize = 'a'.repeat(5000);
 	const res = await handler(
