@@ -50,7 +50,7 @@ export interface AppDef {
 	readonly id: string;
 	readonly label: string;
 	readonly glyph: string;
-	/** Path under public/ to a PNG icon. When set, replaces glyph in the UI. */
+	/** Path under public/ to a PNG or SVG icon. When set, replaces glyph in the UI. */
 	readonly iconUrl?: string;
 	/**
 	 * Sprite-sourced icon from the XP WinIcons pack. Wins over `iconUrl`
@@ -167,6 +167,7 @@ const _APPS_DATA = [
 		id: 'unifi',
 		label: 'unifi-mcp',
 		glyph: '📡',
+		iconUrl: '/images/projects/unifi-mcp-transparent.svg',
 		title: 'unifi-mcp.exe',
 		ogDescription:
 			'a live, simulated unifi-mcp demo — drive a fake network with an AI assistant calling real MCP tools across network, protect, and site manager.',
