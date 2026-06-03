@@ -2,16 +2,21 @@
  * External module so the production CSP `script-src 'self'` allows it.
  * See #129/#231 for the pattern.
  *
- * Permissions-Policy in production ships `publickey-credentials-create=()`
- * and `publickey-credentials-get=()`, which blocks both calls at the
- * browser level. The demo only operates end-to-end in dev or once the
- * CloudFront slice extends those directives to `=(self)` for this page.
- * See `infra/cloudfront.tf` and `src/data/security-controls.ts`.
+ * Real WebAuthn ceremonies against the demo Lambda (#446) fronted by
+ * CloudFront at `/api/passkey/*` (#447/#630). The `/demo/passkey/*`
+ * response-headers policy ships `publickey-credentials-create=(self)` /
+ * `publickey-credentials-get=(self)` (infra/cloudfront.tf), so the
+ * navigator.credentials.* calls run in production on this page only.
+ *
+ * Wire format is handled by `@simplewebauthn/browser`, the client companion
+ * to the `@simplewebauthn/server` the Lambda verifies with — it produces the
+ * exact base64url-encoded response JSON the server expects.
  */
 
+import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
+
 const STORAGE_KEY = 'mills.passkey-demo.v1';
-const RP_NAME = 'mills passkey demo';
-const TIMEOUT_MS = 60_000;
+const API_BASE = '/api/passkey';
 
 interface StoredCredential {
 	readonly id: string;
@@ -19,30 +24,26 @@ interface StoredCredential {
 	readonly createdAt: string;
 }
 
-function base64UrlEncode(bytes: ArrayBuffer | Uint8Array): string {
-	const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-	let s = '';
-	for (const b of view) s += String.fromCharCode(b);
-	return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function base64UrlDecode(s: string): Uint8Array<ArrayBuffer> {
-	// A base64 string never has length 4k+1 (every 3 input bytes -> 4 chars);
-	// only 4k+2 and 4k+3 need padding. atob throws on malformed input, which
-	// the caller's try/catch surfaces as a status error.
-	const rem = s.length % 4;
-	const pad = rem === 2 ? '==' : rem === 3 ? '=' : '';
-	const b64 = (s + pad).replace(/-/g, '+').replace(/_/g, '/');
-	const raw = atob(b64);
-	const out = new Uint8Array(new ArrayBuffer(raw.length));
-	for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-	return out;
-}
-
-function randomBytes(n: number): Uint8Array<ArrayBuffer> {
-	const buf = new Uint8Array(new ArrayBuffer(n));
-	crypto.getRandomValues(buf);
-	return buf;
+async function postJSON<T>(path: string, body: unknown): Promise<T> {
+	const res = await fetch(`${API_BASE}${path}`, {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(body ?? {}),
+	});
+	let data: unknown = null;
+	try {
+		data = await res.json();
+	} catch {
+		// fall through to the status-based error below
+	}
+	if (!res.ok) {
+		const reason =
+			data && typeof data === 'object' && 'error' in data
+				? String((data as { error: unknown }).error)
+				: `request failed (${res.status})`;
+		throw new Error(reason);
+	}
+	return data as T;
 }
 
 function loadStored(): StoredCredential | null {
@@ -62,8 +63,7 @@ function loadStored(): StoredCredential | null {
 function persistStored(cred: StoredCredential): boolean {
 	// Safari private-mode and some locked-down WebViews throw QuotaExceededError
 	// even on first write — surface the failure rather than letting it bubble
-	// through navigator.credentials' catch path and produce a misleading
-	// "register failed" message.
+	// through a misleading "register failed" message.
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(cred));
 		return true;
@@ -99,41 +99,33 @@ async function handleRegister(displayName: string, status: HTMLElement): Promise
 		writeStatus(status, 'err', 'webauthn not supported in this browser.');
 		return;
 	}
-	writeStatus(status, 'busy', 'awaiting authenticator…');
-	const challenge = randomBytes(32);
-	const userId = randomBytes(16);
-	const options: PublicKeyCredentialCreationOptions = {
-		challenge,
-		rp: { name: RP_NAME, id: location.hostname },
-		user: {
-			id: userId,
-			name: `${displayName}@demo.local`,
-			displayName,
-		},
-		pubKeyCredParams: [
-			{ type: 'public-key', alg: -7 },
-			{ type: 'public-key', alg: -257 },
-		],
-		authenticatorSelection: {
-			userVerification: 'preferred',
-			residentKey: 'preferred',
-		},
-		attestation: 'none',
-		timeout: TIMEOUT_MS,
-	};
+	writeStatus(status, 'busy', 'requesting options…');
 	try {
-		const cred = (await navigator.credentials.create({ publicKey: options })) as PublicKeyCredential | null;
-		if (!cred) {
-			writeStatus(status, 'err', 'register cancelled.');
+		const { sessionId, options } = await postJSON<{
+			sessionId: string;
+			options: Parameters<typeof startRegistration>[0]['optionsJSON'];
+		}>('/registration/options', {});
+
+		writeStatus(status, 'busy', 'awaiting authenticator…');
+		const response = await startRegistration({ optionsJSON: options });
+
+		writeStatus(status, 'busy', 'verifying…');
+		const result = await postJSON<{ verified: boolean }>('/registration/verify', {
+			sessionId,
+			response,
+		});
+		if (!result.verified) {
+			writeStatus(status, 'err', 'server rejected the registration.');
 			return;
 		}
+
 		const stored: StoredCredential = {
-			id: base64UrlEncode(cred.rawId),
+			id: response.id,
 			displayName,
 			createdAt: new Date().toISOString(),
 		};
 		if (!persistStored(stored)) {
-			writeStatus(status, 'err', 'registered but localStorage is blocked (private mode?). cannot persist.');
+			writeStatus(status, 'ok', `registered ${stored.id.slice(0, 12)}… (local view unavailable — private mode?)`);
 			return;
 		}
 		writeStatus(status, 'ok', `registered. credential id ${stored.id.slice(0, 12)}…`);
@@ -147,37 +139,28 @@ async function handleAuthenticate(status: HTMLElement): Promise<void> {
 		writeStatus(status, 'err', 'webauthn not supported in this browser.');
 		return;
 	}
-	const stored = loadStored();
-	if (!stored) {
-		writeStatus(status, 'err', 'no credential registered — register first.');
-		return;
-	}
-	writeStatus(status, 'busy', 'awaiting authenticator…');
-	const challenge = randomBytes(32);
-	const options: PublicKeyCredentialRequestOptions = {
-		challenge,
-		rpId: location.hostname,
-		allowCredentials: [
-			{
-				id: base64UrlDecode(stored.id),
-				type: 'public-key',
-			},
-		],
-		userVerification: 'preferred',
-		timeout: TIMEOUT_MS,
-	};
+	writeStatus(status, 'busy', 'requesting challenge…');
 	try {
-		const assertion = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
-		if (!assertion) {
-			writeStatus(status, 'err', 'authenticate cancelled.');
+		const { sessionId, options } = await postJSON<{
+			sessionId: string;
+			options: Parameters<typeof startAuthentication>[0]['optionsJSON'];
+		}>('/authentication/options', {});
+
+		writeStatus(status, 'busy', 'awaiting authenticator…');
+		const response = await startAuthentication({ optionsJSON: options });
+
+		writeStatus(status, 'busy', 'verifying…');
+		const result = await postJSON<{ verified: boolean }>('/authentication/verify', {
+			sessionId,
+			response,
+		});
+		if (!result.verified) {
+			writeStatus(status, 'err', 'server rejected the assertion.');
 			return;
 		}
-		const returnedId = base64UrlEncode(assertion.rawId);
-		if (returnedId !== stored.id) {
-			writeStatus(status, 'err', 'credential id mismatch (mock verification failed).');
-			return;
-		}
-		writeStatus(status, 'ok', `verified. assertion for ${stored.displayName}.`);
+		const stored = loadStored();
+		const who = stored ? ` for "${stored.displayName}"` : '';
+		writeStatus(status, 'ok', `verified${who}.`);
 	} catch (err) {
 		writeStatus(status, 'err', `authenticate failed: ${err instanceof Error ? err.message : String(err)}`);
 	}

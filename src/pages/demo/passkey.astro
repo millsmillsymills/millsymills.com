@@ -6,7 +6,7 @@ const canonical = new URL('/demo/passkey/', Astro.site).toString();
 
 <BaseLayout
 	title="passkey demo — millsymills.com"
-	description="webauthn passkey register + authenticate demo with a mock backend. sandbox; no real account."
+	description="webauthn passkey register + authenticate demo against a real @simplewebauthn/server backend. sandbox; no real account."
 	canonical={canonical}
 	ogUrl={canonical}
 	noindex
@@ -17,17 +17,19 @@ const canonical = new URL('/demo/passkey/', Astro.site).toString();
 			<h1 class="passkey__title">passkey demo</h1>
 			<p class="passkey__lede">
 				exercise <code>navigator.credentials.create()</code> and
-				<code>navigator.credentials.get()</code> against a mock backend.
-				the real lambda lands in the #140 logic slice.
+				<code>navigator.credentials.get()</code> against a real
+				<code>@simplewebauthn/server</code> backend (AWS Lambda + DynamoDB),
+				reached same-origin through CloudFront at <code>/api/passkey/*</code>.
 			</p>
 		</header>
 
 		<aside class="passkey__notice" role="note" aria-label="sandbox notice">
-			<strong>sandbox.</strong> no real account is created. credentials live in
-			<code>localStorage</code> only and can be cleared at any time. authenticator
-			challenges are generated client-side; nothing is sent to a server in this
-			demo. credentials expire automatically when you clear browser storage for
-			this origin.
+			<strong>sandbox.</strong> no real account is created — the server stores
+			only a synthetic user handle, the credential public key, and a signature
+			counter, never any PII. those rows auto-expire after 24h (DynamoDB TTL);
+			in-flight ceremony challenges expire after 5 minutes. the browser keeps a
+			local label in <code>localStorage</code> for the panel below, which you can
+			clear at any time.
 		</aside>
 
 		<section class="passkey__demo" data-passkey-demo>
@@ -65,8 +67,9 @@ const canonical = new URL('/demo/passkey/', Astro.site).toString();
 			<div class="passkey__row">
 				<h2 class="passkey__h2">authenticate</h2>
 				<p class="passkey__copy">
-					assert with the credential you just registered. the mock backend
-					checks that the returned credential id matches the stored one.
+					assert with the credential you just registered. the server verifies
+					the assertion signature against the stored public key and advances
+					the signature counter.
 				</p>
 				<div class="passkey__actions">
 					<button type="button" class="passkey__btn" data-action="authenticate">
@@ -153,10 +156,11 @@ const canonical = new URL('/demo/passkey/', Astro.site).toString();
 			</ul>
 			<p>
 				this demo requests <code>residentKey: "preferred"</code> on register,
-				then on authenticate sends an explicit <code>allowCredentials</code>
-				list — that's the belt-and-suspenders posture most rps actually
-				ship. platform authenticators (touch id, windows hello, face id)
-				virtually always store the credential as discoverable regardless.
+				then on authenticate the server returns an empty
+				<code>allowCredentials</code> — the discoverable-credential path, so the
+				authenticator offers its stored passkey with no username typed. platform
+				authenticators (touch id, windows hello, face id) virtually always store
+				the credential as discoverable regardless.
 			</p>
 		</section>
 	</div>

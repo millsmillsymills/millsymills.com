@@ -103,6 +103,31 @@ resource "aws_cloudfront_origin_request_policy" "hits" {
   }
 }
 
+# Origin-request policy for /api/passkey/*. Same Host-rewrite rationale as
+# the other Lambda origins -- Function URLs reject any Host that doesn't
+# match `<id>.lambda-url.<region>.on.aws`. The handler reads no viewer
+# headers (it routes on the path and validates origin from the WebAuthn
+# clientDataJSON, not a request header), so whitelist is empty -- CloudFront
+# forwards only the rewritten Host plus its injected x-origin-secret.
+resource "aws_cloudfront_origin_request_policy" "webauthn_demo" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  name    = "${local.domain_slug}-webauthn-demo-origin-req"
+  comment = "Strip viewer headers en route to webauthn_demo Lambda; let CloudFront rewrite Host"
+
+  headers_config {
+    header_behavior = "none"
+  }
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+
+  query_strings_config {
+    query_string_behavior = "none"
+  }
+}
+
 resource "aws_cloudfront_response_headers_policy" "site" {
   count = var.cloudfront_headers_profile == "strict" ? 1 : 0
 
@@ -553,6 +578,32 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  # Lambda Function URL origin for the /api/passkey/* WebAuthn demo. NOT
+  # OAC-fronted (like csp_report, unlike inspector_tls/hits): the routes are
+  # POST with JSON bodies and OAC SigV4 can't carry a browser POST body.
+  # The Function URL is public (authorization_type = NONE); CloudFront
+  # injects a high-entropy x-origin-secret custom_header and the handler
+  # rejects any request lacking it, closing the direct-call bypass.
+  dynamic "origin" {
+    for_each = var.enable_webauthn_demo ? [1] : []
+    content {
+      domain_name = local.webauthn_demo_origin_host
+      origin_id   = "lambda-${local.webauthn_demo_name}"
+
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+
+      custom_header {
+        name  = "x-origin-secret"
+        value = random_password.webauthn_demo_origin_secret[0].result
+      }
+    }
+  }
+
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
@@ -641,6 +692,30 @@ resource "aws_cloudfront_distribution" "site" {
       # AWS-managed CachingDisabled
       cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
       origin_request_policy_id   = aws_cloudfront_origin_request_policy.hits[0].id
+      response_headers_policy_id = aws_cloudfront_response_headers_policy.api[0].id
+    }
+  }
+
+  # /api/passkey/* → webauthn_demo Lambda. POST-bearing (registration /
+  # authentication ceremonies), so the full method set is routed; CachingDisabled
+  # because every ceremony step must reach the Lambda. Uses the `api`
+  # response-headers policy (same as inspector_tls/hits) so the JSON is
+  # fetchable from the COEP-isolated /demo/passkey document, and the
+  # `webauthn_demo` origin-request policy so the Function URL's Host check
+  # passes. See `infra/webauthn_demo.tf` for the x-origin-secret gate.
+  dynamic "ordered_cache_behavior" {
+    for_each = var.enable_webauthn_demo ? [1] : []
+    content {
+      path_pattern           = "/api/passkey/*"
+      target_origin_id       = "lambda-${local.webauthn_demo_name}"
+      allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+      cached_methods         = ["GET", "HEAD"]
+      viewer_protocol_policy = "https-only"
+      compress               = true
+
+      # AWS-managed CachingDisabled
+      cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+      origin_request_policy_id   = aws_cloudfront_origin_request_policy.webauthn_demo[0].id
       response_headers_policy_id = aws_cloudfront_response_headers_policy.api[0].id
     }
   }

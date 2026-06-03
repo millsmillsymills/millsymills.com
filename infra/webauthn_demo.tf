@@ -6,12 +6,15 @@
 # file). Still outstanding: the `/demo/passkey` Astro page (#445) and
 # the CloudFront-vs-direct-Function-URL decision (#447).
 #
-# Architecture differs from `infra/csp_report.tf` / `infra/inspector_tls.tf`
-# in one place: the Function URL is `authorization_type = "NONE"` (public)
-# rather than `AWS_IAM` behind a CloudFront OAC. That's a deliberate
-# slice-level decision -- the followup CloudFront-slice PR will revisit
-# it. The demo collects no PII; credentials are ephemeral (TTL'd) and
-# origin-bound at the application layer.
+# Fronted by CloudFront at `/api/passkey/*` (decision #447, impl #630).
+# Mirrors `infra/csp_report.tf`, NOT the inspector_tls/hits OAC pattern:
+# every WebAuthn route is POST with a JSON body, and CloudFront OAC SigV4
+# can't carry a browser-supplied POST body (Lambda rejects it 403 — see the
+# csp_report.tf header). So the Function URL stays `authorization_type =
+# "NONE"` and CloudFront injects a high-entropy `x-origin-secret` custom
+# header; the handler rejects (403) anything lacking the match, closing the
+# direct Function-URL bypass. The demo also collects no PII; credentials are
+# ephemeral (TTL'd) and origin-bound at the application layer.
 #
 # Cost guard: reserved_concurrent_executions = 5 mirrors csp_report --
 # a runaway demo cannot blow the account budget.
@@ -20,6 +23,20 @@ locals {
   webauthn_demo_name       = "${local.domain_slug}-webauthn-demo"
   webauthn_demo_lambda_dir = "${path.module}/lambdas/webauthn_demo"
   webauthn_sessions_table  = "${local.webauthn_demo_name}-sessions"
+  webauthn_demo_origin_host = var.enable_webauthn_demo ? trimsuffix(
+    replace(aws_lambda_function_url.webauthn_demo[0].function_url, "https://", ""),
+    "/",
+  ) : null
+}
+
+# High-entropy secret CloudFront injects as the x-origin-secret header so the
+# public Function URL only honors CloudFront-proxied requests. Same pattern
+# and rationale as random_password.csp_report_origin_secret.
+resource "random_password" "webauthn_demo_origin_secret" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  length  = 48
+  special = false
 }
 
 # --------------------------------------------------------------------
@@ -231,32 +248,26 @@ resource "aws_lambda_function" "webauthn_demo" {
       WEBAUTHN_SESSIONS_TABLE  = aws_dynamodb_table.webauthn_sessions[0].name
       WEBAUTHN_RP_ID           = var.domain
       WEBAUTHN_EXPECTED_ORIGIN = "https://${var.domain}"
+      ORIGIN_SECRET            = random_password.webauthn_demo_origin_secret[0].result
     }
   }
 
   depends_on = [aws_cloudwatch_log_group.webauthn_demo[0]]
 }
 
-# Public Function URL. No CloudFront OAC fronting -- the
-# direct-vs-CloudFront-origin decision is deferred to a followup PR
-# (see header comment + issue #140). CORS allows only `https://<domain>`
-# so a browser on any other origin cannot exercise the endpoint.
+# Public Function URL (authorization_type = NONE) — see the header comment
+# for why OAC isn't usable here (POST body + SigV4). No CORS block: browsers
+# reach the endpoint same-origin through CloudFront at /api/passkey/*, and
+# the x-origin-secret gate (not CORS) is what closes the direct-call bypass.
 resource "aws_lambda_function_url" "webauthn_demo" {
   count = var.enable_webauthn_demo ? 1 : 0
 
   function_name      = aws_lambda_function.webauthn_demo[0].function_name
   authorization_type = "NONE"
-
-  cors {
-    allow_origins = ["https://${var.domain}"]
-    allow_methods = ["GET", "POST"]
-    allow_headers = ["content-type"]
-    max_age       = 86400
-  }
 }
 
 output "webauthn_demo_url" {
-  description = "Public HTTPS endpoint for the WebAuthn demo Lambda. Routes /registration/options, /registration/verify, /authentication/options, /authentication/verify (all POST). Wire this into the `/demo/passkey` Astro page in the followup page-slice PR (#445). Null on stacks with `enable_webauthn_demo = false`; consumers must either guard for null or be downstream of a stack with the toggle on. `terraform output -raw webauthn_demo_url` errors loudly on null (`Unsupported value for raw output`), so a copy-paste workflow surfaces the absence; `terraform output -json` returns JSON null, so automated consumers must reject it explicitly."
+  description = "Raw Function URL of the WebAuthn demo Lambda. Internal origin only — CloudFront fronts it at https://<domain>/api/passkey/* and the browser never calls this directly. The raw URL is internet-reachable but returns 403 to any request lacking the CloudFront-injected x-origin-secret header. Null on stacks with `enable_webauthn_demo = false`; `terraform output -raw` errors loudly on null, `terraform output -json` returns JSON null."
   value       = var.enable_webauthn_demo ? aws_lambda_function_url.webauthn_demo[0].function_url : null
 }
 

@@ -174,6 +174,11 @@ variable "enable_webauthn_demo" {
     condition     = !var.enable_webauthn_demo || var.enable_csp_report
     error_message = "enable_webauthn_demo requires enable_csp_report; webauthn alarms publish to the shared csp_report_ops SNS topic which only exists when csp_report is enabled."
   }
+
+  validation {
+    condition     = !var.enable_webauthn_demo || var.enable_inspector_tls
+    error_message = "enable_webauthn_demo requires enable_inspector_tls; the /api/passkey/* cache behavior reuses `aws_cloudfront_response_headers_policy.api` which is only provisioned when inspector_tls is enabled."
+  }
 }
 
 variable "enable_ct_monitor" {

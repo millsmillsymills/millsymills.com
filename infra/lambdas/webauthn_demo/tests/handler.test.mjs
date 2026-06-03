@@ -16,6 +16,8 @@ process.env.WEBAUTHN_RP_ID = 'example.test';
 process.env.WEBAUTHN_EXPECTED_ORIGIN = 'https://example.test';
 process.env.WEBAUTHN_TABLE = 'creds-test';
 process.env.WEBAUTHN_SESSIONS_TABLE = 'sessions-test';
+const TEST_ORIGIN_SECRET = 'test-origin-secret-value';
+process.env.ORIGIN_SECRET = TEST_ORIGIN_SECRET;
 
 const { DynamoDBDocumentClient } = await import('@aws-sdk/lib-dynamodb');
 
@@ -52,10 +54,11 @@ afterEach(() => {
 	console.warn = originalConsoleWarn;
 });
 
-function eventOf({ method = 'POST', path = '/', body, isBase64Encoded = false } = {}) {
+function eventOf({ method = 'POST', path = '/', body, isBase64Encoded = false, secret = TEST_ORIGIN_SECRET } = {}) {
 	return {
 		rawPath: path,
 		requestContext: { http: { method, path } },
+		headers: secret == null ? {} : { 'x-origin-secret': secret },
 		body: typeof body === 'string' ? body : body == null ? '' : JSON.stringify(body),
 		isBase64Encoded,
 	};
@@ -75,6 +78,38 @@ test('GET on a POST route returns 405', async () => {
 test('unknown route returns 404', async () => {
 	const res = await handler(eventOf({ path: '/nope', body: {} }));
 	assert.equal(res.statusCode, 404);
+});
+
+test('POST without the CloudFront origin secret returns 403', async () => {
+	const res = await handler(eventOf({ path: '/registration/options', body: {}, secret: null }));
+	assert.equal(res.statusCode, 403);
+});
+
+test('POST with a wrong origin secret returns 403', async () => {
+	const res = await handler(eventOf({ path: '/registration/options', body: {}, secret: 'wrong' }));
+	assert.equal(res.statusCode, 403);
+});
+
+test('CloudFront /api/passkey/* prefix is stripped to the route key', async () => {
+	const res = await handler(eventOf({ path: '/api/passkey/registration/options', body: {} }));
+	assert.equal(res.statusCode, 200);
+	const body = JSON.parse(res.body);
+	assert.equal(typeof body.sessionId, 'string');
+});
+
+test('normalizePath strips the /api/passkey prefix and trailing slash', () => {
+	assert.equal(__test.normalizePath('/api/passkey/registration/options'), '/registration/options');
+	assert.equal(__test.normalizePath('/api/passkey/registration/options/'), '/registration/options');
+	assert.equal(__test.normalizePath('/api/passkey'), '/');
+	assert.equal(__test.normalizePath('/registration/options'), '/registration/options');
+	assert.equal(__test.normalizePath('/api/passkeyXYZ'), '/api/passkeyXYZ');
+});
+
+test('secretMatches is constant-time-safe and rejects wrong/short input', () => {
+	assert.equal(__test.secretMatches(TEST_ORIGIN_SECRET), true);
+	assert.equal(__test.secretMatches('wrong'), false);
+	assert.equal(__test.secretMatches(''), false);
+	assert.equal(__test.secretMatches(undefined), false);
 });
 
 test('body larger than 4 KB is rejected with 413', async () => {

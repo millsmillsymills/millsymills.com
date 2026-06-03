@@ -34,7 +34,7 @@
 //   * Credential IDs are NOT logged. Only opaque session IDs appear in
 //     CloudWatch.
 
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import {
 	DynamoDBClient,
@@ -57,6 +57,13 @@ const RP_ID = requireEnv('WEBAUTHN_RP_ID');
 const EXPECTED_ORIGIN = requireEnv('WEBAUTHN_EXPECTED_ORIGIN');
 const CREDENTIALS_TABLE = requireEnv('WEBAUTHN_TABLE');
 const SESSIONS_TABLE = requireEnv('WEBAUTHN_SESSIONS_TABLE');
+const ORIGIN_SECRET_BYTES = Buffer.from(requireEnv('ORIGIN_SECRET'), 'utf-8');
+
+// CloudFront forwards browser requests under /api/passkey/*; the Function
+// URL receives that full path. Strip the prefix so the route table keys
+// (/registration/options, …) match whether the request arrives via
+// CloudFront (prefixed) or a direct test/rehearsal call (unprefixed).
+const ROUTE_PREFIX = '/api/passkey';
 
 const RP_NAME = 'millsymills passkey demo';
 const MAX_BODY_BYTES = 4096;
@@ -123,6 +130,28 @@ function errFields(err) {
 		stack: err?.stack,
 		cause: err?.cause,
 	};
+}
+
+// Case-insensitive header lookup. Lambda Function URLs lowercase header
+// keys, but a direct test/invoke may not, so match defensively.
+function header(headers, name) {
+	if (!headers) return undefined;
+	const lower = name.toLowerCase();
+	for (const k of Object.keys(headers)) {
+		if (k.toLowerCase() === lower) return headers[k];
+	}
+	return undefined;
+}
+
+// Constant-time comparison of the CloudFront-injected origin secret. The
+// length check short-circuits before timingSafeEqual (which throws on
+// length mismatch); the byte compare is timing-safe so a direct caller of
+// the public Function URL can't recover the secret one character at a time.
+function secretMatches(candidate) {
+	if (typeof candidate !== 'string') return false;
+	const candidateBytes = Buffer.from(candidate, 'utf-8');
+	if (candidateBytes.length !== ORIGIN_SECRET_BYTES.length) return false;
+	return timingSafeEqual(candidateBytes, ORIGIN_SECRET_BYTES);
 }
 
 function parseBody(event) {
@@ -554,6 +583,15 @@ export const handler = async (event) => {
 		return { statusCode: 405, headers: { allow: 'POST' }, body: '' };
 	}
 
+	// The Function URL is public (authorization_type = NONE) because OAC
+	// SigV4 can't carry a browser POST body — see infra/csp_report.tf for the
+	// same constraint. CloudFront injects a high-entropy x-origin-secret
+	// custom header; reject anything lacking the match so the direct
+	// Function-URL bypass is closed and only CloudFront-proxied requests run.
+	if (!secretMatches(header(event?.headers, 'x-origin-secret'))) {
+		return { statusCode: 403, body: '' };
+	}
+
 	const route = ROUTES.get(path);
 	if (!route) return errorResponse(404, 'not found');
 
@@ -574,9 +612,12 @@ export const handler = async (event) => {
 
 function normalizePath(p) {
 	if (typeof p !== 'string') return '/';
-	// Strip trailing slashes (except for the root).
-	const trimmed = p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
-	return trimmed;
+	// Strip a trailing slash (except for the root), then the CloudFront
+	// /api/passkey route prefix so the path matches the ROUTES keys.
+	let path = p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
+	if (path === ROUTE_PREFIX) return '/';
+	if (path.startsWith(`${ROUTE_PREFIX}/`)) path = path.slice(ROUTE_PREFIX.length);
+	return path;
 }
 
 // Exposed for unit tests. Not part of the Lambda contract.
@@ -584,6 +625,8 @@ export const __test = {
 	originMatches,
 	parseBody,
 	normalizePath,
+	secretMatches,
+	header,
 	ROUTES,
 	updateCredentialCounter,
 	credentialDiscriminator,
