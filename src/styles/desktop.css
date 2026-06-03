@@ -90,6 +90,7 @@
 	--chrome-border-width: 2px;
 	--chrome-radius-window: 10px;
 	--chrome-radius-button: 4px;
+	--taskbar-height: 44px;
 
 	/* ------------------------------------------------------------
 	 * Legacy names — repointed values, not renamed, so unrelated
@@ -463,8 +464,17 @@ a {
 	position: absolute;
 	top: 24px;
 	left: 24px;
+	/* Bound the grid above the fixed taskbar so icons never paint under
+	 * it (taskbar is z-index 9999, this is 1). auto-fill rows fit the
+	 * bounded height, and column auto-flow wraps overflow into new
+	 * columns to the right — classic desktop behavior — instead of
+	 * growing straight down behind the taskbar. */
+	bottom: calc(var(--taskbar-height) + 24px);
 	display: grid;
-	grid-template-columns: repeat(2, 120px);
+	grid-auto-flow: column;
+	grid-template-rows: repeat(auto-fill, 100px);
+	grid-auto-columns: 120px;
+	align-content: start;
 	gap: 16px 12px;
 	margin: 0;
 	padding: 0;
@@ -743,7 +753,7 @@ a {
 	bottom: 0;
 	left: 0;
 	right: 0;
-	height: 44px;
+	height: var(--taskbar-height);
 	display: flex;
 	align-items: stretch;
 	padding: 4px;
