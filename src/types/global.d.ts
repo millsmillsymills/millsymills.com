@@ -17,9 +17,24 @@ interface MillsNamespace {
 	__clippyInit?: true;
 }
 
+// Minimal Trusted Types surface — only what trusted-types.ts touches.
+// lib.dom under the current TS target omits these; remove this block if a
+// future lib bump adds them (duplicate-identifier error will flag it).
+interface TrustedTypePolicyOptions {
+	createScriptURL?: (input: string) => string;
+}
+interface TrustedTypePolicy {
+	readonly name: string;
+}
+interface TrustedTypePolicyFactory {
+	createPolicy(name: string, options: TrustedTypePolicyOptions): TrustedTypePolicy;
+	readonly defaultPolicy: TrustedTypePolicy | null;
+}
+
 declare global {
 	interface Window {
 		mills?: MillsNamespace;
+		trustedTypes?: TrustedTypePolicyFactory;
 	}
 }
 
