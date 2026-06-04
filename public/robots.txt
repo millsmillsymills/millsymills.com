@@ -12,8 +12,6 @@
 User-agent: *
 Allow: /
 Disallow: /super-secret/
-# Tripwire (#141): no real content lives here. A request for this path is
-# curiosity-driven probing — it surfaces in the CloudFront access logs.
 Disallow: /admin/backup/
 
 # Cloudflare Content Signals — consent for search + AI training

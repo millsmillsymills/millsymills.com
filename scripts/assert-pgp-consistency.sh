@@ -89,16 +89,15 @@ fi
 printf '\033[1;32m✓ pgp.ts, pgp.asc, and WKD binary all agree on %s\033[0m\n' "$asc_fpr"
 
 # 6. WKD-extraction regex consistency. The character class used to grep
-# the zbase32 hash out of `gpg --with-wkd-hash` output is duplicated
-# across the live script and two design docs (markdown can't transclude
-# a shell snippet). #119 fixed silent drift between them; this check
-# locks in the canonical zbase32 alphabet so the next maintainer who
-# loosens or rewrites it gets caught at PR time.
+# the zbase32 hash out of `gpg --with-wkd-hash` output. #119 fixed silent
+# drift between the live script and its design docs; this check locks in
+# the canonical zbase32 alphabet so the next maintainer who loosens or
+# rewrites it gets caught at PR time. The design/plan docs that once
+# mirrored the snippet now live under the gitignored docs/superpowers/
+# tree (#635), so the live script is the sole tracked source of truth.
 WKD_REGEX_CANON='[ybndrfg8ejkmcpqxot1uwisza345h769]{32}@'
 WKD_REGEX_FILES=(
 	scripts/generate-wkd.sh
-	docs/superpowers/specs/2026-04-20-phase-5c-batch-design.md
-	docs/superpowers/plans/2026-04-20-phase-5c-pr5-pgp.md
 )
 for f in "${WKD_REGEX_FILES[@]}"; do
 	if [[ ! -f "$f" ]]; then
@@ -110,7 +109,7 @@ for f in "${WKD_REGEX_FILES[@]}"; do
 		exit 1
 	fi
 done
-printf '\033[1;32m✓ WKD extraction regex matches canonical zbase32 across script + spec + plan\033[0m\n'
+printf '\033[1;32m✓ WKD extraction regex matches canonical zbase32 in generate-wkd.sh\033[0m\n'
 
 # 4 + 5. age key — ships dormant. Once mills activates, both pgp.ts's
 # `age` field and public/age.pub must be set and match each other.
