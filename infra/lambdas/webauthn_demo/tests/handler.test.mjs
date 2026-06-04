@@ -16,6 +16,8 @@ process.env.WEBAUTHN_RP_ID = 'example.test';
 process.env.WEBAUTHN_EXPECTED_ORIGIN = 'https://example.test';
 process.env.WEBAUTHN_TABLE = 'creds-test';
 process.env.WEBAUTHN_SESSIONS_TABLE = 'sessions-test';
+const TEST_ORIGIN_SECRET = 'test-origin-secret-value';
+process.env.ORIGIN_SECRET = TEST_ORIGIN_SECRET;
 
 const { DynamoDBDocumentClient } = await import('@aws-sdk/lib-dynamodb');
 
@@ -52,10 +54,11 @@ afterEach(() => {
 	console.warn = originalConsoleWarn;
 });
 
-function eventOf({ method = 'POST', path = '/', body, isBase64Encoded = false } = {}) {
+function eventOf({ method = 'POST', path = '/', body, isBase64Encoded = false, secret = TEST_ORIGIN_SECRET } = {}) {
 	return {
 		rawPath: path,
 		requestContext: { http: { method, path } },
+		headers: secret == null ? {} : { 'x-origin-secret': secret },
 		body: typeof body === 'string' ? body : body == null ? '' : JSON.stringify(body),
 		isBase64Encoded,
 	};
@@ -75,6 +78,69 @@ test('GET on a POST route returns 405', async () => {
 test('unknown route returns 404', async () => {
 	const res = await handler(eventOf({ path: '/nope', body: {} }));
 	assert.equal(res.statusCode, 404);
+});
+
+test('POST without the CloudFront origin secret returns 403', async () => {
+	const res = await handler(eventOf({ path: '/registration/options', body: {}, secret: null }));
+	assert.equal(res.statusCode, 403);
+});
+
+test('POST with a wrong origin secret returns 403', async () => {
+	const res = await handler(eventOf({ path: '/registration/options', body: {}, secret: 'wrong' }));
+	assert.equal(res.statusCode, 403);
+});
+
+test('non-POST without the secret returns a uniform 403, not 405', async () => {
+	// The secret gate runs before the method check, so a direct caller
+	// hitting the raw Function URL with the wrong method but no secret gets
+	// 403 — it can't distinguish a method mismatch from a missing secret and
+	// so can't learn that POST is the expected method.
+	for (const method of ['GET', 'PUT', 'DELETE']) {
+		const res = await handler(eventOf({ method, path: '/registration/options', secret: null }));
+		assert.equal(res.statusCode, 403);
+	}
+});
+
+test('CloudFront /api/passkey/* prefix is stripped to the route key', async () => {
+	const res = await handler(eventOf({ path: '/api/passkey/registration/options', body: {} }));
+	assert.equal(res.statusCode, 200);
+	const body = JSON.parse(res.body);
+	assert.equal(typeof body.sessionId, 'string');
+});
+
+test('normalizePath strips the /api/passkey prefix and trailing slash', () => {
+	assert.equal(__test.normalizePath('/api/passkey/registration/options'), '/registration/options');
+	assert.equal(__test.normalizePath('/api/passkey/registration/options/'), '/registration/options');
+	assert.equal(__test.normalizePath('/api/passkey'), '/');
+	assert.equal(__test.normalizePath('/registration/options'), '/registration/options');
+	assert.equal(__test.normalizePath('/api/passkeyXYZ'), '/api/passkeyXYZ');
+});
+
+test('secretMatches is constant-time-safe and rejects wrong/short input', () => {
+	assert.equal(__test.secretMatches(TEST_ORIGIN_SECRET), true);
+	assert.equal(__test.secretMatches('wrong'), false);
+	assert.equal(__test.secretMatches(''), false);
+	assert.equal(__test.secretMatches(undefined), false);
+});
+
+test('secretMatches rejects a same-length-but-wrong secret (timingSafeEqual branch)', () => {
+	// The length short-circuit can't catch this: same byte length as the real
+	// secret, differing only in the final byte. Exercises the timingSafeEqual
+	// comparison itself, not the length guard, so a regression that dropped the
+	// constant-time compare (e.g. `return true` after the length check) fails here.
+	const sameLengthWrong = `${TEST_ORIGIN_SECRET.slice(0, -1)}X`;
+	assert.equal(sameLengthWrong.length, TEST_ORIGIN_SECRET.length);
+	assert.notEqual(sameLengthWrong, TEST_ORIGIN_SECRET);
+	assert.equal(__test.secretMatches(sameLengthWrong), false);
+});
+
+test('header() resolves case-insensitively and null-guards missing input', () => {
+	// Function URLs lowercase header keys, but a direct invoke/test may not;
+	// the lookup must match defensively so a mixed-case secret header still gates.
+	assert.equal(__test.header({ 'X-Origin-Secret': 'v' }, 'x-origin-secret'), 'v');
+	assert.equal(__test.header({ 'x-origin-secret': 'v' }, 'x-origin-secret'), 'v');
+	assert.equal(__test.header({}, 'x-origin-secret'), undefined);
+	assert.equal(__test.header(undefined, 'x-origin-secret'), undefined);
 });
 
 test('body larger than 4 KB is rejected with 413', async () => {
@@ -314,7 +380,8 @@ test('parseBody returns {} for empty body', () => {
 });
 
 test('updateCredentialCounter issues a conditional UpdateCommand', async () => {
-	await __test.updateCredentialCounter('cred1', 5);
+	const result = await __test.updateCredentialCounter('cred1', 0, 5);
+	assert.deepEqual(result, { ok: true });
 	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
 	assert.equal(updates.length, 1);
 	const input = updates[0].input;
@@ -325,14 +392,38 @@ test('updateCredentialCounter issues a conditional UpdateCommand', async () => {
 	assert.equal(input.ExpressionAttributeValues[':new'], 5);
 });
 
-test('updateCredentialCounter skips DDB write for counter=0 authenticators (U2F)', async () => {
-	await __test.updateCredentialCounter('cred-u2f', 0);
+test('updateCredentialCounter skips DDB write for always-zero authenticators (U2F)', async () => {
+	const result = await __test.updateCredentialCounter('cred-u2f', 0, 0);
+	assert.deepEqual(result, { ok: true });
 	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
 	assert.equal(updates.length, 0);
 });
 
+test('updateCredentialCounter does NOT skip a regression-to-zero (stored counter > 0)', async () => {
+	// A credential that registered with a positive counter and now presents 0
+	// must fall through to the conditional update so the regression is caught,
+	// not silently accepted by the U2F always-zero short-circuit.
+	ddbResponses.set('UpdateCommand', () => {
+		const err = new Error('counter not strictly greater');
+		err.name = 'ConditionalCheckFailedException';
+		err.Item = { credentialId: 'cred1', counter: 9 };
+		throw err;
+	});
+	const originalError = console.error;
+	console.error = () => {};
+	let result;
+	try {
+		result = await __test.updateCredentialCounter('cred1', 9, 0);
+	} finally {
+		console.error = originalError;
+	}
+	assert.deepEqual(result, { ok: false, reason: 'counter-regression' });
+	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
+	assert.equal(updates.length, 1, 'regression-to-zero must still issue the update');
+});
+
 test('updateCredentialCounter passes ReturnValuesOnConditionCheckFailure=ALL_OLD', async () => {
-	await __test.updateCredentialCounter('cred1', 5);
+	await __test.updateCredentialCounter('cred1', 0, 5);
 	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
 	assert.equal(updates[0].input.ReturnValuesOnConditionCheckFailure, 'ALL_OLD');
 });
@@ -350,12 +441,14 @@ test('updateCredentialCounter genuine regression: console.error + CounterRegress
 	const errors = [];
 	console.warn = (...args) => warnings.push(args);
 	console.error = (...args) => errors.push(args);
+	let result;
 	try {
-		await __test.updateCredentialCounter('cred1', 3);
+		result = await __test.updateCredentialCounter('cred1', 7, 3);
 	} finally {
 		console.warn = originalWarn;
 		console.error = originalError;
 	}
+	assert.deepEqual(result, { ok: false, reason: 'counter-regression' });
 	const regressionError = errors.find(([msg]) => /counter regression detected/.test(String(msg)));
 	assert.ok(regressionError, 'expected console.error for genuine regression');
 	const ctx = regressionError[1];
@@ -384,12 +477,14 @@ test('updateCredentialCounter TTL race: warn only, no CounterRegression EMF', as
 	const errors = [];
 	console.warn = (...args) => warnings.push(args);
 	console.error = (...args) => errors.push(args);
+	let result;
 	try {
-		await __test.updateCredentialCounter('cred1', 3);
+		result = await __test.updateCredentialCounter('cred1', 5, 3);
 	} finally {
 		console.warn = originalWarn;
 		console.error = originalError;
 	}
+	assert.deepEqual(result, { ok: true }, 'TTL race is benign -- assertion may proceed');
 	const vanished = warnings.find(([msg]) => /credential vanished mid-update/.test(String(msg)));
 	assert.ok(vanished, 'expected warn on TTL-race branch');
 	const ctx = vanished[1];
@@ -454,7 +549,7 @@ test('updateCredentialCounter rethrows non-conditional errors', async () => {
 		throw err;
 	});
 	await assert.rejects(
-		() => __test.updateCredentialCounter('cred1', 3),
+		() => __test.updateCredentialCounter('cred1', 5, 3),
 		/throttled/,
 	);
 });

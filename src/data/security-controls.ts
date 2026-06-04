@@ -110,7 +110,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'CloudFront response-headers policy ships a strict-deny `Permissions-Policy` that blocks 36 powerful features — camera, microphone, geolocation, USB / Serial / HID / MIDI / Bluetooth, clipboard read/write, payment, fullscreen, screen-wake-lock, WebAuthn `publickey-credentials-*`, FLoC/Topics, otp-credentials, attribution-reporting, window-management, local-fonts, unload, and the rest of the W3C catalog — for both top-level and embedded contexts. A CI lint rejects any directive that deviates from `=()` (deny) or `=(self)` (self-allow), so a future "fix" that flips to `=*` fails CI. The `/demo/passkey/*` cache behavior overrides only the two `publickey-credentials-*` directives to `=(self)` via a sibling response-headers policy (`aws_cloudfront_response_headers_policy.passkey_demo`); every other directive remains denied, including on the demo path.',
 		why: 'The site has zero JavaScript use of any powerful API (verified by greppping `navigator.*` in `src/`), so the strict-deny baseline ships without breaking anything visitors actually use. Closing every feature the site does not need turns silent permission requests into hard `Permission denied` failures, narrows the impact radius of a future XSS, and makes the inspector\'s self-grading honest — previously the site failed its own `Permissions-Policy` check.',
-		tradeoffs: 'Future features that legitimately need a powerful API (e.g. the WebAuthn passkey demo #140, a theater-mode fullscreen) must extend this policy in the same PR; otherwise the API call no-ops silently. The policy does not rate-limit — it\'s a strict allow-list, not a runtime gate.',
+		tradeoffs: 'Features that legitimately need a powerful API (the live WebAuthn passkey demo at `/demo/passkey`, a future theater-mode fullscreen) must extend this policy in the same PR; otherwise the API call no-ops silently. The policy does not rate-limit — it\'s a strict allow-list, not a runtime gate.',
 		code: ['infra/cloudfront.tf', 'scripts/assert-permissions-policy.sh'],
 		verify: {
 			label: 'securityheaders.com report',
@@ -171,6 +171,23 @@ export const securityControls: readonly SecurityControl[] = [
 			'infra/cloudfront.tf',
 		],
 		prs: [302],
+	},
+	{
+		id: 'passkey-demo',
+		title: 'WebAuthn passkey demo backend',
+		category: 'web',
+		status: 'shipped',
+		what: 'The `/demo/passkey` page runs real WebAuthn registration + authentication ceremonies against a `@simplewebauthn/server` Lambda behind CloudFront at `/api/passkey/*`. Challenges, the credential public key, and the signature counter live in DynamoDB with short TTLs (5-minute in-flight sessions, 24-hour credentials) and no PII — `userID` is a synthetic random handle, not an account. Authentication uses discoverable credentials (`allowCredentials: []`), so the authenticator chooses which key to present.',
+		why: 'A passkey demo that mock-signs in the browser proves nothing. Wiring the page to a real server-side verifier (challenge issuance, origin/RP-ID binding, signature-counter clone detection) makes it an honest demonstration of the ceremony — and exercises the same Permissions-Policy `publickey-credentials-*=(self)` carve-out the site documents.',
+		tradeoffs: 'Like the CSP-report endpoint, this Function URL is public (`authorization_type = NONE`) rather than OAC-locked, because OAC SigV4 can\'t carry a browser POST body and every WebAuthn route is POST. CloudFront injects a high-entropy `x-origin-secret` custom header and the handler rejects (403) any request lacking it — constant-time compared, evaluated before the method check so a direct caller gets a uniform 403. A 403-rate CloudWatch alarm (`OriginSecretMismatch`, mirroring `SessionMiss` and `CounterRegression`) surfaces sustained direct-to-Function-URL probing. Body size, content type, and `reserved_concurrent_executions` are capped; signature-counter regressions page immediately as a clone signal.',
+		code: [
+			'src/scripts/passkey-demo.ts',
+			'src/pages/demo/passkey.astro',
+			'infra/webauthn_demo.tf',
+			'infra/lambdas/webauthn_demo/index.mjs',
+			'infra/cloudfront.tf',
+		],
+		prs: [631],
 	},
 
 	// ─── dns + domain ──────────────────────────────────────────────────

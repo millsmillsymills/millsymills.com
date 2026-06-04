@@ -9,6 +9,14 @@ deploy_branch = "main"
 # steady state — same dual-permission shape is provisioned for hits via
 # `aws_lambda_permission.hits_cloudfront_invoke`. See #551 / #571 / #576.
 enable_hitcounter = true
+# Deliberate opt-in to the WebAuthn passkey demo (#650). The variable
+# defaults to false so merging #631 + the next scheduled deploy don't
+# provision the public Function URL + /api/passkey/* behavior on their
+# own; flipping this true here is the explicit, flag-gated prod apply
+# step. Tear down by setting this false and applying. Requires
+# enable_csp_report + enable_inspector_tls (both default true), enforced
+# by validations in infra/variables.tf.
+enable_webauthn_demo = true
 # Set explicitly even though it matches the default — keeps the trust
 # policy's expected value visible in the stack file rather than
 # relying on a default that could shift.

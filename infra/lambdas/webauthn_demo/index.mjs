@@ -34,7 +34,7 @@
 //   * Credential IDs are NOT logged. Only opaque session IDs appear in
 //     CloudWatch.
 
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import {
 	DynamoDBClient,
@@ -57,6 +57,16 @@ const RP_ID = requireEnv('WEBAUTHN_RP_ID');
 const EXPECTED_ORIGIN = requireEnv('WEBAUTHN_EXPECTED_ORIGIN');
 const CREDENTIALS_TABLE = requireEnv('WEBAUTHN_TABLE');
 const SESSIONS_TABLE = requireEnv('WEBAUTHN_SESSIONS_TABLE');
+const ORIGIN_SECRET_BYTES = Buffer.from(requireEnv('ORIGIN_SECRET'), 'utf-8');
+
+// CloudFront forwards browser requests under /api/passkey/*; the Function
+// URL receives that full path. Strip the prefix so the route table keys
+// (/registration/options, …) match whether the request arrives via
+// CloudFront (prefixed) or a direct test/rehearsal call (unprefixed).
+// MUST stay in sync with the CloudFront cache behavior's path_pattern in
+// infra/cloudfront.tf ("/api/passkey/*") — if one moves, the other must
+// too or every CloudFront-forwarded request silently 404s.
+const ROUTE_PREFIX = '/api/passkey';
 
 const RP_NAME = 'millsymills passkey demo';
 const MAX_BODY_BYTES = 4096;
@@ -125,6 +135,28 @@ function errFields(err) {
 	};
 }
 
+// Case-insensitive header lookup. Lambda Function URLs lowercase header
+// keys, but a direct test/invoke may not, so match defensively.
+function header(headers, name) {
+	if (!headers) return undefined;
+	const lower = name.toLowerCase();
+	for (const k of Object.keys(headers)) {
+		if (k.toLowerCase() === lower) return headers[k];
+	}
+	return undefined;
+}
+
+// Constant-time comparison of the CloudFront-injected origin secret. The
+// length check short-circuits before timingSafeEqual (which throws on
+// length mismatch); the byte compare is timing-safe so a direct caller of
+// the public Function URL can't recover the secret one character at a time.
+function secretMatches(candidate) {
+	if (typeof candidate !== 'string') return false;
+	const candidateBytes = Buffer.from(candidate, 'utf-8');
+	if (candidateBytes.length !== ORIGIN_SECRET_BYTES.length) return false;
+	return timingSafeEqual(candidateBytes, ORIGIN_SECRET_BYTES);
+}
+
 function parseBody(event) {
 	const raw = event?.body;
 	if (raw == null || raw === '') return {};
@@ -173,6 +205,32 @@ function parseBody(event) {
 		const wrapped = new Error('body is not valid JSON');
 		wrapped.statusCode = 400;
 		throw wrapped;
+	}
+}
+
+// EMF metric for the origin-secret-mismatch alarm in webauthn_demo.tf.
+// Fired on the 403 gate when a request reaches the raw Function URL
+// without CloudFront's injected x-origin-secret. Sustained volume is the
+// direct-call brute-force signal; like SessionMiss, Lambda's built-in
+// Errors metric can't see a handler-returned 403. Wrapped so a
+// stringify/log failure can't turn the gate into an uncaught exception.
+function emitOriginSecretMismatchMetric() {
+	try {
+		console.warn(JSON.stringify({
+			_aws: {
+				Timestamp: Date.now(),
+				CloudWatchMetrics: [{
+					Namespace: 'MillsymillsCom/WebauthnDemo',
+					Dimensions: [[]],
+					Metrics: [{ Name: 'OriginSecretMismatch', Unit: 'Count' }],
+				}],
+			},
+			level: 'warn',
+			msg: 'webauthn-demo origin-secret mismatch',
+			OriginSecretMismatch: 1,
+		}));
+	} catch (emfErr) {
+		console.error('emf emit failed', { err: emfErr?.message });
 	}
 }
 
@@ -280,10 +338,19 @@ async function putCredential(record) {
 // signature counters MUST report `signCount = 0` on every assertion.
 // SimpleWebAuthn already accepted this auth, so persisting 0 is a
 // no-op -- and skipping it avoids a guaranteed `0 < 0` condition
-// failure on every assertion for U2F-style keys.
-async function updateCredentialCounter(credentialId, newCounter) {
-	if (!credentialId || typeof credentialId !== 'string') return;
-	if (newCounter === 0) return;
+// failure on every assertion for U2F-style keys. Skip ONLY when the
+// credential has always reported 0 (storedCounter === 0); a credential
+// that registered with a positive counter and now presents 0 is a
+// regression-to-zero and must fall through to the conditional update so
+// it is detected rather than silently accepted.
+//
+// Returns a discriminated result so the caller can reject a detected
+// clone/replay: { ok: true } when the assertion may proceed (counter
+// advanced, U2F always-zero, or a benign TTL race), { ok: false,
+// reason: 'counter-regression' } when the signature counter regressed.
+async function updateCredentialCounter(credentialId, storedCounter, newCounter) {
+	if (!credentialId || typeof credentialId !== 'string') return { ok: true };
+	if (newCounter === 0 && storedCounter === 0) return { ok: true };
 	try {
 		await ddb.send(
 			new UpdateCommand({
@@ -302,6 +369,7 @@ async function updateCredentialCounter(credentialId, newCounter) {
 				ReturnValuesOnConditionCheckFailure: 'ALL_OLD',
 			}),
 		);
+		return { ok: true };
 	} catch (err) {
 		if (err?.name === 'ConditionalCheckFailedException') {
 			const credentialIdHash = credentialDiscriminator(credentialId);
@@ -316,21 +384,22 @@ async function updateCredentialCounter(credentialId, newCounter) {
 					newCounter,
 					credentialIdHash,
 				});
-				return;
+				return { ok: true };
 			}
 			// Row exists and the counter did NOT advance -- the
 			// `#counter < :new` clause failed. This is the WebAuthn
 			// clone-detection signal: a second authenticator copy with
 			// the same private key replayed an older signCount, or a
 			// genuine attacker is replaying captured assertions. Log
-			// + emit CounterRegression EMF so the alarm pages.
+			// + emit CounterRegression EMF so the alarm pages, and tell
+			// the caller to reject -- the whole point of the demo.
 			console.error('webauthn-demo counter regression detected', {
 				newCounter,
 				storedCounter: old.counter,
 				credentialIdHash,
 			});
 			emitCounterRegressionMetric();
-			return;
+			return { ok: false, reason: 'counter-regression' };
 		}
 		throw err;
 	}
@@ -423,6 +492,7 @@ async function registrationVerifyHandler(body) {
 	}
 
 	if (!verification.verified || !verification.registrationInfo) {
+		console.warn('registration not verified', { sessionId });
 		return errorResponse(400, 'registration not verified');
 	}
 
@@ -438,8 +508,11 @@ async function registrationVerifyHandler(body) {
 	return jsonResponse(200, { verified: true, userHandle: session.userHandle });
 }
 
-async function authenticationOptionsHandler(body) {
-	const { userHandle } = body;
+async function authenticationOptionsHandler() {
+	// Discoverable credentials (allowCredentials: []) — the authenticator
+	// surfaces which credential to use, so no caller-supplied userHandle is
+	// needed here. The verified userHandle comes from the stored credential
+	// looked up by response.id in authenticationVerifyHandler.
 	const options = await generateAuthenticationOptions({
 		rpID: RP_ID,
 		userVerification: 'preferred',
@@ -450,7 +523,6 @@ async function authenticationOptionsHandler(body) {
 	await putSession(sessionId, {
 		type: 'authentication',
 		challenge: options.challenge,
-		userHandle: typeof userHandle === 'string' ? userHandle : '',
 	});
 
 	return jsonResponse(200, { sessionId, options });
@@ -499,12 +571,26 @@ async function authenticationVerifyHandler(body) {
 		return errorResponse(400, 'authentication verification failed');
 	}
 
-	if (!verification.verified) return errorResponse(400, 'authentication not verified');
+	if (!verification.verified) {
+		console.warn('authentication not verified', { sessionId });
+		return errorResponse(400, 'authentication not verified');
+	}
 
-	await updateCredentialCounter(
+	const counterResult = await updateCredentialCounter(
 		credential.credentialId,
+		Number(credential.counter ?? 0),
 		verification.authenticationInfo.newCounter,
 	);
+	if (!counterResult.ok) {
+		// Signature counter regressed -- a cloned authenticator replayed an
+		// older signCount (or a genuine replay). The assertion is
+		// cryptographically valid but fails the WebAuthn monotonicity
+		// invariant, so reject it. Surfacing this is the demo's headline.
+		return errorResponse(
+			401,
+			'authentication rejected: signature counter regressed (possible cloned authenticator)',
+		);
+	}
 
 	return jsonResponse(200, {
 		verified: true,
@@ -550,6 +636,25 @@ export const handler = async (event) => {
 	const rawPath = event?.rawPath ?? event?.requestContext?.http?.path ?? '/';
 	const path = normalizePath(rawPath);
 
+	// The Function URL is public (authorization_type = NONE) because OAC
+	// SigV4 can't carry a browser POST body — see infra/csp_report.tf for the
+	// same constraint. CloudFront injects a high-entropy x-origin-secret
+	// custom header; reject anything lacking the match so the direct
+	// Function-URL bypass is closed and only CloudFront-proxied requests run.
+	// This gate runs before the method check so the raw Function URL answers
+	// any request lacking the secret with a uniform 403 regardless of method —
+	// a direct caller can't tell a method mismatch (405) from a missing secret
+	// and so can't learn that POST is the expected method.
+	if (!secretMatches(header(event?.headers, 'x-origin-secret'))) {
+		// Direct-to-Function-URL probing is the signal this logs/meters:
+		// every legitimate request arrives via CloudFront with the secret,
+		// so a mismatch means someone found the raw *.lambda-url host and
+		// is calling it directly. The EMF emit carries level+msg, so it is
+		// the single warn line per rejection — no separate console.warn.
+		emitOriginSecretMismatchMetric();
+		return { statusCode: 403, body: '' };
+	}
+
 	if (method !== 'POST') {
 		return { statusCode: 405, headers: { allow: 'POST' }, body: '' };
 	}
@@ -574,9 +679,12 @@ export const handler = async (event) => {
 
 function normalizePath(p) {
 	if (typeof p !== 'string') return '/';
-	// Strip trailing slashes (except for the root).
-	const trimmed = p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
-	return trimmed;
+	// Strip a trailing slash (except for the root), then the CloudFront
+	// /api/passkey route prefix so the path matches the ROUTES keys.
+	let path = p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
+	if (path === ROUTE_PREFIX) return '/';
+	if (path.startsWith(`${ROUTE_PREFIX}/`)) path = path.slice(ROUTE_PREFIX.length);
+	return path;
 }
 
 // Exposed for unit tests. Not part of the Lambda contract.
@@ -584,6 +692,8 @@ export const __test = {
 	originMatches,
 	parseBody,
 	normalizePath,
+	secretMatches,
+	header,
 	ROUTES,
 	updateCredentialCounter,
 	credentialDiscriminator,
