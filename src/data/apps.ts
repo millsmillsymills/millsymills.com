@@ -256,7 +256,6 @@ const _APPS_DATA = [
 		id: 'security',
 		label: 'security',
 		glyph: '🛡️',
-		// VHS-distorted shield icon (see public/images/icons/security.svg).
 		iconUrl: '/images/icons/security.svg',
 		title: 'security.txt',
 		ogDescription: 'controls shipped on this site — DNSSEC, CAA, CT monitoring, SBOM, mail-auth stack. every claim links to the implementation.',
