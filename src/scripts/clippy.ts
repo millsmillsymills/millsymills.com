@@ -4,7 +4,6 @@
 
 import { isAppId, type AppId } from '../data/apps';
 import { pickQuip, type QuipPose as Pose } from '../data/clippy-quips';
-import { captureById } from './flags';
 
 const POSE_DURATIONS_MS: Record<Pose, number> = {
 	idle: 2400,
@@ -21,12 +20,8 @@ const IDLE_TIRED_MS = 120_000;
 const IDLE_SLEEP_MS = 300_000;
 const QUIP_VISIBLE_MS = 4000;
 // Minimum gap between any two spoken quips, regardless of trigger. Tune here.
-// Dismissing a quip does NOT reset this gap — see speak() for why. The
-// `force` option on speak() bypasses the gate for high-signal moments
-// (flag captures), so a CTF win lands even if Clippy spoke 2s ago.
+// Dismissing a quip does NOT reset this gap — see speak() for why.
 const QUIP_COOLDOWN_MS = 8000;
-const CLICK_STREAK_WINDOW_MS = 10_000;
-const CLICK_STREAK_THRESHOLD = 7;
 const STORAGE_KEY = 'mills.clippy.dismissed';
 
 let aside: HTMLElement | null = null;
@@ -41,7 +36,6 @@ let bubbleHideTimer: number | null = null;
 let idleThinkTimer: number | null = null;
 let idleTiredTimer: number | null = null;
 let idleSleepTimer: number | null = null;
-let clickTimes: number[] = [];
 let lastQuipAt = 0;
 
 function clearTimer(id: number | null): void {
@@ -78,15 +72,13 @@ function setPose(next: Pose): void {
 	}
 }
 
-function speak(text: string, options: { force?: boolean } = {}): void {
+function speak(text: string): void {
 	if (!bubble || !bubbleText || !text) return;
 	// Global cooldown: drop the quip if we spoke too recently. Anchored on the
 	// last *spoken* time, not on bubble visibility — so a user-initiated dismiss
-	// can't shorten the gap by clearing the bubble early. `force: true` bypasses
-	// the gate for events where dropping the quip would feel like a bug (e.g.
-	// a flag capture immediately after an idle-think quip).
+	// can't shorten the gap by clearing the bubble early.
 	const now = Date.now();
-	if (!options.force && now - lastQuipAt < QUIP_COOLDOWN_MS) return;
+	if (now - lastQuipAt < QUIP_COOLDOWN_MS) return;
 	lastQuipAt = now;
 	bubbleText.textContent = text;
 	bubble.hidden = false;
@@ -216,34 +208,8 @@ function init(): void {
 	document.addEventListener('mousemove', resetIdleTimers, { passive: true });
 	document.addEventListener('click', resetIdleTimers);
 
-	// Flag captured anywhere → cool pose + contextual quip. Reset the idle
-	// ladder so a capture at minute 4 of an idle session doesn't let Clippy
-	// fall asleep mid-celebration. `force: true` bypasses the global cooldown:
-	// a CTF win is a once-per-flag user-driven event, and silently dropping
-	// the celebration because Clippy spoke 2s ago would feel like a bug.
-	window.addEventListener('mills:flag-captured', () => {
-		resetIdleTimers();
-		setPose('cool');
-		const entry = pickQuip(getCurrentAppId(), 'flag');
-		if (entry) speak(entry.quip, { force: true });
-	});
-
-	// Sprite click — track for the clippy CTF flag, suppress popover during a
-	// streak so the user can keep clicking, otherwise open the popover.
+	// Sprite click — open the dismiss popover.
 	sprite.addEventListener('click', () => {
-		const now = Date.now();
-		clickTimes = clickTimes.filter((t) => now - t < CLICK_STREAK_WINDOW_MS);
-		clickTimes.push(now);
-		if (clickTimes.length >= CLICK_STREAK_THRESHOLD) {
-			captureById('clippy');
-			setPose('cool');
-			clickTimes = [];
-			return;
-		}
-		// Streak active — suppress the popover so the click run isn't interrupted.
-		if (clickTimes.length >= 2) {
-			return;
-		}
 		openDismissPopover();
 	});
 

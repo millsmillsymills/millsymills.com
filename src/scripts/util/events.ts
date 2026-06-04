@@ -7,7 +7,6 @@
 
 import type { AppId } from '../../data/apps';
 import type { QuipTrigger } from '../../data/clippy-quips';
-import type { Challenge } from '../flags';
 
 /**
  * The complete map of mills:* events. Both `Window` and `Document` listen,
@@ -21,8 +20,6 @@ export interface MillsEventMap {
 	// observe. The dispatcher passes `{ detail: null }` explicitly to keep
 	// type and runtime in lockstep.
 	'mills:boot-done': CustomEvent<null>;
-	'mills:flag-captured': CustomEvent<Challenge>;
-	'mills:flags-unlocked': CustomEvent<Challenge>;
 	'mills:now-playing': CustomEvent<NowPlaying>;
 	'mills:close-window': CustomEvent<{ id: string }>;
 	'mills:clippy-trigger': CustomEvent<ClippyTriggerDetail>;
@@ -67,19 +64,6 @@ declare global {
 
 export function dispatchBootDone(): void {
 	window.dispatchEvent(new CustomEvent('mills:boot-done', { detail: null }));
-}
-
-export function dispatchFlagCaptured(challenge: Challenge): void {
-	window.dispatchEvent(new CustomEvent('mills:flag-captured', { detail: challenge }));
-}
-
-/**
- * Fired exactly once per profile — on the first capture. Carries the same
- * Challenge payload as `mills:flag-captured` so subscribers can render
- * something specific to the unlock moment (e.g. the celebration banner).
- */
-export function dispatchFlagsUnlocked(challenge: Challenge): void {
-	window.dispatchEvent(new CustomEvent('mills:flags-unlocked', { detail: challenge }));
 }
 
 export function dispatchNowPlaying(detail: NowPlaying): void {

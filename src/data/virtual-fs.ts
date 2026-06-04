@@ -93,7 +93,7 @@ nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
 
 const shadow = trim(`
 root:!:20089:0:99999:7:::
-mills:$6$rounds=656000$abcd$flag{etc_shadow_should_not_be_world_readable}:20089:0:99999:7:::
+mills:$6$rounds=656000$abcd$KqJxYz9pN0wXm2vQ7rT4hC8bL1sD6fG3jR5kP0aZ:20089:0:99999:7:::
 nobody:*:20089:0:99999:7:::
 `);
 
@@ -110,7 +110,7 @@ const hosts = trim(`
 const motd = trim(`
 welcome to mills@millsymills:~
 
-this terminal is a toy. ls / cat / cd / nmap / curl / ssh / sudo / flag — try \`help\`.
+this terminal is a toy. ls / cat / cd / nmap / curl / ssh / sudo — try \`help\`.
 
 real shells exit. this one closes the window.
 `);

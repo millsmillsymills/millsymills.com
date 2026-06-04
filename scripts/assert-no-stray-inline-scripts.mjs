@@ -1,13 +1,12 @@
 // Assert every executable inline <script> shipped in dist/ is allowlisted by a
 // SHA-256 in the CloudFront CSP `script-src`.
 //
-// `script-src` is 'self' plus pinned hashes, so an inline script whose bytes
-// aren't pinned is silently CSP-blocked at runtime. The block is invisible
-// locally — `astro preview` serves no CSP; only prod CloudFront enforces it —
-// so this class of bug ships green and only surfaces in the browser console on
-// prod (#645: the unifi-demo loader inlined itself, got blocked, demo never
-// loaded). assert-flags-init-csp.sh proves the one expected hash IS pinned;
-// this proves nothing UNexpected ships. Runs after `npm run build`.
+// `script-src` is 'self' with no inline allowance, so any executable inline
+// script is silently CSP-blocked at runtime. The block is invisible locally —
+// `astro preview` serves no CSP; only prod CloudFront enforces it — so this
+// class of bug ships green and only surfaces in the browser console on prod
+// (#645: the unifi-demo loader inlined itself, got blocked, demo never loaded).
+// This proves no executable inline script ships. Runs after `npm run build`.
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -39,11 +38,10 @@ function inlineScriptType(attrs) {
 	return m ? m[1].trim().toLowerCase() : '';
 }
 
+// `script-src` is 'self' with no pinned inline hashes today, so `allowed` is
+// expected to be empty — that is the correct state, not an error. Any
+// executable inline script in dist/ is therefore a violation.
 const allowed = allowedHashes();
-if (allowed.size === 0) {
-	console.error(`✗ no script-src hash found in ${CF_TF}`);
-	process.exit(2);
-}
 
 const re = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi;
 const violations = new Map();
@@ -73,10 +71,10 @@ if (violations.size > 0) {
 	}
 	console.error(
 		`\nFix: import the script from a module so Astro bundles it to an external\n` +
-			`     _astro/*.js (covered by script-src 'self') — see UniFi.astro. Only the\n` +
-			`     pre-paint flag-unlock bootstrap is meant to ship inline (and is pinned).`,
+			`     _astro/*.js (covered by script-src 'self') — see UniFi.astro. No\n` +
+			`     executable inline script is allowlisted in the CSP.`,
 	);
 	process.exit(1);
 }
 
-console.log(`✓ every executable inline script in dist/ is CSP-allowlisted (${allowed.size} pinned hash(es))`);
+console.log(`✓ no executable inline script in dist/ falls outside the CloudFront CSP`);

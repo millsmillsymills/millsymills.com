@@ -3,7 +3,6 @@ import type { Entry } from '../filesystem';
 import { incidents } from '../../../data/incidents';
 import { pgp } from '../../../data/pgp';
 import pgpArmored from '../../../../public/pgp.asc?raw';
-import { flagsUnlocked } from '../../flags';
 import {
 	tools,
 	findTool,
@@ -54,9 +53,7 @@ register(
 		handler: ({ out }) => {
 			out('available commands:', 't-dim');
 			out('');
-			const unlocked = flagsUnlocked();
 			for (const c of listCommands()) {
-				if (!unlocked && c.name === 'flag') continue;
 				out(`  ${c.name.padEnd(12)} ${c.summary}`);
 			}
 			out('');
@@ -229,7 +226,7 @@ register(
 		handler: ({ out }) => {
 			out('tl;dr — no tracking, no cookies, no third-party scripts.', 't-dim');
 			out('');
-			out('  - localStorage + sessionStorage only (window positions, flag progress, boot flag)');
+			out('  - localStorage + sessionStorage only (window positions, boot flag)');
 			out('  - CloudFront access logs — 90d retention (ip, ua, url, status, timestamp)');
 			out('  - MIT licensed, source on GitHub');
 			out('');
