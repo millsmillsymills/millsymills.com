@@ -1,0 +1,3 @@
+[submodule "vendor/tech-memes"]
+	path = vendor/tech-memes
+	url = https://github.com/millsmillsymills/tech-memes.git
