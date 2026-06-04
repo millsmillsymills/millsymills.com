@@ -380,7 +380,8 @@ test('parseBody returns {} for empty body', () => {
 });
 
 test('updateCredentialCounter issues a conditional UpdateCommand', async () => {
-	await __test.updateCredentialCounter('cred1', 5);
+	const result = await __test.updateCredentialCounter('cred1', 0, 5);
+	assert.deepEqual(result, { ok: true });
 	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
 	assert.equal(updates.length, 1);
 	const input = updates[0].input;
@@ -391,14 +392,38 @@ test('updateCredentialCounter issues a conditional UpdateCommand', async () => {
 	assert.equal(input.ExpressionAttributeValues[':new'], 5);
 });
 
-test('updateCredentialCounter skips DDB write for counter=0 authenticators (U2F)', async () => {
-	await __test.updateCredentialCounter('cred-u2f', 0);
+test('updateCredentialCounter skips DDB write for always-zero authenticators (U2F)', async () => {
+	const result = await __test.updateCredentialCounter('cred-u2f', 0, 0);
+	assert.deepEqual(result, { ok: true });
 	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
 	assert.equal(updates.length, 0);
 });
 
+test('updateCredentialCounter does NOT skip a regression-to-zero (stored counter > 0)', async () => {
+	// A credential that registered with a positive counter and now presents 0
+	// must fall through to the conditional update so the regression is caught,
+	// not silently accepted by the U2F always-zero short-circuit.
+	ddbResponses.set('UpdateCommand', () => {
+		const err = new Error('counter not strictly greater');
+		err.name = 'ConditionalCheckFailedException';
+		err.Item = { credentialId: 'cred1', counter: 9 };
+		throw err;
+	});
+	const originalError = console.error;
+	console.error = () => {};
+	let result;
+	try {
+		result = await __test.updateCredentialCounter('cred1', 9, 0);
+	} finally {
+		console.error = originalError;
+	}
+	assert.deepEqual(result, { ok: false, reason: 'counter-regression' });
+	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
+	assert.equal(updates.length, 1, 'regression-to-zero must still issue the update');
+});
+
 test('updateCredentialCounter passes ReturnValuesOnConditionCheckFailure=ALL_OLD', async () => {
-	await __test.updateCredentialCounter('cred1', 5);
+	await __test.updateCredentialCounter('cred1', 0, 5);
 	const updates = ddbCalls.filter((c) => c.name === 'UpdateCommand');
 	assert.equal(updates[0].input.ReturnValuesOnConditionCheckFailure, 'ALL_OLD');
 });
@@ -416,12 +441,14 @@ test('updateCredentialCounter genuine regression: console.error + CounterRegress
 	const errors = [];
 	console.warn = (...args) => warnings.push(args);
 	console.error = (...args) => errors.push(args);
+	let result;
 	try {
-		await __test.updateCredentialCounter('cred1', 3);
+		result = await __test.updateCredentialCounter('cred1', 7, 3);
 	} finally {
 		console.warn = originalWarn;
 		console.error = originalError;
 	}
+	assert.deepEqual(result, { ok: false, reason: 'counter-regression' });
 	const regressionError = errors.find(([msg]) => /counter regression detected/.test(String(msg)));
 	assert.ok(regressionError, 'expected console.error for genuine regression');
 	const ctx = regressionError[1];
@@ -450,12 +477,14 @@ test('updateCredentialCounter TTL race: warn only, no CounterRegression EMF', as
 	const errors = [];
 	console.warn = (...args) => warnings.push(args);
 	console.error = (...args) => errors.push(args);
+	let result;
 	try {
-		await __test.updateCredentialCounter('cred1', 3);
+		result = await __test.updateCredentialCounter('cred1', 5, 3);
 	} finally {
 		console.warn = originalWarn;
 		console.error = originalError;
 	}
+	assert.deepEqual(result, { ok: true }, 'TTL race is benign -- assertion may proceed');
 	const vanished = warnings.find(([msg]) => /credential vanished mid-update/.test(String(msg)));
 	assert.ok(vanished, 'expected warn on TTL-race branch');
 	const ctx = vanished[1];
@@ -520,7 +549,7 @@ test('updateCredentialCounter rethrows non-conditional errors', async () => {
 		throw err;
 	});
 	await assert.rejects(
-		() => __test.updateCredentialCounter('cred1', 3),
+		() => __test.updateCredentialCounter('cred1', 5, 3),
 		/throttled/,
 	);
 });

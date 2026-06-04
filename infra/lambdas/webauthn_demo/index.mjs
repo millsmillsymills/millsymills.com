@@ -338,10 +338,19 @@ async function putCredential(record) {
 // signature counters MUST report `signCount = 0` on every assertion.
 // SimpleWebAuthn already accepted this auth, so persisting 0 is a
 // no-op -- and skipping it avoids a guaranteed `0 < 0` condition
-// failure on every assertion for U2F-style keys.
-async function updateCredentialCounter(credentialId, newCounter) {
-	if (!credentialId || typeof credentialId !== 'string') return;
-	if (newCounter === 0) return;
+// failure on every assertion for U2F-style keys. Skip ONLY when the
+// credential has always reported 0 (storedCounter === 0); a credential
+// that registered with a positive counter and now presents 0 is a
+// regression-to-zero and must fall through to the conditional update so
+// it is detected rather than silently accepted.
+//
+// Returns a discriminated result so the caller can reject a detected
+// clone/replay: { ok: true } when the assertion may proceed (counter
+// advanced, U2F always-zero, or a benign TTL race), { ok: false,
+// reason: 'counter-regression' } when the signature counter regressed.
+async function updateCredentialCounter(credentialId, storedCounter, newCounter) {
+	if (!credentialId || typeof credentialId !== 'string') return { ok: true };
+	if (newCounter === 0 && storedCounter === 0) return { ok: true };
 	try {
 		await ddb.send(
 			new UpdateCommand({
@@ -360,6 +369,7 @@ async function updateCredentialCounter(credentialId, newCounter) {
 				ReturnValuesOnConditionCheckFailure: 'ALL_OLD',
 			}),
 		);
+		return { ok: true };
 	} catch (err) {
 		if (err?.name === 'ConditionalCheckFailedException') {
 			const credentialIdHash = credentialDiscriminator(credentialId);
@@ -374,21 +384,22 @@ async function updateCredentialCounter(credentialId, newCounter) {
 					newCounter,
 					credentialIdHash,
 				});
-				return;
+				return { ok: true };
 			}
 			// Row exists and the counter did NOT advance -- the
 			// `#counter < :new` clause failed. This is the WebAuthn
 			// clone-detection signal: a second authenticator copy with
 			// the same private key replayed an older signCount, or a
 			// genuine attacker is replaying captured assertions. Log
-			// + emit CounterRegression EMF so the alarm pages.
+			// + emit CounterRegression EMF so the alarm pages, and tell
+			// the caller to reject -- the whole point of the demo.
 			console.error('webauthn-demo counter regression detected', {
 				newCounter,
 				storedCounter: old.counter,
 				credentialIdHash,
 			});
 			emitCounterRegressionMetric();
-			return;
+			return { ok: false, reason: 'counter-regression' };
 		}
 		throw err;
 	}
@@ -481,6 +492,7 @@ async function registrationVerifyHandler(body) {
 	}
 
 	if (!verification.verified || !verification.registrationInfo) {
+		console.warn('registration not verified', { sessionId });
 		return errorResponse(400, 'registration not verified');
 	}
 
@@ -559,12 +571,26 @@ async function authenticationVerifyHandler(body) {
 		return errorResponse(400, 'authentication verification failed');
 	}
 
-	if (!verification.verified) return errorResponse(400, 'authentication not verified');
+	if (!verification.verified) {
+		console.warn('authentication not verified', { sessionId });
+		return errorResponse(400, 'authentication not verified');
+	}
 
-	await updateCredentialCounter(
+	const counterResult = await updateCredentialCounter(
 		credential.credentialId,
+		Number(credential.counter ?? 0),
 		verification.authenticationInfo.newCounter,
 	);
+	if (!counterResult.ok) {
+		// Signature counter regressed -- a cloned authenticator replayed an
+		// older signCount (or a genuine replay). The assertion is
+		// cryptographically valid but fails the WebAuthn monotonicity
+		// invariant, so reject it. Surfacing this is the demo's headline.
+		return errorResponse(
+			401,
+			'authentication rejected: signature counter regressed (possible cloned authenticator)',
+		);
+	}
 
 	return jsonResponse(200, {
 		verified: true,
