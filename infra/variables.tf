@@ -88,6 +88,18 @@ variable "ct_monitor_alert_address" {
   default     = ""
 }
 
+variable "enable_canary" {
+  description = "Provision the AWS access-key canarytoken (#141): a Deny-all IAM user + access key, a dedicated CloudTrail, and a CloudWatch alarm that emails on any use of the key. Off by default — opt in per stack once `canary_alert_address` is set and the planting step (docs/runbooks/canarytokens.md) is understood. Never commit the key's secret."
+  type        = bool
+  default     = false
+}
+
+variable "canary_alert_address" {
+  description = "Mailbox / alias that receives canarytoken alerts (SNS email subscription) when the bait key is used. Leave blank to default to `security@<var.domain>`. The address must confirm the AWS subscription email after first apply or alerts go nowhere."
+  type        = string
+  default     = ""
+}
+
 variable "ct_monitor_extra_issuers" {
   description = "Extra issuer organization names to add to the CT-monitor allow-list, alongside the always-included `Amazon`. Each value is matched against the `O=` or `CN=` component of the issuer DN (case-insensitive); free-substring matching was tightened to avoid silently allow-listing future CAs whose DN happens to contain an allow-listed name in an unrelated component. Use only if you start issuing certs for this domain from a CA other than ACM (e.g. `[\"Let's Encrypt\"]`)."
   type        = list(string)

@@ -12,6 +12,7 @@
 User-agent: *
 Allow: /
 Disallow: /super-secret/
+***REMOVED***Disallow: /admin/backup/
 
 # Cloudflare Content Signals — consent for search + AI training
 Content-Signal: search=yes, ai-input=yes, ai-train=yes
