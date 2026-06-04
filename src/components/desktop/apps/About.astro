@@ -3,7 +3,7 @@ import { profile } from '../../../data/profile';
 import { pgp } from '../../../data/pgp';
 
 // Square 480x480 head-and-shoulders crops — the avatar renders them at
-// 120x120 with object-fit: cover, so a 1:1 source downscales without any
+// 160x160 with object-fit: cover, so a 1:1 source downscales without any
 // further crop (the framing is baked in). The client picks one at random
 // per load (about-avatar-rotate); the first entry is the SSR default so
 // the no-JS / pre-hydration view still shows a real headshot.
@@ -11,7 +11,6 @@ const headshots = [
 	'/images/headshots/studio.jpg',
 	'/images/headshots/studio-laugh.jpg',
 	'/images/headshots/castle.jpg',
-	'/images/headshots/street.jpg',
 ];
 const [defaultHeadshot] = headshots;
 ---
@@ -19,7 +18,7 @@ const [defaultHeadshot] = headshots;
 <style>
 	.about {
 		display: grid;
-		grid-template-columns: 120px 1fr;
+		grid-template-columns: 160px 1fr;
 		gap: 16px;
 	}
 
@@ -31,8 +30,8 @@ const [defaultHeadshot] = headshots;
 	}
 
 	.about__avatar {
-		width: 120px;
-		height: 120px;
+		width: 160px;
+		height: 160px;
 		object-fit: cover;
 		background: var(--lilac-100);
 		border: 2px solid var(--border);
@@ -40,7 +39,7 @@ const [defaultHeadshot] = headshots;
 	}
 
 	.about__online {
-		width: 120px;
+		width: 160px;
 		height: auto;
 		image-rendering: pixelated;
 		filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.45));
