@@ -15,6 +15,17 @@ output "route53_nameservers" {
   value       = data.aws_route53_zone.site.name_servers
 }
 
+output "canary_access_key_id" {
+  description = "Access key id of the canarytoken IAM user (#141). Not secret on its own — plant it alongside the secret in a public-looking spot. Empty unless enable_canary = true."
+  value       = var.enable_canary ? aws_iam_access_key.canary[0].id : ""
+}
+
+output "canary_secret_access_key" {
+  description = "Secret of the canarytoken bait key (#141). Plant out-of-band into the live site (an S3 object the repo never tracks) — NEVER commit it, or GitHub secret scanning quarantines the key and defeats the canary. See docs/runbooks/canarytokens.md. Empty unless enable_canary = true."
+  value       = var.enable_canary ? aws_iam_access_key.canary[0].secret : ""
+  sensitive   = true
+}
+
 output "dnssec_ds_record" {
   description = "DS record to paste into the registrar's DNSSEC field to chain the parent-zone trust. Paste this LAST, after Route53 is signing the zone — see infra/dnssec.tf for the safe ordering. Format: `<key-tag> <algorithm> <digest-type> <digest-hex>`."
   value       = aws_route53_key_signing_key.ksk.ds_record
