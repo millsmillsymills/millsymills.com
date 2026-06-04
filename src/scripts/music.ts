@@ -1,5 +1,5 @@
 /*
- * Music player controller for the winamp.exe window.
+ * Music player controller for the vaporplayer window.
  *
  * Wires the rendered controls + playlist to a single <audio> element.
  * Handles missing audio files gracefully — clicking play on a 404
@@ -40,7 +40,7 @@ function playErrorMessage(err: unknown): string {
 	return 'cannot play';
 }
 
-// Window id of the music.exe / winamp.exe shell -- see src/data/apps.ts
+// Window id of the vaporplayer shell -- see src/data/apps.ts
 // and the rendered `<div class="window" data-window-id="music">` in the
 // desktop layout. Subscribers to mills:window-open / mills:window-closed
 // filter on this string to decide whether the event is theirs.

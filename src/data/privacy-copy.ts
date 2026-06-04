@@ -43,15 +43,17 @@ export const copy = {
 		'this site does not track you. the rest of this page is a more specific statement of that fact, with citations into the repo so you can check the receipts.',
 	whatWeCollect: {
 		heading: 'what we collect',
-		body: 'nothing. no analytics, no cookies, no fingerprinting, no tag managers, no third-party scripts. the site is static html + css + a little javascript, served from cloudfront, built from a public github repo. the cloudfront cache policy explicitly forwards zero cookies to the origin.',
+		body: 'almost nothing — and the one exception is an aggregate, not you. no cookies, no fingerprinting, no tag managers, no third-party scripts, no per-visitor analytics. the single piece of server-side counting is the y2k taskbar hit-counter: each load fires a GET to `/api/hits` that adds 1 to one shared integer in dynamodb and returns the new total. the request carries no cookies (`credentials: omit`) and no per-visitor id — nothing distinguishes one loader from the next. the site is otherwise static html + css + a little javascript, served from cloudfront, built from a public github repo. the cloudfront cache policy explicitly forwards zero cookies to the origin.',
 		citations: [
 			{ label: 'infra/cloudfront.tf (cookie_behavior = "none")', path: 'infra/cloudfront.tf' },
 			{ label: 'infra/cloudfront.tf (CSP: default-src \'self\')', path: 'infra/cloudfront.tf' },
+			{ label: 'src/scripts/hit-counter.ts (GET /api/hits, no cookies)', path: 'src/scripts/hit-counter.ts' },
+			{ label: 'infra/hitcounter.tf (DynamoDB ADD, single global counter)', path: 'infra/hitcounter.tf' },
 		] as Citation[],
 	},
 	whatsOnTheWire: {
 		heading: "what's on the wire",
-		body: 'when you load a page: html, css, images, self-hosted webfonts, and the javascript bundle for the desktop ui. the desktop shell ships four fonts (Tahoma, Franklin Gothic ITC, Press Start 2P, VT323); the embedded unifi-mcp demo loads a few more of its own — all self-hosted, all same-origin. zero third-party fetches either way. no google fonts, no cdn libraries, no analytics beacons. the content security policy pins `default-src`, `script-src`, `connect-src`, `img-src`, and `font-src` to `\'self\'`, so the browser refuses any cross-origin fetch even if one slipped past code review.',
+		body: 'when you load a page: html, css, images, self-hosted webfonts, and the javascript bundle for the desktop ui. the desktop shell ships four fonts (Tahoma, Franklin Gothic ITC, Press Start 2P, VT323); the embedded unifi-mcp demo loads a few more of its own — all self-hosted, all same-origin. zero third-party fetches either way. no google fonts, no cdn libraries, no third-party analytics beacons (the one same-origin call the ui makes is the hit-counter above). the content security policy pins `default-src`, `script-src`, `connect-src`, `img-src`, and `font-src` to `\'self\'`, so the browser refuses any cross-origin fetch even if one slipped past code review.',
 		citations: [
 			{ label: 'src/styles/desktop.css (font @font-face declarations)', path: 'src/styles/desktop.css' },
 			{ label: 'infra/cloudfront.tf (CSP response-headers policy)', path: 'infra/cloudfront.tf' },

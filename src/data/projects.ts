@@ -15,6 +15,8 @@ export interface Project {
 	readonly describe?: string;
 	/** Path to a logo asset under `public/`, e.g. `/images/projects/foo.svg`. */
 	readonly icon?: `/${string}`;
+	/** On-site demo route (e.g. `/unifi/`) when the project has a live, playable demo app. */
+	readonly demoUrl?: `/${string}`;
 }
 
 export const projects: readonly Project[] = [
@@ -40,6 +42,7 @@ export const projects: readonly Project[] = [
 			'Wraps the UniFi Controller API as MCP tools: list clients, inspect sites, kick a misbehaving device, pull event logs, toggle guest networks. Useful for anyone running UniFi at home or at a small org who wants an LLM-native way to poke at the network.',
 		repo: 'https://github.com/millsymills-com/unifi-mcp',
 		icon: '/images/projects/unifi-mcp.svg',
+		demoUrl: '/unifi/',
 		kind: 'mcp',
 		tags: ['mcp', 'unifi', 'networking', 'python'],
 		install: 'claude mcp add unifi --transport http http://<controller-host>:8766/',
@@ -111,17 +114,6 @@ export const projects: readonly Project[] = [
 		repo: 'https://github.com/millsymills-com/millsymills-com-org',
 		kind: 'tool',
 		tags: ['terraform', 'opentofu', 'github', 'oidc', 'iac'],
-	},
-	{
-		id: 'millsymills.com',
-		name: 'millsymills.com',
-		tagline: 'this site — portfolio + community template',
-		description:
-			'The source for the site you are looking at. Astro + Terraform + GitHub Actions OIDC. Released under MIT as a community template — fork it for your own Y2K-pink desktop portfolio.',
-		repo: 'https://github.com/millsmillsymills/millsymills.com',
-		icon: '/images/projects/millsymills.com.svg',
-		kind: 'site',
-		tags: ['astro', 'terraform', 'aws', 'mit'],
 	},
 ];
 
