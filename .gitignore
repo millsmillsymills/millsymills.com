@@ -72,3 +72,5 @@ playwright-report/
 # HSTS preload submission screenshots — local proof-of-work for the migration
 # runbook (step 9); the audit trail is the submission itself, not a binary in-repo.
 /hstspreload-submission-*.png
+# internal agent planning run-books — keep local (FIND-030 / #635)
+docs/superpowers/
