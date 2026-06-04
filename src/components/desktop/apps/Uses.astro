@@ -15,7 +15,13 @@ const toolsByCategory = toolCategoryOrder
 // chimera spec block and the cli-tools section are injected right after the
 // homelab group below so the whole hardware cluster reads together.
 const usesGroupOrder = ['coffee', 'keyboard', 'homelab', 'this site', 'mac security'] as const;
-const orderedGroups = usesGroupOrder.map((title) => gear.find((g) => g.title === title)!);
+const orderedGroups = usesGroupOrder.map((title) => {
+	const group = gear.find((g) => g.title === title);
+	if (!group) {
+		throw new Error(`usesGroupOrder lists "${title}" but no gear group in src/data/uses.ts has that title`);
+	}
+	return group;
+});
 ---
 
 <style>
