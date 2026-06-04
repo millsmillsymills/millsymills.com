@@ -35,7 +35,6 @@ interface OptionsResponse<TOptions> {
 
 interface VerifyResult {
 	readonly verified: boolean;
-	readonly userHandle?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,10 +50,7 @@ function parseOptionsResponse<TOptions>(data: unknown): OptionsResponse<TOptions
 
 function parseVerifyResult(data: unknown): VerifyResult {
 	if (isRecord(data) && typeof data.verified === 'boolean') {
-		return {
-			verified: data.verified,
-			userHandle: typeof data.userHandle === 'string' ? data.userHandle : undefined,
-		};
+		return { verified: data.verified };
 	}
 	throw new Error('server returned a malformed verification response.');
 }

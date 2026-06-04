@@ -96,12 +96,8 @@ describe('parseOptionsResponse', () => {
 });
 
 describe('parseVerifyResult', () => {
-	it('passes through verified + userHandle', () => {
-		expect(parseVerifyResult({ verified: true, userHandle: 'uh' })).toEqual({ verified: true, userHandle: 'uh' });
-	});
-
-	it('drops a non-string userHandle to undefined', () => {
-		expect(parseVerifyResult({ verified: false, userHandle: 42 })).toEqual({ verified: false, userHandle: undefined });
+	it('keeps only verified, ignoring extra server fields', () => {
+		expect(parseVerifyResult({ verified: true, userHandle: 'uh' })).toEqual({ verified: true });
 	});
 
 	it('throws when verified is not a boolean', () => {
