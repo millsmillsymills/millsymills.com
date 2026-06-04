@@ -9,4 +9,4 @@ the actual source lives at:
 
 `npm run dev` runs the whole thing. MIT license.
 
-ps — for the explorers: flag{not_an_electron_app}
+ps — for the explorers: it's not an electron app.

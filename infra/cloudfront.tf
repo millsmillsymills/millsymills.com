@@ -137,13 +137,10 @@ resource "aws_cloudfront_response_headers_policy" "site" {
       # custom header below. Both forms target the same /api/csp-report
       # endpoint so violations are captured regardless of browser vintage.
       #
-      # `script-src` is 'self' plus one SHA-256 hash: the pre-paint flag-unlock
-      # bootstrap inlined in DesktopLayout.astro (#588). Inline-script hashes
-      # match inline scripts only — every bundled script is external and stays
-      # covered by 'self'. scripts/assert-flags-init-csp.sh recomputes the hash
-      # from the built HTML and fails CI if this string and the inline body
-      # drift apart.
-      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-X9wMGwdtIrpmBsyUBdxZkHNWAq84mKOd8aIJXlDa4E0='; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
+      # `script-src` is 'self' with no inline allowance — every bundled script
+      # is external and covered by 'self'. scripts/assert-no-stray-inline-scripts.mjs
+      # fails CI if any executable inline script ships that this policy would block.
+      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
       override                = true
     }
   }
@@ -362,13 +359,9 @@ resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
     }
 
     content_security_policy {
-      # Byte-identical to the site policy above. The /demo/passkey surface uses
-      # BaseLayout, not DesktopLayout, so the inline flag-unlock bootstrap (#588)
-      # does not render here and the SHA-256 source is inert on this path — but
-      # the two policies are kept identical so a future page that does render the
-      # bootstrap under this behavior can't be silently CSP-blocked, and so
-      # assert-flags-init-csp.sh can require the hash on every script-src.
-      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-X9wMGwdtIrpmBsyUBdxZkHNWAq84mKOd8aIJXlDa4E0='; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
+      # Byte-identical to the site policy above. Kept in lockstep so the two
+      # surfaces never drift on script-src/style-src posture.
+      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
       override                = true
     }
   }

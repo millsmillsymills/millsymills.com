@@ -67,13 +67,9 @@ section "node: build"
 npm run build
 ok "npm run build"
 
-section "node: assert flag-unlock inline-script CSP hash in sync"
-./scripts/assert-flags-init-csp.sh
-ok "DesktopLayout inline flag-unlock script hash pinned in cloudfront.tf"
-
 section "node: assert no stray inline scripts ship outside the CSP allowlist"
 node scripts/assert-no-stray-inline-scripts.mjs
-ok "every executable inline script in dist/ is CSP-allowlisted"
+ok "no executable inline script in dist/ falls outside the CSP"
 
 section "node: playwright e2e"
 # Install the chromium binary if the local cache is empty (idempotent — a

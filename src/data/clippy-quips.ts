@@ -15,7 +15,6 @@ import type { AppId } from './apps';
 
 export type QuipTrigger =
 	| 'idle'
-	| 'flag'
 	| 'wakeup'
 	| 'open'
 	| 'close'
@@ -88,17 +87,6 @@ export const quips: QuipBank = {
 			{ quip: 'a horse appeared. ignore the horse.' },
 		],
 
-		flag: [
-			{ quip: 'nice find. very 1995 of you.' },
-			{ quip: 'flag captured. this used to be a job.' },
-			{ quip: 'mess with the best, die like the rest.' },
-			{ quip: 'i know kung fu.' },
-			{ quip: 'hail yourself.' },
-			{ quip: 'ravage the lan.' },
-			{ quip: 'the path is shut. you opened it anyway.' },
-			{ quip: 'wouldst thou like another?' },
-		],
-
 		open: [
 			{ quip: 'a new window. exciting. terrifying.' },
 			{ quip: 'access granted.' },
@@ -153,15 +141,6 @@ export const quips: QuipBank = {
 				{ quip: 'the prompt knows what you did.', pose: 'tired' },
 				{ quip: 'ed and the bois are on the line.' },
 				{ quip: 'try `nmap`. very 1995 of you.' },
-			],
-		},
-
-		flags: {
-			idle: [
-				{ quip: "there's one inside me. probably." },
-				{ quip: 'you have entered the labyrinth.' },
-				{ quip: 'all flags are inside us. like the worm in midsommar.' },
-				{ quip: 'follow the white rabbit.' },
 			],
 		},
 

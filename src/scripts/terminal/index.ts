@@ -5,7 +5,6 @@
  */
 
 import './commands/basic';
-import './commands/flag';
 import './commands/net';
 import './commands/fun';
 import './commands/mcp';

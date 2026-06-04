@@ -73,8 +73,7 @@ export interface AppDef {
 	 * The per-app route (`/<id>/`) keeps working for direct hits; this
 	 * flag controls *advertising*, not reachability. Use for unfinished
 	 * apps (mail before Proton activates, vscode before dotfiles are
-	 * reviewed) and for the CTF (flags — discoverable through the
-	 * terminal, not the icon grid). The CI llms.txt completeness check
+	 * reviewed). The CI llms.txt completeness check
 	 * (`scripts/assert-llms-txt-completeness.sh`) skips hidden ids.
 	 */
 	readonly hidden?: boolean;
@@ -128,28 +127,12 @@ const _APPS_DATA = [
 		glyph: '⌨️',
 		iconUrl: '/images/icons/web10/windows-95-internet.png',
 		title: 'mills@millsymills:~',
-		ogDescription: 'a mock shell. `help`, `ls`, `nmap 192.168.1.0/24`, `flag status`. try it.',
+		ogDescription: 'a mock shell. `help`, `ls`, `nmap 192.168.1.0/24`. try it.',
 		desktopOnly: true,
 		x: 180,
 		y: 120,
 		width: 680,
 		height: 460,
-	},
-	{
-		id: 'flags',
-		label: 'flags.exe',
-		glyph: '🚩',
-		iconUrl: '/images/icons/vaporwave/arcade-game.png',
-		title: 'flags.exe',
-		ogDescription: '12 hidden CTF flags scattered across the site. find them all. Juice-Shop-style.',
-		// Hidden from launcher/menu/llms.txt — discovered via the terminal
-		// (`flag status`) or once the player captures their first flag, not
-		// advertised on the homepage.
-		hidden: true,
-		x: 220,
-		y: 140,
-		width: 520,
-		height: 520,
 	},
 	{
 		id: 'projects',

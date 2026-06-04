@@ -6,7 +6,6 @@
  */
 
 import { lookup, listCommands, type Context } from './registry';
-import { flagsUnlocked } from '../flags';
 import { buildFs } from './filesystem';
 
 interface Options {
@@ -134,10 +133,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 	function tabComplete(): void {
 		const value = input!.value;
 		if (!value || value.includes(' ')) return; // only complete the command word for now
-		const unlocked = flagsUnlocked();
-		const matches = listCommands().filter(
-			(c) => c.name.startsWith(value) && (unlocked || c.name !== 'flag'),
-		);
+		const matches = listCommands().filter((c) => c.name.startsWith(value));
 		if (matches.length === 1) {
 			input!.value = matches[0].name + ' ';
 		} else if (matches.length > 1) {
@@ -228,7 +224,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 
 	// boot banner
 	writeLine('millsOS terminal v0.1', 't-dim');
-	writeLine("type 'help' to start. 'flag status' to see CTF challenges.", 't-dim');
+	writeLine("type 'help' to start.", 't-dim');
 	writeLine('');
 	refreshPrompt();
 }

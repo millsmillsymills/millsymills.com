@@ -56,13 +56,12 @@ describe('findHost', () => {
 });
 
 describe('curl command', () => {
-	it('returns the lab.local flag body on http://lab.local/', async () => {
+	it('returns the lab.local body on http://lab.local/', async () => {
 		const curl = lookup('curl')!;
 		const { ctx, state } = mockContext(['http://lab.local/']);
 		await curl.handler(ctx);
 		const joined = state.out.join('\n');
 		expect(joined).toContain('welcome to lab.local');
-		expect(joined).toContain('flag{lateral_movement_is_my_love_language}');
 	});
 
 	it('returns "Connection refused" on a closed port (lab.local:9999)', async () => {

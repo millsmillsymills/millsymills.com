@@ -93,9 +93,6 @@ jobs:
         run: npm run test:e2e
 
       # ---- post-build asserts (consume dist/) ----
-      - name: Assert flag-unlock inline-script CSP hash in sync
-        run: ./scripts/assert-flags-init-csp.sh
-
       - name: Assert no stray inline scripts outside the CSP allowlist
         run: node scripts/assert-no-stray-inline-scripts.mjs
 

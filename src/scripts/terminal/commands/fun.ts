@@ -1,5 +1,12 @@
 import { register, lookup } from '../registry';
-import { sha256, captureById } from '../../flags';
+
+async function sha256(input: string): Promise<string> {
+	const data = new TextEncoder().encode(input);
+	const hash = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(hash))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
 
 // SHA-256 of the canonical sudo password. Don't put the literal in the
 // bundle — the puzzle is finding it elsewhere on the site.
@@ -29,7 +36,6 @@ register(
 				const digest = await sha256(pw);
 				if (digest === SUDO_PASS_DIGEST) {
 					out('');
-					captureById('sudo'); // direct capture; the digest verification happened above
 					// re-run the wrapped command with priv elevation: temporarily clear `priv`
 					const sub = args[0];
 					const cmd = lookup(sub);

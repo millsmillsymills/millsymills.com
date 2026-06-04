@@ -26,7 +26,6 @@ export interface Citation {
 
 export const browserStorageKeys: BrowserStorageKey[] = [
 	{ key: 'mills.desktop.v1', storage: 'local', purpose: 'open windows, positions, last-open app' },
-	{ key: 'mills.flags.v1', storage: 'local', purpose: 'captured CTF flags' },
 	{ key: 'mills.vscode.v1', storage: 'local', purpose: 'vscode.exe open tabs + active tab' },
 	{ key: 'mills.wallpaper.v1', storage: 'local', purpose: 'selected desktop wallpaper id' },
 	{ key: 'mills.theme.v1', storage: 'local', purpose: 'selected desktop theme id' },

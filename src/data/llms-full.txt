@@ -92,49 +92,12 @@ A mock zsh-ish REPL embedded as an app window. Commands:
   `curl <url>`, `ssh <user>@<host>`.
 - `sudo <cmd>` — accepts the word "password" as password (on
   purpose).
-- `flag submit <flag{...}>`, `flag status`, `flag hints [<id>]`.
 - `fortune`, `cowsay`, `uname`, hidden `sl`.
 
-Fake /24 subnet at 192.168.1.0 with 5 hosts. `lab.local` hosts a
-little CTF breadcrumb trail in its HTTP banner.
+Fake /24 subnet at 192.168.1.0 with 5 hosts.
 
 Terminal is desktop-only; phones without real keyboards get a
 friendly stub.
-
----
-
-## flags (CTF)
-
-Juice-Shop-style challenge set. Ten flags scattered across
-the site at varied difficulty. Submit via `flags.exe` (the
-scoreboard window) or the terminal's `flag submit` command.
-
-Client-side verification uses SHA-256 of the submitted string
-vs. baked-in digests, so view-sourcing the JS bundle doesn't
-leak canonical flag strings for most challenges.
-
-### flag hints
-
-1. `view-source` (easy) — somewhere in the HTML, comments are
-   still a thing.
-2. `console` (easy) — open devtools and have a look at what we
-   logged for you.
-3. `sudo` (medium) — a frequent and very common password used
-   by lazy admins.
-4. `nmap` (medium) — try scanning the local /24 from the
-   terminal.
-5. `konami` (medium) — old school cheat codes still work, even
-   on the modern web.
-6. `garbage` (easy) — rent is too damn high. dade. cereal. burn.
-7. `llms` (easy) — agents see a different view of this site.
-   fetch what they see. [bonus: the flag is right here in this
-   file: **flag{read_the_llms_dot_txt}**]
-8. `robots` (medium) — disallowed paths are sometimes an
-   invitation.
-9. `palette` (medium) — press the power-user shortcut. ask for
-   the thing you should not need to ask for.
-10. `base64` (easy) — agents read head tags. humans with
-    devtools do too. ZmxhZ3s=...
 
 ---
 
@@ -182,7 +145,7 @@ on main, HSTS preload-list submission.
 
 - Frontend: Astro 6, static output. No JS frameworks for app
   logic; small vanilla-TS modules for window management,
-  terminal REPL, mobile shell, flag tracking, music player,
+  terminal REPL, mobile shell, music player,
   boot animation.
 - Hosting: AWS S3 + CloudFront (with OAC + CloudFront Function
   for `/path/` → `/path/index.html` rewriting) + Route53 + ACM.
