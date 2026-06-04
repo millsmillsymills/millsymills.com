@@ -94,7 +94,14 @@ function main(argv) {
 	const entries = parseManifest(JSON.parse(readFileSync(manifestPath, 'utf8')));
 	mkdirSync(IMAGES_DEST, { recursive: true });
 	for (const e of entries) {
-		copyFileSync(join(imagesSrcDir, e.file), join(IMAGES_DEST, e.file));
+		try {
+			copyFileSync(join(imagesSrcDir, e.file), join(IMAGES_DEST, e.file));
+		} catch (cause) {
+			throw new Error(
+				`manifest entry "${e.id}" references image "${e.file}" missing from ${imagesSrcDir}`,
+				{ cause },
+			);
+		}
 	}
 	writeFileSync(MODULE_DEST, renderMemesModule(entries));
 	// eslint-disable-next-line no-console
