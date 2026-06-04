@@ -623,11 +623,8 @@ export const handler = async (event) => {
 		// Direct-to-Function-URL probing is the signal this logs/meters:
 		// every legitimate request arrives via CloudFront with the secret,
 		// so a mismatch means someone found the raw *.lambda-url host and
-		// is calling it directly. Mirrors csp_report's logged rejection.
-		console.warn(JSON.stringify({
-			level: 'warn',
-			msg: 'webauthn-demo origin-secret mismatch',
-		}));
+		// is calling it directly. The EMF emit carries level+msg, so it is
+		// the single warn line per rejection — no separate console.warn.
 		emitOriginSecretMismatchMetric();
 		return { statusCode: 403, body: '' };
 	}

@@ -20,6 +20,9 @@ import type {
 } from '@simplewebauthn/browser';
 
 const STORAGE_KEY = 'mills.passkey-demo.v1';
+// MUST match the CloudFront `path_pattern` in infra/cloudfront.tf and the
+// Lambda `ROUTE_PREFIX` in infra/lambdas/webauthn_demo/index.mjs — the three
+// are the same prefix in three layers; drift silently 404s every request.
 const API_BASE = '/api/passkey';
 
 interface StoredCredential {
@@ -72,8 +75,11 @@ async function postJSON<T>(path: string, body: unknown, parse: (data: unknown) =
 	let data: unknown = null;
 	try {
 		data = await res.json();
-	} catch {
-		// fall through to the status-based error below
+	} catch (err) {
+		// Body didn't parse. For a non-2xx the status drives the message below;
+		// for a 2xx this collapses to "unreadable response", so log the real
+		// SyntaxError here to keep a malformed-but-200 diagnosable in devtools.
+		console.debug('passkey response body parse failed', err);
 	}
 	if (!res.ok) {
 		const reason =
@@ -115,8 +121,16 @@ function persistStored(cred: StoredCredential): boolean {
 	}
 }
 
-function clearStored(): void {
-	localStorage.removeItem(STORAGE_KEY);
+function clearStored(): boolean {
+	// Same locked-down/private-mode browsers that throw on setItem (see
+	// persistStored) can throw on removeItem too — guard it so the clear
+	// button reports failure instead of dying with an unhandled rejection.
+	try {
+		localStorage.removeItem(STORAGE_KEY);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 function writeStatus(el: HTMLElement, kind: 'idle' | 'ok' | 'err' | 'busy', msg: string): void {
@@ -247,7 +261,10 @@ function init(): void {
 	});
 
 	clearBtn.addEventListener('click', () => {
-		clearStored();
+		if (!clearStored()) {
+			writeStatus(registerStatus, 'err', 'could not clear local storage (private mode?).');
+			return;
+		}
 		refreshStoredView(storedView, clearBtn);
 		writeStatus(registerStatus, 'idle', '');
 		writeStatus(authStatus, 'idle', '');
@@ -270,5 +287,7 @@ export {
 	clearStored,
 	parseOptionsResponse,
 	parseVerifyResult,
+	handleRegister,
+	handleAuthenticate,
 };
 export type { StoredCredential, OptionsResponse, VerifyResult };
