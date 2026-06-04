@@ -9,6 +9,13 @@ const toolsByCategory = toolCategoryOrder
 		items: tools.filter((t) => t.category === cat),
 	}))
 	.filter((group) => group.items.length > 0); // skip empty categories (matches terminal behavior)
+
+// Render order is grouped by type: coffee, hardware (keyboard + homelab + the
+// chimera box), then the cli stack, then the site, then mac security. The
+// chimera spec block and the cli-tools section are injected right after the
+// homelab group below so the whole hardware cluster reads together.
+const usesGroupOrder = ['coffee', 'keyboard', 'homelab', 'this site', 'mac security'] as const;
+const orderedGroups = usesGroupOrder.map((title) => gear.find((g) => g.title === title)!);
 ---
 
 <style>
@@ -118,6 +125,22 @@ const toolsByCategory = toolCategoryOrder
 		image-rendering: pixelated;
 	}
 
+	.uses-item__icon--lg {
+		width: 72px;
+		height: 72px;
+	}
+
+	.uses-item__demo {
+		margin: 6px 0 0;
+		font-family: var(--font-screen);
+		font-size: 15px;
+	}
+
+	.uses-item__demo a {
+		color: var(--pink-500);
+		text-decoration: underline;
+	}
+
 	.uses-item__detail {
 		font-family: var(--font-mono);
 		font-size: 13px;
@@ -217,91 +240,95 @@ const toolsByCategory = toolCategoryOrder
 	replacing something.
 </p>
 
-<h2>ai-native cli stack</h2>
-<p class="tools-lede">
-	every tool here is chosen because agents and i consume the same interfaces — machine-parseable
-	output, deterministic behavior, per-project scoping. most look like "modern cli alternatives,"
-	but the real selection pressure is <em>this works with ai pair programming</em>.
-</p>
-<p class="tools-hint">
-	terminal tip: run <code>tools</code> for the overview, or <code>tools &lt;name&gt;</code> (e.g.
-	<code>tools ripgrep</code>) for per-tool rationale + examples.
-</p>
 {
-	toolsByCategory.map((group) => (
-		<section class="tools-group">
-			<h3>{group.title}</h3>
-			<ul class="tools-list">
-				{group.items.map((t) => (
-					<li>
-						<span class="tool-id">
-							{t.docsUrl ? (
-								<a href={t.docsUrl} target="_blank" rel="noopener">
-									{t.name}
-								</a>
-							) : (
-								t.name
+	orderedGroups.map((g) => (
+		<>
+			<section class="uses-group">
+				<h2>{g.title}</h2>
+				<ul>
+					{g.items.map((item) => (
+						<li class="uses-item">
+							<p class="uses-item__name">
+								{item.icon && (
+									<img
+										class:list={['uses-item__icon', item.largeIcon && 'uses-item__icon--lg']}
+										src={item.icon}
+										alt=""
+										width={item.largeIcon ? 72 : 32}
+										height={item.largeIcon ? 72 : 32}
+										loading="lazy"
+										decoding="async"
+									/>
+								)}
+								{item.url ? (
+									<a href={item.url} target="_blank" rel="noopener">
+										{item.name}
+									</a>
+								) : (
+									item.name
+								)}
+							</p>
+							{item.detail && <p class="uses-item__detail">{item.detail}</p>}
+							{item.why && <p class="uses-item__why">{item.why}</p>}
+							{item.demoUrl && (
+								<p class="uses-item__demo">
+									<a href={item.demoUrl}>live demo →</a>
+								</p>
 							)}
-						</span>
-						<span class="tool-tag">{t.tagline}</span>
-					</li>
-				))}
-			</ul>
-		</section>
-	))
-}
-
-<h2>physical stack</h2>
-
-<section class="chimera" aria-label="chimera server specs">
-	<header class="chimera__header">
-		<span class="chimera__name">chimera</span>
-		<span class="chimera__role">{chimera.role}</span>
-	</header>
-	<dl class="chimera__specs">
-		{
-			chimera.specs.map((s) => (
+						</li>
+					))}
+				</ul>
+			</section>
+			{g.title === 'homelab' && (
 				<>
-					<dt>{s.k}</dt>
-					<dd>{s.v}</dd>
-				</>
-			))
-		}
-	</dl>
-</section>
+					<section class="chimera" aria-label="chimera server specs">
+						<header class="chimera__header">
+							<span class="chimera__name">chimera</span>
+							<span class="chimera__role">{chimera.role}</span>
+						</header>
+						<dl class="chimera__specs">
+							{chimera.specs.map((spec) => (
+								<>
+									<dt>{spec.k}</dt>
+									<dd>{spec.v}</dd>
+								</>
+							))}
+						</dl>
+					</section>
 
-{
-	gear.map((g) => (
-		<section class="uses-group">
-			<h2>{g.title}</h2>
-			<ul>
-				{g.items.map((item) => (
-					<li class="uses-item">
-						<p class="uses-item__name">
-							{item.icon && (
-								<img
-									class="uses-item__icon"
-									src={item.icon}
-									alt=""
-									width="32"
-									height="32"
-									loading="lazy"
-									decoding="async"
-								/>
-							)}
-							{item.url ? (
-								<a href={item.url} target="_blank" rel="noopener">
-									{item.name}
-								</a>
-							) : (
-								item.name
-							)}
-						</p>
-						{item.detail && <p class="uses-item__detail">{item.detail}</p>}
-						{item.why && <p class="uses-item__why">{item.why}</p>}
-					</li>
-				))}
-			</ul>
-		</section>
+					<h2>ai-native cli stack</h2>
+					<p class="tools-lede">
+						every tool here is chosen because agents and i consume the same interfaces — machine-parseable
+						output, deterministic behavior, per-project scoping. most look like "modern cli alternatives,"
+						but the real selection pressure is <em>this works with ai pair programming</em>.
+					</p>
+					<p class="tools-hint">
+						terminal tip: run <code>tools</code> for the overview, or <code>tools &lt;name&gt;</code> (e.g.
+						<code>tools ripgrep</code>) for per-tool rationale + examples.
+					</p>
+					{toolsByCategory.map((toolGroup) => (
+						<section class="tools-group">
+							<h3>{toolGroup.title}</h3>
+							<ul class="tools-list">
+								{toolGroup.items.map((t) => (
+									<li>
+										<span class="tool-id">
+											{t.docsUrl ? (
+												<a href={t.docsUrl} target="_blank" rel="noopener">
+													{t.name}
+												</a>
+											) : (
+												t.name
+											)}
+										</span>
+										<span class="tool-tag">{t.tagline}</span>
+									</li>
+								))}
+							</ul>
+						</section>
+					))}
+				</>
+			)}
+		</>
 	))
 }

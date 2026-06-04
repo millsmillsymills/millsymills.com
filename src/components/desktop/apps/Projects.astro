@@ -182,13 +182,9 @@ import { projects } from '../../../data/projects';
 						<a class="project-card__btn" href={p.repo} target="_blank" rel="noopener">
 							source ↗
 						</a>
-						{p.install && (
-							<a
-								class="project-card__btn"
-								href={`/terminal/?open=terminal`}
-								title="open the terminal to run `mcp install` interactively"
-							>
-								open in terminal →
+						{p.demoUrl && (
+							<a class="project-card__btn" href={p.demoUrl} title="open the live demo on this site">
+								live demo →
 							</a>
 						)}
 					</div>

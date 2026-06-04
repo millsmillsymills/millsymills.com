@@ -11,6 +11,12 @@ export interface Track {
 
 export const playlist: readonly Track[] = [
 	{
+		id: 't15',
+		title: 'ｇｌｏｗｉｎｇ アベニュー',
+		artist: '「サンセット Ｎｅｔｗｏｒｋ❾❶」',
+		src: '/audio/track-15.m4a',
+	},
+	{
 		id: 't01',
 		title: 'ＶＨＳ 追憶',
 		artist: '「サンセット Ｎｅｔｗｏｒｋ❾❶」',
@@ -93,12 +99,6 @@ export const playlist: readonly Track[] = [
 		title: 'Fleeting Moments',
 		artist: '「サンセット Ｎｅｔｗｏｒｋ❾❶」',
 		src: '/audio/track-14.m4a',
-	},
-	{
-		id: 't15',
-		title: 'ｇｌｏｗｉｎｇ アベニュー',
-		artist: '「サンセット Ｎｅｔｗｏｒｋ❾❶」',
-		src: '/audio/track-15.m4a',
 	},
 	{
 		id: 't16',

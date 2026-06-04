@@ -194,10 +194,10 @@ const _APPS_DATA = [
 	},
 	{
 		id: 'music',
-		label: 'music',
+		label: 'vaporplayer',
 		glyph: '💿',
 		iconUrl: '/images/icons/web10/midi-music.png',
-		title: 'winamp.exe',
+		title: 'vaporplayer',
 		ogDescription: 'a tiny y2k winamp for whatever track mills is spinning this week.',
 		x: 220,
 		y: 180,

@@ -10,6 +10,10 @@ export interface GearItem {
 	readonly why?: string;
 	/** Optional pixel-art icon path under `public/`. Rendered at 32px with `image-rendering: pixelated` (#165). */
 	readonly icon?: `/${string}`;
+	/** Render the icon at a larger size when the default 32px is too small to read. */
+	readonly largeIcon?: boolean;
+	/** On-site demo route (e.g. `/unifi/`) surfaced as a "live demo" link on the item. */
+	readonly demoUrl?: `/${string}`;
 }
 
 export interface GearGroup {
@@ -19,7 +23,7 @@ export interface GearGroup {
 
 export const chimera = {
 	name: 'chimera',
-	role: 'primary unraid server. the ripper.',
+	role: 'primary server, unholy spinning disk array',
 	// keep the shape predictable — the terminal `chimera` command
 	// renders this as a neofetch-style block.
 	specs: [
@@ -50,7 +54,7 @@ export const gear: readonly GearGroup[] = [
 			{
 				name: 'TypeScript + vanilla TS modules',
 				detail: 'no React/Vue runtime',
-				why: 'window manager, terminal, flags, mobile shell are all hand-rolled — wanted control + zero framework bloat.',
+				why: 'window manager, terminal, mobile shell are all hand-rolled — wanted control + zero framework bloat.',
 			},
 			{
 				name: 'AWS S3 + CloudFront (OAC)',
@@ -78,11 +82,6 @@ export const gear: readonly GearGroup[] = [
 				why: 'mail provider that earns the privacy-engineer cred. paranoid DMARC from day one.',
 			},
 			{
-				name: 'CTF flag system',
-				detail: 'SHA-256 digest table + side-channel listeners, localStorage',
-				why: 'Juice-Shop-style. submitted flags hit the digest table; konami / clippy / etc. capture by id from event listeners. canonical strings stay out of the bundle for most challenges.',
-			},
-			{
 				name: 'MIT license',
 				detail: 'fork it, ship your own',
 				url: 'https://github.com/millsmillsymills/millsymills.com/blob/main/LICENSE',
@@ -91,7 +90,7 @@ export const gear: readonly GearGroup[] = [
 		],
 	},
 	{
-		title: 'battlestation',
+		title: 'keyboard',
 		items: [
 			{
 				name: 'Glorious mechanical keyboard',
@@ -114,8 +113,9 @@ export const gear: readonly GearGroup[] = [
 				name: 'UniFi networking stack',
 				detail: 'controller + switches + APs',
 				url: 'https://ui.com/',
-				why: 'one pane of glass for the whole /24. great telemetry. hence unifi-mcp.',
+				why: 'one pane of glass for the whole /24. great telemetry. hence unifi-mcp — drive a simulated version of it from the live demo.',
 				icon: '/images/icons/uses/unifi-pixel.png',
+				demoUrl: '/unifi/',
 			},
 		],
 	},
@@ -128,6 +128,7 @@ export const gear: readonly GearGroup[] = [
 				url: 'https://us.moccamaster.com/collections/coffee-brewers/products/kbg',
 				why: 'the pour-over of auto-drips. pulls the right temperature and stays out of the way.',
 				icon: '/images/icons/uses/moccamaster-pixel.png',
+				largeIcon: true,
 			},
 			{
 				name: 'Philips 800 Series',

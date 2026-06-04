@@ -165,26 +165,21 @@ export const photos = [
 	{
 		src: '/images/cats/tabby-fluff.jpg',
 		alt: 'long-haired tabby with green eyes, looking up',
-		caption: 'fluff',
 	},
 	{
 		src: '/images/cats/kittens-pair.jpg',
 		alt: 'two kittens on a couch — gray dilute calico and a smaller white-and-gray',
-		caption: 'the kittens, day one',
 	},
 	{
 		src: '/images/cats/missy.jpg',
 		alt: 'long-haired tabby sitting upright in front of a brick fireplace, green eyes looking just past the camera',
-		caption: 'missy, holding court',
 	},
 	{
 		src: '/images/cats/olive.jpg',
 		alt: 'gray dilute-tortoiseshell cat perched on the corner of a sofa, tail draped over the side',
-		caption: 'olive on her perch',
 	},
 	{
 		src: '/images/cats/eva.jpg',
 		alt: 'long-haired gray-and-white cat sprawled belly-up on a fleece cushion in front of a wicker hamper',
-		caption: 'eva, fully unbothered',
 	},
 ] as const;
