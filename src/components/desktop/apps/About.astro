@@ -1,6 +1,19 @@
 ---
 import { profile } from '../../../data/profile';
 import { pgp } from '../../../data/pgp';
+
+// Square 480x480 head-and-shoulders crops — the avatar renders them at
+// 120x120 with object-fit: cover, so a 1:1 source downscales without any
+// further crop (the framing is baked in). The client picks one at random
+// per load (about-avatar-rotate); the first entry is the SSR default so
+// the no-JS / pre-hydration view still shows a real headshot.
+const headshots = [
+	'/images/headshots/studio.jpg',
+	'/images/headshots/studio-laugh.jpg',
+	'/images/headshots/castle.jpg',
+	'/images/headshots/street.jpg',
+];
+const [defaultHeadshot] = headshots;
 ---
 
 <style>
@@ -122,13 +135,14 @@ import { pgp } from '../../../data/pgp';
 	<div class="about__avatar-stack">
 		<img
 			class="about__avatar"
-			src="/images/headshot.jpg"
+			src={defaultHeadshot}
+			data-frames={JSON.stringify(headshots)}
 			alt={`${profile.name} headshot`}
 			loading="lazy"
 			decoding="async"
 		/>
 		<div class="about__avatar about__avatar--placeholder" hidden>
-			headshot.jpg pending — drop into public/images/
+			headshot pending — drop into public/images/headshots/
 		</div>
 		<img
 			class="about__online"
@@ -183,5 +197,6 @@ import { pgp } from '../../../data/pgp';
 </article>
 
 <script>
+	import '../../../scripts/about-avatar-rotate';
 	import '../../../scripts/about-avatar-fallback';
 </script>
