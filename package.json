@@ -10,6 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
+    "sync:memes": "node scripts/sync-memes.mjs vendor/tech-memes/memes.json vendor/tech-memes/memes",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "astro": "astro"
