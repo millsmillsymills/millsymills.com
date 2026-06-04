@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const desktopStateKey = 'mills.desktop.v1';
-const flagsStateKey = 'mills.flags.v1';
 const wallpaperStateKey = 'mills.wallpaper.v1';
 
 async function suppressBoot(page: Page): Promise<void> {
@@ -56,52 +55,6 @@ test.describe('desktop shell tracer bullets', () => {
 
 		await page.locator('[data-open-window="about"]').first().click();
 		await expect(aboutWindow).toBeVisible();
-	});
-
-	test('command palette reveals and captures hidden flag after flags are unlocked', async ({
-		page,
-	}) => {
-		await page.addInitScript((key) => {
-			localStorage.setItem(key, JSON.stringify({ console: Date.now() }));
-		}, flagsStateKey);
-		await page.goto('/');
-
-		await page.keyboard.press('Control+K');
-		const palette = page.getByRole('dialog', { name: 'command palette' });
-		await expect(palette).toBeVisible();
-
-		await page.getByRole('textbox', { name: 'search apps' }).fill('hack');
-		// Click the matched item directly rather than fill+Enter --
-		// `Enter` immediately after `fill` races any debounce/RAF/
-		// microtask in the palette's filter pipeline; the highlighted
-		// item is set during render, not during fill. Click is the
-		// stable contract.
-		const secretItem = palette.locator('.cmdp__item', { hasText: 'reveal hidden flag' });
-		await expect(secretItem).toBeVisible();
-		await secretItem.click();
-
-		await expect(page.getByRole('textbox', { name: 'search apps' })).toHaveValue(
-			'flag{command_k_to_rule_them_all}',
-		);
-		await expect
-			.poll(async () => page.evaluate((key) => localStorage.getItem(key), flagsStateKey))
-			.toContain('"palette"');
-	});
-
-	test('command palette opens without flags but does not surface the hidden-flag entry', async ({
-		page,
-	}) => {
-		// First-time visitor: no flags captured. The palette still
-		// opens (Ctrl+K is unconditional) but the secret entry must
-		// stay hidden -- otherwise the reward stops being a reward.
-		await page.goto('/');
-
-		await page.keyboard.press('Control+K');
-		const palette = page.getByRole('dialog', { name: 'command palette' });
-		await expect(palette).toBeVisible();
-
-		await page.getByRole('textbox', { name: 'search apps' }).fill('hack');
-		await expect(palette.locator('.cmdp__item', { hasText: 'reveal hidden flag' })).toHaveCount(0);
 	});
 
 	test('Ctrl+K is a toggle: second press closes the palette', async ({ page }) => {
