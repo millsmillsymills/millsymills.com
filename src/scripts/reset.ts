@@ -1,7 +1,6 @@
 /*
  * Reset everything mills-flavored back to first-load state:
  *   - desktop window positions + open set    (mills.desktop.v1)
- *   - captured CTF flags                     (mills.flags.v1)
  *   - boot-animation seen flag               (mills.boot.played, sessionStorage)
  *   - vscode.exe open tabs + active tab      (mills.vscode.v1)
  *   - any other key starting with `mills.`   (future-proofing — sweeps
@@ -10,7 +9,6 @@
  * Triggers (any of):
  *   - terminal `reset` command
  *   - start-menu "reset desktop" entry
- *   - "clear progress" button inside flags.exe
  *   - `window.mills.reset()` from devtools
  *
  * Always confirms first via the on-page modal. Refuses to wipe state if the
@@ -144,8 +142,8 @@ function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElemen
 			closeModal();
 		} else if (e.key === 'Enter') {
 			// Only confirm if focus is inside the modal. A future surface
-			// that focuses an <input> while the modal is open (e.g. flag
-			// submit) shouldn't have its Enter wipe state.
+			// that focuses an <input> while the modal is open shouldn't
+			// have its Enter wipe state.
 			if (!activeOverlay?.contains(document.activeElement)) return;
 			e.preventDefault();
 			onYesClick();
@@ -248,8 +246,6 @@ function init(): void {
 		openModal(overlay, {}, trigger);
 	});
 
-	// `reset` is advertised in src/scripts/flags.ts:consoleBanner — rename
-	// in lockstep, no compile-time link.
 	Object.assign((window.mills ??= {}), { reset: resetAll, __resetInit: true });
 }
 

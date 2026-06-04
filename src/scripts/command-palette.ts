@@ -5,16 +5,10 @@
  *
  * Opens the matching window on desktop, switches app on mobile shell,
  * navigates to /<app>/ when nothing on the current page matches.
- *
- * Easter egg: typing a specific query reveals an extra result that
- * captures the `palette` flag directly.
  */
 
 import { apps } from '../data/apps';
-import { captureById, flagsUnlocked } from './flags';
 import { escapeHtml } from './util/html';
-
-const SECRET_QUERIES = ['hack', 'hackers', 'hack the planet', 'mills'];
 
 interface Entry {
 	id: string;
@@ -41,24 +35,13 @@ class CommandPalette {
 		this.bindGlobalKeys();
 		this.bindInput();
 		this.bindList();
-
-		// Re-build entries on first capture so the flags app appears live
-		// without a reload. Subsequent captures don't change visibility.
-		window.addEventListener('mills:flags-unlocked', () => {
-			this.entries = this.buildEntries();
-			if (!this.overlay.hidden) this.render();
-		});
 	}
 
 	private buildEntries(): Entry[] {
-		const unlocked = flagsUnlocked();
-		// Hidden apps (mail, vscode, flags) stay out of the palette by
-		// default — same advertising-surface rule as the launcher and
-		// start menu. Flags is the special case: once the player has
-		// captured a flag, reveal it as a reward, even though it's
-		// flagged `hidden` for first-impression hygiene.
+		// Hidden apps (mail, vscode) stay out of the palette — same
+		// advertising-surface rule as the launcher and start menu.
 		return apps
-			.filter((a) => (a.id === 'flags' ? unlocked : !a.hidden))
+			.filter((a) => !a.hidden)
 			.map<Entry>((a) => ({
 				id: a.id,
 				label: a.title,
@@ -66,20 +49,6 @@ class CommandPalette {
 				glyph: a.glyph,
 				run: () => this.openApp(a.id),
 			}));
-	}
-
-	private secretEntry(): Entry {
-		return {
-			id: 'palette-secret',
-			label: 'reveal hidden flag',
-			hint: 'you asked nicely',
-			glyph: '🪄',
-			run: () => {
-				captureById('palette');
-				this.input.value = 'flag{command_k_to_rule_them_all}';
-				this.render();
-			},
-		};
 	}
 
 	private bindGlobalKeys(): void {
@@ -153,26 +122,22 @@ class CommandPalette {
 	private activate(): void {
 		const entry = this.visibleEntries[this.activeIdx];
 		if (!entry) return;
-		const keepOpen = entry.id === 'palette-secret';
 		try {
 			entry.run();
 		} finally {
-			if (!keepOpen) this.close();
+			this.close();
 		}
 	}
 
 	private render(): void {
 		const q = this.input.value.trim().toLowerCase();
-		let entries = this.entries.filter(
+		const entries = this.entries.filter(
 			(e) =>
 				!q ||
 				e.id.toLowerCase().includes(q) ||
 				e.label.toLowerCase().includes(q) ||
 				e.hint.toLowerCase().includes(q),
 		);
-		// Secret entry only surfaces post-unlock — pre-capture it would
-		// reveal there's a CTF surface to find, defeating the gate.
-		if (flagsUnlocked() && SECRET_QUERIES.includes(q)) entries = [this.secretEntry(), ...entries];
 		this.visibleEntries = entries;
 		this.activeIdx = Math.min(this.activeIdx, entries.length - 1);
 		if (this.activeIdx < 0) this.activeIdx = 0;

@@ -86,8 +86,8 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'CloudFront response-headers policy injects a strict CSP (`default-src \'self\'`, `object-src \'none\'`, `upgrade-insecure-requests`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and SAMEORIGIN frame-ancestors on every response.',
 		why: 'Defense-in-depth against XSS, MIME sniffing, leaky referrers, and clickjacking. The CSP allow-list is intentionally tight — no third-party origins anywhere.',
-		tradeoffs: '`style-src \'self\' \'unsafe-inline\'` is the one knowing concession to make Astro\'s scoped styles work; tightening to nonces is tracked as #129. `script-src` is `\'self\'` plus a single SHA-256 hash pinning the pre-paint flag-unlock bootstrap inlined in `DesktopLayout.astro` (#588) — every bundled script stays external and covered by `\'self\'`; `scripts/assert-flags-init-csp.sh` fails CI if that hash and the inline body drift. Violation reporting is wired separately as `csp-reporting` below.',
-		code: ['infra/cloudfront.tf', 'scripts/assert-flags-init-csp.sh'],
+		tradeoffs: '`style-src \'self\' \'unsafe-inline\'` is the one knowing concession to make Astro\'s scoped styles work; tightening to nonces is tracked as #129. `script-src` is `\'self\'` with no inline allowance — every bundled script stays external and covered by `\'self\'`; `scripts/assert-no-stray-inline-scripts.mjs` fails CI if any executable inline script ships that the CSP would block. Violation reporting is wired separately as `csp-reporting` below.',
+		code: ['infra/cloudfront.tf', 'scripts/assert-no-stray-inline-scripts.mjs'],
 	},
 	{
 		id: 'tls-pqc',

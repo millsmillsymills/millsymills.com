@@ -2,8 +2,7 @@
  * Fake LAN for the terminal's nmap/curl/ssh/ping commands.
  *
  * Each Host has a friendly name + an OS string + a list of open Ports.
- * Some ports advertise a "vulnerable" banner; one of them serves the
- * nmap-chain flag from its HTTP body.
+ * Some ports advertise a "vulnerable" banner.
  */
 
 export interface Port {
@@ -20,13 +19,11 @@ export interface Host {
 	readonly ports: readonly Port[];
 }
 
-const labFlagBody = `<!doctype html>
+const labBody = `<!doctype html>
 <html><head><title>lab.local</title></head>
 <body style="font-family:monospace;background:#111;color:#0f0">
 <h1>welcome to lab.local</h1>
 <p>this is mills's pet pwn-lab. there's nothing here.</p>
-<!-- flag{lateral_movement_is_my_love_language} -->
-<p><small>...except in the source.</small></p>
 </body></html>`;
 
 export const HOSTS: readonly Host[] = [
@@ -52,7 +49,7 @@ export const HOSTS: readonly Host[] = [
 		os: 'Debian 12 (bookworm)',
 		ports: [
 			{ port: 22, service: 'ssh', banner: 'SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u3' },
-			{ port: 80, service: 'http', banner: 'nginx/1.22.1', httpBody: labFlagBody },
+			{ port: 80, service: 'http', banner: 'nginx/1.22.1', httpBody: labBody },
 			{ port: 8080, service: 'http-alt', banner: 'Werkzeug/3.0.3 Python/3.11.9' },
 		],
 	},
