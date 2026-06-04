@@ -332,11 +332,12 @@ export const securityControls: readonly SecurityControl[] = [
 		id: 'canarytoken',
 		title: 'AWS access-key canarytoken',
 		category: 'monitoring',
-		status: 'roadmap',
-		what: 'A Deny-all IAM user holds an access key planted in a public-looking spot. The key can do nothing, but any API call signed with it is caught by a dedicated CloudTrail and fires a CloudWatch → SNS-email alarm. A robots.txt tripwire path and a lure PDF add passive, log-only signals.',
+		status: 'shipped',
+		what: 'A Deny-all IAM user holds an inert access key. Any API call signed with it is caught by a dedicated multi-region CloudTrail and fires a CloudWatch → SNS-email alarm. A robots.txt tripwire path and a lure PDF add passive, log-only signals.',
 		why: 'Turns curiosity-driven probing into an actionable alert — operational-security thinking past the compliance controls. The key being inert means a hit is unambiguous: nobody legitimate ever uses it.',
-		tradeoffs: 'Coded but gated off (`enable_canary = false`) until the alert address is confirmed and the key is planted out-of-band — the secret must never be committed or GitHub secret-scanning quarantines it. The robots tripwire + lure PDF are forensic-only (CloudFront logs), not actively alerted.',
+		tradeoffs: 'The bait key is planted out-of-band by the operator (never committed — GitHub secret-scanning would quarantine it) and the SNS email subscription is a one-time manual confirmation, so end-to-end alerting depends on those two operator steps. The robots tripwire + lure PDF are forensic-only (CloudFront logs), not actively alerted.',
 		code: ['infra/canary.tf', 'public/robots.txt', 'docs/runbooks/canarytokens.md'],
+		prs: [663],
 	},
 
 	// ─── identity + contact ────────────────────────────────────────────
