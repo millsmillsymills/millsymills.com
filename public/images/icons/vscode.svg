@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 128 128" width="128" height="128">
+  <defs>
+    <g id="vscode-sil"><path d="M6 50 L57 0 L82 0 L82 100 L57 100 Z"></path><path d="M82 0 H94 V100 H82 Z"></path></g>
+    
+      <linearGradient id="vs-blue" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#34abff"></stop>
+        <stop offset="1" stop-color="#0070c4"></stop>
+      </linearGradient>
+    <filter id="vscode-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="b1"></feGaussianBlur>
+      <feGaussianBlur stdDeviation="4.6" in="SourceGraphic" result="b2"></feGaussianBlur>
+      <feMerge><feMergeNode in="b2"></feMergeNode><feMergeNode in="b1"></feMergeNode></feMerge>
+    </filter>
+    <filter id="vscode-grain" x="-14" y="-14" width="128" height="128">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="42"></feTurbulence>
+      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0"></feColorMatrix>
+    </filter>
+    <pattern id="vscode-scan" x="0" y="0" width="4" height="2.6" patternUnits="userSpaceOnUse">
+      <rect x="-1" y="0" width="6" height="1.3" fill="#000"></rect>
+    </pattern>
+    <clipPath id="vscode-clip"><path d="M6 50 L57 0 L82 0 L82 100 L57 100 Z"></path><path d="M82 0 H94 V100 H82 Z"></path></clipPath>
+  </defs>
+
+  
+  <g filter="url(#vscode-glow)" opacity="0.55"><use href="#vscode-sil" fill="#2fc2ff"></use></g>
+
+  
+  <use href="#vscode-sil" fill="#ff4fa8" transform="translate(2.6 0)" opacity="0.5"></use>
+  <use href="#vscode-sil" fill="#00e5ff" transform="translate(-2.6 0)" opacity="0.5"></use>
+
+  
+  <g>
+      <path d="M6 50 L57 0 L82 0 L82 100 L57 100 Z" fill="url(#vs-blue)"></path>
+      <path d="M31 50 L82 6 L82 94 Z" fill="#00406f"></path>
+      <path d="M82 0 H94 V100 H82 Z" fill="#34c4ff"></path>
+      <rect x="82" y="0" width="12" height="3.4" fill="#aeeaff"></rect>
+      <rect x="82" y="96.6" width="12" height="3.4" fill="#aeeaff"></rect></g>
+  <use href="#vscode-sil" fill="#ff4fa8" opacity="0.36" style="mix-blend-mode:screen"></use>
+
+  
+  <g opacity="0.4">
+    <use href="#vscode-sil" fill="#2fc2ff" transform="translate(3 0)" style="clip-path: inset(34% 0 58% 0)"></use>
+    <use href="#vscode-sil" fill="#ff4fa8" transform="translate(-2 0)" style="clip-path: inset(70% 0 22% 0)"></use>
+  </g>
+
+  
+  <g clip-path="url(#vscode-clip)">
+    <rect x="-14" y="-14" width="128" height="128" fill="url(#vscode-scan)" opacity="0.30"></rect>
+    <rect x="-14" y="-14" width="128" height="128" filter="url(#vscode-grain)" opacity="0.10"></rect>
+  </g>
+</svg>

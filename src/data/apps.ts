@@ -256,11 +256,8 @@ const _APPS_DATA = [
 		id: 'security',
 		label: 'security',
 		glyph: '🛡️',
-		// Deliberately no iconUrl — privacy already uses keyed-file.png
-		// for the padlock motif. The 🛡️ glyph reads distinctly in both
-		// the desktop icon grid and the start-menu / taskbar, and stays
-		// thematically separate from privacy ("what we store") vs
-		// security ("controls in place").
+		// VHS-distorted shield icon (see public/images/icons/security.svg).
+		iconUrl: '/images/icons/security.svg',
 		title: 'security.txt',
 		ogDescription: 'controls shipped on this site — DNSSEC, CAA, CT monitoring, SBOM, mail-auth stack. every claim links to the implementation.',
 		x: 220,
@@ -272,6 +269,7 @@ const _APPS_DATA = [
 		id: 'inspector',
 		label: 'inspector',
 		glyph: '🔍',
+		iconUrl: '/images/icons/inspector.svg',
 		title: 'inspector.exe',
 		ogDescription: 'live security-headers inspector. fetches the site\'s own response headers and grades them against the controls listed in security.txt.',
 		x: 240,
@@ -295,7 +293,7 @@ const _APPS_DATA = [
 		id: 'vscode',
 		label: 'vscode',
 		glyph: '🆅',
-		iconUrl: '/images/icons/vscode-pixel.svg',
+		iconUrl: '/images/icons/vscode.svg',
 		title: 'vscode.exe',
 		ogDescription: 'an evocative, pink-tinted vscode reskin. browse real dotfiles and snippets of the site\'s own source.',
 		x: 140,
@@ -321,6 +319,7 @@ const _APPS_DATA = [
 		id: 'display',
 		label: 'display',
 		glyph: '🖼️',
+		iconUrl: '/images/icons/display.svg',
 		title: 'display.cpl',
 		ogDescription: 'a tiny windows-style display panel. pick a desktop theme and wallpaper; choices persist in localStorage.',
 		// Wallpaper only renders on the desktop layout (mshell never
