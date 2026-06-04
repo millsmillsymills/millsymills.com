@@ -14,6 +14,12 @@ enable_hitcounter = true
 # relying on a default that could shift.
 deploy_environment = "production"
 
+# Canarytoken (#141). Bait key + CloudTrail + email alarm. Confirm the SNS
+# subscription email after apply, then plant the key out-of-band per
+# docs/runbooks/canarytokens.md. Never commit the key secret.
+enable_canary        = true
+canary_alert_address = "security@millsymills.com"
+
 # ProtonMail activated 2026-05-14 per
 # docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md.
 # Verification token is supplied at apply time via
