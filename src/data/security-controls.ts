@@ -327,7 +327,7 @@ export const securityControls: readonly SecurityControl[] = [
 		tradeoffs: 'Stateless 48h-lookback / 24h-schedule = max two alerts per cert. Allow-list is just substring matching on issuer name — narrow-scope by design.',
 		code: ['infra/ct_monitor.tf', 'infra/ct_monitor.py'],
 		prs: [198],
-	},***REMOVED***
+	},
 
 	// ─── identity + contact ────────────────────────────────────────────
 	{
