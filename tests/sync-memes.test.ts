@@ -1,6 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import { parseManifest, renderMemesModule } from '../scripts/sync-memes.mjs';
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('parseManifest', () => {
 	it('accepts a well-formed manifest', () => {
@@ -52,5 +58,16 @@ describe('renderMemesModule', () => {
 	it('is deterministic for the same input', () => {
 		const entries = [{ id: 'x', file: 'x.jpg', alt: 'x' }];
 		expect(renderMemesModule(entries)).toBe(renderMemesModule(entries));
+	});
+});
+
+describe('committed src/data/memes.ts', () => {
+	it('equals the regenerated module — run `npm run sync:memes` after a manifest bump', () => {
+		const manifest = JSON.parse(
+			readFileSync(join(repoRoot, 'vendor/tech-memes/memes.json'), 'utf8'),
+		);
+		const expected = renderMemesModule(parseManifest(manifest));
+		const committed = readFileSync(join(repoRoot, 'src/data/memes.ts'), 'utf8');
+		expect(committed).toBe(expected);
 	});
 });
