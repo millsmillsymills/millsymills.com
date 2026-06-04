@@ -14,11 +14,11 @@ enable_hitcounter = true
 # relying on a default that could shift.
 deploy_environment = "production"
 
-# Canarytoken (#141). Off until the alert address is set + confirmed and the
-# bait key is planted out-of-band per docs/runbooks/canarytokens.md. Flip to
-# true and set canary_alert_address, then apply. Never commit the key secret.
-enable_canary = false
-# canary_alert_address = "security@millsymills.com"
+# Canarytoken (#141). Bait key + CloudTrail + email alarm. Confirm the SNS
+# subscription email after apply, then plant the key out-of-band per
+# docs/runbooks/canarytokens.md. Never commit the key secret.
+enable_canary        = true
+canary_alert_address = "security@millsymills.com"
 
 # ProtonMail activated 2026-05-14 per
 # docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md.
