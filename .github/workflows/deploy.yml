@@ -122,6 +122,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+          # tech-memes (public) carries memes.json; the inline vitest run
+          # below includes the sync-memes round-trip test, which reads it.
+          # ci.yml checks it out the same way; without this the deploy job
+          # fails on a test that is green on PRs.
+          submodules: true
           # On workflow_run we must explicitly check out the SHA that
           # triggered CI — the default would be main's tip at queue
           # time, which may have moved.
