@@ -288,6 +288,18 @@ else
 	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
 fi
 
+section "post-deploy: webauthn_demo Function URL 403 (opt-in)"
+# The webauthn_demo Function URL is authorization_type = "NONE"; its only
+# protection is the application-layer x-origin-secret gate (issue #668
+# followup to PR #631). Asserts the raw URL returns 403 to direct callers
+# with no/wrong secret.
+if [[ -n "${MMS_SMOKE_STACK:-}" ]]; then
+	./scripts/smoke-webauthn-demo.sh "$MMS_SMOKE_STACK"
+	ok "webauthn_demo Function URL returns 403 for $MMS_SMOKE_STACK"
+else
+	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
+fi
+
 section "audit: terraform state bucket controls (opt-in)"
 # Off by default — requires AWS creds. Set MMS_VERIFY_STATE_BUCKET=true
 # to run. Asserts the live `millsymills-terraform-state` bucket matches
