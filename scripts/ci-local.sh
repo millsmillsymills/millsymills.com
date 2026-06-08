@@ -200,7 +200,11 @@ section "node: webauthn_demo lambda unit tests"
 # (the @aws-sdk/* packages bundled at runtime by Lambda) are installed
 # locally for the import to resolve.
 (cd infra/lambdas/webauthn_demo && npm ci >/dev/null 2>&1)
-node --test 'infra/lambdas/webauthn_demo/tests/**/*.test.mjs'
+# --experimental-test-module-mocks: verify-success.test.mjs mocks the
+# @simplewebauthn/server crypto boundary via mock.module to drive the
+# verified:true path. --disable-warning=ExperimentalWarning suppresses the
+# flag's own ExperimentalWarning so the run output stays clean.
+node --experimental-test-module-mocks --disable-warning=ExperimentalWarning --test 'infra/lambdas/webauthn_demo/tests/**/*.test.mjs'
 ok "infra/lambdas/webauthn_demo unit tests"
 
 section "terraform: fmt"
