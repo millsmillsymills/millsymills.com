@@ -112,6 +112,34 @@ for policy_value in "$@"; do
 	total_directive_count=$((total_directive_count + directive_count))
 done
 
+# Parity across policies (#694). The strict-deny baseline string is
+# duplicated verbatim across every response-headers policy (site, api,
+# csp_report, passkey_api, …) because this lint validates each literal
+# in-file (CI has no AWS creds to read live headers) — a `locals`
+# reference would be invisible to the awk above and silently disable the
+# per-policy floor. The cost of that duplication is drift: an edit to one
+# policy's directive list that misses the others. The floor check above
+# would still pass. So require every policy's Permissions-Policy to be the
+# SAME baseline, normalizing per-policy self-allows (`=(self)` -> `=()`)
+# first — e.g. passkey_demo flips `publickey-credentials-*` to `(self)`,
+# which is legitimate and must not trip parity. After normalization every
+# value must be byte-identical; a divergent directive list fails CI.
+canonical=""
+parity_index=0
+for policy_value in "$@"; do
+	parity_index=$((parity_index + 1))
+	normalized=$(printf '%s' "$policy_value" | sed 's/=(self)/=()/g')
+	if [ -z "$canonical" ]; then
+		canonical=$normalized
+	elif [ "$normalized" != "$canonical" ]; then
+		printf '\nFix: Permissions-Policy #%d in %s diverged from the shared strict-deny baseline.\n' "$parity_index" "$CF_TF" >&2
+		printf '     Every response-headers policy must ship the identical directive list;\n' >&2
+		printf '     only the deny/self-allow form (`=()` vs `=(self)`) may differ per policy.\n' >&2
+		printf '     Update all policies together, or the /security/ strict-deny claim drifts.\n' >&2
+		lint::fatal "Permissions-Policy #$parity_index drifted from baseline (#694 parity)"
+	fi
+done
+
 # Belt + suspenders: ensure the security-controls entry is still shipped.
 DATA_FILE=src/data/security-controls.ts
 if [ ! -s "$DATA_FILE" ]; then
@@ -130,4 +158,4 @@ if ! awk -v q="'" '
 	lint::fatal "$DATA_FILE: permissions-policy entry is not status: 'shipped'"
 fi
 
-lint::ok "Permissions-Policy wired in $CF_TF ($policy_index polic$([ "$policy_index" -eq 1 ] && printf 'y' || printf 'ies'), $total_directive_count directives total) + shipped in $DATA_FILE"
+lint::ok "Permissions-Policy wired in $CF_TF ($policy_index polic$([ "$policy_index" -eq 1 ] && printf 'y' || printf 'ies'), $total_directive_count directives total, baseline parity holds) + shipped in $DATA_FILE"
