@@ -78,6 +78,12 @@ jobs:
       - name: Test (vitest)
         run: npm test
 
+      - name: Test csp_report lambda handler
+        # csp_report.mjs imports @aws-sdk/client-s3 (a root devDependency; the
+        # Lambda runtime supplies it in prod), so the import resolves off the
+        # root npm ci above without a per-Lambda node_modules.
+        run: node --test infra/csp_report.test.mjs
+
       - name: Typecheck (astro check)
         run: npm run check
 

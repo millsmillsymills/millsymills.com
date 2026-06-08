@@ -63,6 +63,13 @@ section "node: vitest"
 npm run test
 ok "npm run test"
 
+section "node: csp_report lambda unit tests"
+# csp_report.mjs imports @aws-sdk/client-s3 (a root devDependency; the Lambda
+# runtime supplies it in prod), so the import resolves off the root npm ci
+# without a per-Lambda node_modules.
+node --test infra/csp_report.test.mjs
+ok "infra/csp_report.test.mjs unit tests"
+
 section "node: build"
 npm run build
 ok "npm run build"
