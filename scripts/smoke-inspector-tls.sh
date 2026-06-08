@@ -50,11 +50,20 @@ if [[ -z "$DOMAIN" ]]; then
 fi
 FUNCTION_NAME="${DOMAIN//./-}-inspector-tls"
 
+# The Lambda lives in the stack's primary region (us-west-2), which may
+# differ from the caller's configured default region. Pin it from tfvars so
+# the lookup resolves regardless of ambient AWS_REGION; fall back to the
+# variables.tf default only if the key is absent.
+REGION=$(grep -E '^aws_region[[:space:]]*=[[:space:]]*"' "$TFVARS" |
+	head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
+REGION="${REGION:-us-west-2}"
+
 # Don't redirect stderr — expired-token / wrong-profile errors must
 # surface, otherwise the empty-output branch below falsely blames
 # "is the stack deployed?".
 LAMBDA_URL=$(aws lambda get-function-url-config \
 	--function-name "$FUNCTION_NAME" \
+	--region "$REGION" \
 	--query FunctionUrl \
 	--output text)
 
