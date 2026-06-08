@@ -495,6 +495,66 @@ resource "aws_cloudfront_response_headers_policy" "csp_report" {
   }
 }
 
+# Response-headers policy for /api/passkey/* (webauthn_demo Lambda).
+# Authored separately from `api` (above) for the same reason csp_report
+# is: this endpoint's contract is same-origin only. Every passkey
+# response carries a JSON payload (sessionId / options / verified), and
+# the browser reaches it through CloudFront same-origin — there is no
+# cross-origin allowlist (the Function-URL CORS path was removed; the
+# x-origin-secret gate is the only origin protection). So CORP
+# `cross-origin` (what the shared `api` policy ships for /api/tls/*,
+# which DOES want a future allowlisted cross-origin caller) is broader
+# than this endpoint needs. CORP `same-origin` is the tighter fit and
+# matches the csp_report precedent above. A COEP-isolated same-origin
+# document (the /demo/passkey page) can still fetch a same-origin CORP
+# resource, so this does not break the demo's fetch path.
+#
+# Gating on `enable_webauthn_demo` (not `enable_inspector_tls`, which
+# the shared `api` policy uses) also decouples the passkey behavior from
+# the inspector_tls toggle — borrowing `api[0]` would error on a stack
+# that enables the passkey demo without the TLS inspector.
+#
+# Only delta from `api`: the CORP value flip. HSTS / nosniff /
+# Referrer-Policy / Permissions-Policy stay identical for parity.
+resource "aws_cloudfront_response_headers_policy" "passkey_api" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  name    = "${local.domain_slug}-passkey-api-headers"
+  comment = "Security headers for ${var.domain} /api/passkey/* (CORP same-origin)"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 63072000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
+
+  custom_headers_config {
+    items {
+      header   = "Cross-Origin-Resource-Policy"
+      value    = "same-origin"
+      override = true
+    }
+
+    items {
+      header   = "Permissions-Policy"
+      value    = "accelerometer=(), attribution-reporting=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), clipboard-read=(), clipboard-write=(), compute-pressure=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), storage-access=(), sync-xhr=(), unload=(), usb=(), web-share=(), window-management=(), xr-spatial-tracking=()"
+      override = true
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -698,11 +758,12 @@ resource "aws_cloudfront_distribution" "site" {
 
   # /api/passkey/* → webauthn_demo Lambda. POST-bearing (registration /
   # authentication ceremonies), so the full method set is routed; CachingDisabled
-  # because every ceremony step must reach the Lambda. Uses the `api`
-  # response-headers policy (same as inspector_tls/hits) so the JSON is
-  # fetchable from the COEP-isolated /demo/passkey document, and the
-  # `webauthn_demo` origin-request policy so the Function URL's Host check
-  # passes. See `infra/webauthn_demo.tf` for the x-origin-secret gate.
+  # because every ceremony step must reach the Lambda. Uses the dedicated
+  # `passkey_api` response-headers policy (CORP same-origin — this endpoint
+  # is same-origin only, see the policy's comment) so the JSON is fetchable
+  # from the COEP-isolated /demo/passkey document, and the `webauthn_demo`
+  # origin-request policy so the Function URL's Host check passes. See
+  # `infra/webauthn_demo.tf` for the x-origin-secret gate.
   dynamic "ordered_cache_behavior" {
     for_each = var.enable_webauthn_demo ? [1] : []
     content {
@@ -720,7 +781,7 @@ resource "aws_cloudfront_distribution" "site" {
       # AWS-managed CachingDisabled
       cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
       origin_request_policy_id   = aws_cloudfront_origin_request_policy.webauthn_demo[0].id
-      response_headers_policy_id = aws_cloudfront_response_headers_policy.api[0].id
+      response_headers_policy_id = aws_cloudfront_response_headers_policy.passkey_api[0].id
     }
   }
 
