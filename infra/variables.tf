@@ -166,7 +166,7 @@ variable "enable_hitcounter" {
 }
 
 variable "enable_webauthn_demo" {
-  description = "Provision the webauthn_demo Lambda + 2 DynamoDB tables + IAM role + log group + Function URL + 4 CloudWatch alarms + output. Requires `enable_csp_report = true` until the alarms migrate to a dedicated SNS topic (they currently publish to the shared `aws_sns_topic.csp_report_ops`). Drop on stacks without /demo/passkey. Defaults to false so the public Function URL + /api/passkey/* behavior provision only where a stack opts in explicitly (#650)."
+  description = "Provision the webauthn_demo Lambda + 2 DynamoDB tables + IAM role + log group + Function URL + 8 CloudWatch alarms + output. Requires `enable_csp_report = true` until the alarms migrate to a dedicated SNS topic (they currently publish to the shared `aws_sns_topic.csp_report_ops`). Drop on stacks without /demo/passkey. Defaults to false so the public Function URL + /api/passkey/* behavior provision only where a stack opts in explicitly (#650)."
   type        = bool
   default     = false
 
