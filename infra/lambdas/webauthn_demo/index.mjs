@@ -239,12 +239,13 @@ function emitOriginSecretMismatchMetric() {
 // distinct populations land here: attacker/bot garbage (benign, tolerated by
 // the alarm threshold) and an internal base64url-decode regression that would
 // silently reject every legitimate ceremony — the latter is the one worth
-// paging on, and without a metric it was invisible. errFields is folded into
-// the blob so the error message/stack distinguishes the two without logging
-// any viewer-supplied content (the clientDataJSON itself is never included).
-// Wrapped like the other emitters so a stringify/log failure can't turn the
-// already-handled 400 path into an uncaught exception.
-function emitOriginParseFailureMetric(err) {
+// paging on, and without a metric it was invisible. The two populations are
+// distinguished by alarm volume, not per-event error text: the only throw site
+// is JSON.parse on the base64url-decoded clientDataJSON, so err.message would
+// embed a prefix of attacker-controlled decoded input — deliberately not logged
+// here. Wrapped like the other emitters so a stringify/log failure can't turn
+// the already-handled 400 path into an uncaught exception.
+function emitOriginParseFailureMetric() {
 	try {
 		console.warn(JSON.stringify({
 			_aws: {
@@ -258,7 +259,6 @@ function emitOriginParseFailureMetric(err) {
 			level: 'warn',
 			msg: 'webauthn-demo originMatches parse failed',
 			OriginParseFailure: 1,
-			...errFields(err),
 		}));
 	} catch (emfErr) {
 		console.error('emf emit failed', { err: emfErr?.message });
@@ -649,8 +649,8 @@ function originMatches(response) {
 		const decoded = Buffer.from(clientDataJSON, 'base64url').toString('utf8');
 		const parsed = JSON.parse(decoded);
 		return parsed?.origin === EXPECTED_ORIGIN;
-	} catch (err) {
-		emitOriginParseFailureMetric(err);
+	} catch {
+		emitOriginParseFailureMetric();
 		return false;
 	}
 }

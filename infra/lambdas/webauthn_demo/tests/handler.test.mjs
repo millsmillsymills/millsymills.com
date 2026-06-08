@@ -529,24 +529,31 @@ test('originMatches emits an OriginParseFailure EMF metric on parse failure', ()
 	const originalWarn = console.warn;
 	const warnings = [];
 	console.warn = (...args) => warnings.push(args);
+	// clientDataJSON that base64url-decodes to a recognizable marker, so a leak
+	// of decoded viewer content into the metric blob would be detectable.
+	const leakMarker = 'LEAKMARKER_zzz_not_json';
+	const attackerInput = Buffer.from(leakMarker, 'utf8').toString('base64url');
 	try {
 		const result = __test.originMatches({
-			response: { clientDataJSON: 'not-base64-json' },
+			response: { clientDataJSON: attackerInput },
 		});
 		assert.equal(result, false);
 	} finally {
 		console.warn = originalWarn;
 	}
 	assert.equal(warnings.length, 1);
-	const emf = JSON.parse(String(warnings[0][0]));
+	const raw = String(warnings[0][0]);
+	const emf = JSON.parse(raw);
 	assert.equal(emf.OriginParseFailure, 1);
 	assert.equal(emf._aws.CloudWatchMetrics[0].Namespace, 'MillsymillsCom/WebauthnDemo');
 	assert.deepEqual(emf._aws.CloudWatchMetrics[0].Dimensions, [[]]);
 	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Name, 'OriginParseFailure');
 	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Unit, 'Count');
 	assert.match(emf.msg, /originMatches parse failed/);
-	// errFields folded in so an internal base64url regression is diagnosable.
-	assert.equal(typeof emf.err, 'string');
+	// No viewer-supplied content: the decoded clientDataJSON prefix that V8's
+	// SyntaxError.message would embed must never reach the metric blob.
+	assert.equal(emf.err, undefined);
+	assert.ok(!raw.includes('LEAKMARKER'), 'decoded viewer input leaked into metric');
 });
 
 test('updateCredentialCounter rethrows non-conditional errors', async () => {
