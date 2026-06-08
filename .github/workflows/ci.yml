@@ -270,7 +270,11 @@ jobs:
         run: npm ci
 
       - name: Run handler unit tests
-        run: node --test 'infra/lambdas/webauthn_demo/tests/**/*.test.mjs'
+        # --experimental-test-module-mocks: verify-success.test.mjs mocks the
+        # @simplewebauthn/server crypto boundary via mock.module to drive the
+        # verified:true path. --disable-warning=ExperimentalWarning keeps the
+        # output clean (only the flag's own ExperimentalWarning is emitted).
+        run: node --experimental-test-module-mocks --disable-warning=ExperimentalWarning --test 'infra/lambdas/webauthn_demo/tests/**/*.test.mjs'
 
   actions-lint:
     name: Workflow security audit (zizmor)
