@@ -443,6 +443,29 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_origin_secret_mismatch" {
   ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
 }
 
+# Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` when
+# originMatches can't decode/parse a response's clientDataJSON. Attacker/bot
+# garbage lands here benignly; the signal worth paging on is an internal
+# base64url-decode regression that would silently reject every legitimate
+# ceremony. Same 50/5min tolerance as OriginSecretMismatch — sporadic garbage
+# won't page, a sustained spike (which a regression produces) will.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_origin_parse_failure" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  alarm_name          = "${local.webauthn_demo_name}-origin-parse-failure"
+  alarm_description   = "webauthn_demo failed to parse clientDataJSON origins at a sustained rate. Most likely an internal base64url-decode regression rejecting every legitimate ceremony (not attacker garbage, which the threshold tolerates). Check a recent deploy."
+  namespace           = "MillsymillsCom/WebauthnDemo"
+  metric_name         = "OriginParseFailure"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 50
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
+}
+
 # Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` on
 # the GENUINE-regression branch of updateCredentialCounter's catch only
 # (TTL race + counter=0 deliberately don't emit so this alarm reflects

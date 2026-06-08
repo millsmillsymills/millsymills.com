@@ -234,6 +234,37 @@ function emitOriginSecretMismatchMetric() {
 	}
 }
 
+// EMF metric for the origin-parse-failure alarm in webauthn_demo.tf. Fired
+// when originMatches can't decode/parse a response's clientDataJSON. Two
+// distinct populations land here: attacker/bot garbage (benign, tolerated by
+// the alarm threshold) and an internal base64url-decode regression that would
+// silently reject every legitimate ceremony — the latter is the one worth
+// paging on, and without a metric it was invisible. The two populations are
+// distinguished by alarm volume, not per-event error text: the only throw site
+// is JSON.parse on the base64url-decoded clientDataJSON, so err.message would
+// embed a prefix of attacker-controlled decoded input — deliberately not logged
+// here. Wrapped like the other emitters so a stringify/log failure can't turn
+// the already-handled 400 path into an uncaught exception.
+function emitOriginParseFailureMetric() {
+	try {
+		console.warn(JSON.stringify({
+			_aws: {
+				Timestamp: Date.now(),
+				CloudWatchMetrics: [{
+					Namespace: 'MillsymillsCom/WebauthnDemo',
+					Dimensions: [[]],
+					Metrics: [{ Name: 'OriginParseFailure', Unit: 'Count' }],
+				}],
+			},
+			level: 'warn',
+			msg: 'webauthn-demo originMatches parse failed',
+			OriginParseFailure: 1,
+		}));
+	} catch (emfErr) {
+		console.error('emf emit failed', { err: emfErr?.message });
+	}
+}
+
 // EMF metric for the session-miss alarm in webauthn_demo.tf. Fired
 // every time a verify handler gets a sessionId that has no entry in
 // the sessions table (unknown OR expired OR replayed-after-eager-delete).
@@ -618,8 +649,8 @@ function originMatches(response) {
 		const decoded = Buffer.from(clientDataJSON, 'base64url').toString('utf8');
 		const parsed = JSON.parse(decoded);
 		return parsed?.origin === EXPECTED_ORIGIN;
-	} catch (err) {
-		console.warn('webauthn-demo originMatches parse failed', errFields(err));
+	} catch {
+		emitOriginParseFailureMetric();
 		return false;
 	}
 }
