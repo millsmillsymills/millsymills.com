@@ -246,10 +246,10 @@ if ! command -v duckdb >/dev/null 2>&1; then
 	printf '\033[1;31m✗ duckdb not on PATH; install with `brew install duckdb`\033[0m\n' >&2
 	exit 1
 fi
-shellcheck scripts/analytics/run.sh scripts/analytics/lint-queries.sh
+shellcheck scripts/analytics/run.sh scripts/analytics/lint-queries.sh scripts/smoke-*.sh
 # -ci: switch-case patterns indent inside `case ... esac`, matching the rest
 # of scripts/ (e.g. tf.sh).
-shfmt -ci -d scripts/analytics/run.sh scripts/analytics/lint-queries.sh
+shfmt -ci -d scripts/analytics/run.sh scripts/analytics/lint-queries.sh scripts/smoke-*.sh
 ./scripts/analytics/lint-queries.sh
 ok "analytics: shellcheck + shfmt + SQL parse-check clean"
 
