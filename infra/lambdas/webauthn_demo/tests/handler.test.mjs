@@ -525,7 +525,7 @@ test('errFields on undefined returns undefined fields (no crash)', () => {
 	});
 });
 
-test('originMatches logs a structured warn on parse failure', () => {
+test('originMatches emits an OriginParseFailure EMF metric on parse failure', () => {
 	const originalWarn = console.warn;
 	const warnings = [];
 	console.warn = (...args) => warnings.push(args);
@@ -538,8 +538,15 @@ test('originMatches logs a structured warn on parse failure', () => {
 		console.warn = originalWarn;
 	}
 	assert.equal(warnings.length, 1);
-	assert.match(String(warnings[0][0]), /originMatches parse failed/);
-	assert.equal(typeof warnings[0][1].err, 'string');
+	const emf = JSON.parse(String(warnings[0][0]));
+	assert.equal(emf.OriginParseFailure, 1);
+	assert.equal(emf._aws.CloudWatchMetrics[0].Namespace, 'MillsymillsCom/WebauthnDemo');
+	assert.deepEqual(emf._aws.CloudWatchMetrics[0].Dimensions, [[]]);
+	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Name, 'OriginParseFailure');
+	assert.equal(emf._aws.CloudWatchMetrics[0].Metrics[0].Unit, 'Count');
+	assert.match(emf.msg, /originMatches parse failed/);
+	// errFields folded in so an internal base64url regression is diagnosable.
+	assert.equal(typeof emf.err, 'string');
 });
 
 test('updateCredentialCounter rethrows non-conditional errors', async () => {
