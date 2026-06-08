@@ -246,10 +246,10 @@ if ! command -v duckdb >/dev/null 2>&1; then
 	printf '\033[1;31m✗ duckdb not on PATH; install with `brew install duckdb`\033[0m\n' >&2
 	exit 1
 fi
-shellcheck scripts/analytics/run.sh scripts/analytics/lint-queries.sh
+shellcheck scripts/analytics/run.sh scripts/analytics/lint-queries.sh scripts/smoke-*.sh
 # -ci: switch-case patterns indent inside `case ... esac`, matching the rest
 # of scripts/ (e.g. tf.sh).
-shfmt -ci -d scripts/analytics/run.sh scripts/analytics/lint-queries.sh
+shfmt -ci -d scripts/analytics/run.sh scripts/analytics/lint-queries.sh scripts/smoke-*.sh
 ./scripts/analytics/lint-queries.sh
 ok "analytics: shellcheck + shfmt + SQL parse-check clean"
 
@@ -284,6 +284,18 @@ section "post-deploy: csp_report Function URL 403 (opt-in)"
 if [[ -n "${MMS_SMOKE_STACK:-}" ]]; then
 	./scripts/smoke-csp-report.sh "$MMS_SMOKE_STACK"
 	ok "csp_report Function URL returns 403 for $MMS_SMOKE_STACK"
+else
+	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
+fi
+
+section "post-deploy: webauthn_demo Function URL 403 (opt-in)"
+# The webauthn_demo Function URL is authorization_type = "NONE"; its only
+# protection is the application-layer x-origin-secret gate (issue #668
+# followup to PR #631). Asserts the raw URL returns 403 to direct callers
+# with no/wrong secret.
+if [[ -n "${MMS_SMOKE_STACK:-}" ]]; then
+	./scripts/smoke-webauthn-demo.sh "$MMS_SMOKE_STACK"
+	ok "webauthn_demo Function URL returns 403 for $MMS_SMOKE_STACK"
 else
 	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
 fi
