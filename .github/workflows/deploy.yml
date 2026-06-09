@@ -423,7 +423,7 @@ jobs:
   notify-failure:
     name: Surface unattended deploy failure
     needs: [build, provenance, deploy]
-    if: ${{ failure() && github.event_name == 'schedule' }}
+    if: ${{ always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
