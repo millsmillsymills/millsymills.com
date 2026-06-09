@@ -81,13 +81,27 @@ class Cdp {
 	constructor(ws) {
 		this.#ws = ws;
 		ws.addEventListener('message', (event) => {
-			const msg = JSON.parse(event.data);
+			let msg;
+			try {
+				msg = JSON.parse(event.data);
+			} catch {
+				return;
+			}
 			const resolver = this.#pending.get(msg.id);
 			if (!resolver) return;
 			this.#pending.delete(msg.id);
 			if (msg.error) resolver.reject(new Error(msg.error.message));
 			else resolver.resolve(msg.result);
 		});
+		// A dropped socket (browser crash/exit) must fail every awaited send fast,
+		// not hang it forever — these sends have no per-call timeout.
+		ws.addEventListener('close', () => this.#rejectAll('CDP socket closed'), { once: true });
+		ws.addEventListener('error', () => this.#rejectAll('CDP socket error'), { once: true });
+	}
+
+	#rejectAll(reason) {
+		for (const { reject } of this.#pending.values()) reject(new Error(reason));
+		this.#pending.clear();
 	}
 
 	static async connect(url) {
@@ -160,7 +174,20 @@ async function runStep(cdp, sessionId, clickExpression, statusKey) {
 		}
 		await sleep(250);
 	}
-	return { state: 'timeout', message: `${statusKey} did not settle in ${CEREMONY_TIMEOUT_MS}ms` };
+	// Throw rather than return a 'timeout' sentinel: a stalled ceremony is a
+	// failure, and a caller must not be able to mistake it for success.
+	throw new Error(`${statusKey} did not settle in ${CEREMONY_TIMEOUT_MS}ms`);
+}
+
+async function residentCredential(cdp, sessionId, authenticatorId) {
+	const { credentials } = await cdp.send(
+		'WebAuthn.getCredentials',
+		{ authenticatorId },
+		sessionId,
+	);
+	const resident = credentials.find((c) => c.isResidentCredential);
+	if (!resident) throw new Error('no resident credential on the virtual authenticator');
+	return resident;
 }
 
 async function main() {
@@ -216,6 +243,7 @@ async function main() {
 			throw new Error(`registration ${register.state}: ${register.message}`);
 		}
 		console.error(`  register: ok — ${register.message}`);
+		const afterRegister = await residentCredential(cdp, sessionId, authenticatorId);
 
 		const authenticate = await runStep(
 			cdp,
@@ -227,20 +255,20 @@ async function main() {
 			throw new Error(`authentication ${authenticate.state}: ${authenticate.message}`);
 		}
 		console.error(`  authenticate: ok — ${authenticate.message}`);
+		const afterAuth = await residentCredential(cdp, sessionId, authenticatorId);
 
-		const { credentials } = await cdp.send(
-			'WebAuthn.getCredentials',
-			{ authenticatorId },
-			sessionId,
+		if (
+			typeof afterAuth.signCount !== 'number' ||
+			afterAuth.signCount <= afterRegister.signCount
+		) {
+			throw new Error(
+				`signature counter not monotonic across authenticate ` +
+					`(register=${afterRegister.signCount} -> authenticate=${afterAuth.signCount})`,
+			);
+		}
+		console.error(
+			`  signCount advanced ${afterRegister.signCount} -> ${afterAuth.signCount} (rpId ${afterAuth.rpId})`,
 		);
-		const resident = credentials.find((c) => c.isResidentCredential);
-		if (!resident) {
-			throw new Error('no resident credential after registration');
-		}
-		if (typeof resident.signCount !== 'number' || resident.signCount < 1) {
-			throw new Error(`signature counter did not advance (signCount=${resident.signCount})`);
-		}
-		console.error(`  signCount advanced to ${resident.signCount} (rpId ${resident.rpId})`);
 
 		console.error('OK: register + authenticate verified end-to-end against the live backend.');
 	} finally {
