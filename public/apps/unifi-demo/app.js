@@ -64,12 +64,24 @@ const nodeEls = {};
    today, infra/cloudfront.tf), and this asset is served via the default behavior,
    so it inherits that header. Route the static innerHTML writes through a scoped,
    named policy so the report stream stays empty and the enforce flip can't brick
-   the demo. Deliberately NOT the origin-wide `default` policy — the `unifi-demo`
-   name is allowlisted only for this surface in the trusted-types directive. */
+   the demo. Deliberately NOT the origin-wide `default` policy — the distinct
+   `unifi-demo` name keeps this demo's writes identifiable in the directive
+   allowlist (`trusted-types default unifi-demo`), which the header serves
+   origin-wide, not per-surface. If an enforcing directive ever drops the name,
+   createPolicy throws — surface that visibly instead of dying as a blank shell. */
 const ttHTML = (() => {
   const tt = window.trustedTypes;
   if (!tt) return (s) => s;
-  const policy = tt.createPolicy('unifi-demo', { createHTML: (s) => s });
+  let policy;
+  try {
+    policy = tt.createPolicy('unifi-demo', { createHTML: (s) => s });
+  } catch (err) {
+    const banner = document.createElement('p');
+    banner.className = 'tt-blocked';
+    banner.textContent = "trusted types policy 'unifi-demo' blocked by CSP — demo disabled";
+    appEl.replaceChildren(banner);
+    throw err;
+  }
   return (s) => policy.createHTML(s);
 })();
 
