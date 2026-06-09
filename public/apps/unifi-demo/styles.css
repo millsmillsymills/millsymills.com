@@ -265,21 +265,35 @@ body{
 
 .node .nm,.node .sub,.node .ssidtag,.ssidchip .nm,.ssidchip,.chead .tt,.chead .sd,.statusbar .brand .wm{ white-space:nowrap; }
 
-/* ════════ PORTRAIT-PHONE LAYOUT (bottom-sheet console) ════════ */
-@media (max-width:640px){
+/* ════════ COMPACT (phone — portrait OR short landscape) ════════ */
+@media (max-width:640px), (max-height:480px) and (orientation:landscape){
   .app{ height:100dvh; }
-  .statusbar{ gap:8px 12px; flex-wrap:wrap; padding:9px 12px; }
   .statusbar .counts{ display:none; }
-  .statusbar .net{ font-size:12px; }
 
-  /* shrink nodes + drop secondary labels so the full-width map doesn't overlap */
+  /* shrink nodes + drop secondary labels so the map doesn't overlap */
   .node .glyph svg, .node.device .glyph svg, .node.cloud .glyph svg, .node.client .glyph svg{ width:34px; height:34px; }
   .node .glyph .tg, .node.device .glyph .tg{ font-size:30px; }
   .node .nm{ font-size:10px; }
   .node .sub, .node .ssidtag{ display:none; }
   .ssidbar{ display:none; }
+  .chead .winbtns{ display:none; }
+  .relaunch{ display:none !important; }
 
-  /* console becomes a bottom sheet: header peeks, tap to expand */
+  /* commands fill the sheet; chat stays compact above (boot greeting only at rest) */
+  .cbody{ flex:0 0 auto; max-height:42dvh; }
+  .cfoot{ flex:1 1 auto; min-height:0; padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+  .chipscroll{ flex:1 1 auto; max-height:none; }
+
+  /* >=44px tap targets */
+  .chip{ min-height:44px; padding:11px 13px; font-size:12px; display:inline-flex; align-items:center; }
+  .grouphd{ min-height:44px; padding:12px 8px; }
+}
+
+/* ════════ PORTRAIT PHONE: bottom-sheet console ════════ */
+@media (max-width:640px){
+  .statusbar{ gap:8px 12px; flex-wrap:wrap; padding:9px 12px; }
+  .statusbar .net{ font-size:12px; }
+
   .console{
     position:fixed; left:0; right:0; bottom:0; top:auto; width:100%;
     max-height:none; height:74dvh;
@@ -292,12 +306,21 @@ body{
   .chead{ position:relative; cursor:pointer; padding-top:14px; }
   .chead::before{ content:""; position:absolute; left:50%; top:5px; transform:translateX(-50%);
     width:38px; height:4px; border-radius:2px; background:var(--line-hard); }
-  .chead .winbtns{ display:none; }
-  .relaunch{ display:none !important; }
+}
 
-  /* >=44px tap targets */
-  .chip{ min-height:44px; padding:11px 13px; font-size:12px; display:inline-flex; align-items:center; }
-  .grouphd{ min-height:44px; padding:12px 8px; }
-  .chipscroll{ max-height:36dvh; }
-  .cfoot{ padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+/* ════════ LANDSCAPE PHONE: right side-sheet (docked in the stage) ════════ */
+@media (max-height:480px) and (orientation:landscape){
+  .statusbar{ gap:6px 10px; padding:7px 12px; flex-wrap:nowrap; }
+  .statusbar .net{ font-size:11px; }
+
+  /* .console is inside .stage (position:relative) → absolute fills the band
+     between status bar and ticker, leaving the left of the map clear */
+  .console{
+    position:absolute; inset:0 0 0 auto; left:auto; width:min(380px, 42%);
+    max-height:none; height:auto;
+    border-top:none; border-left:1px solid var(--cyan); border-right:none;
+    box-shadow:-8px 0 40px -10px rgba(0,240,255,.5);
+    transform:none;
+  }
+  .chead{ cursor:default; }
 }
