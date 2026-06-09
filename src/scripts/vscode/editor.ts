@@ -11,8 +11,10 @@
  * HTML insertion trust note: the shiki output is generated at build time
  * by `prerenderHighlights()` from files committed to this repo. There is
  * no runtime input path — Vite inlines the resulting object as a JS
- * literal at config-eval time. We use Range.createContextualFragment
- * rather than `innerHTML` to be explicit that we're parsing trusted HTML.
+ * literal at config-eval time. We parse it with `DOMParser`, which is not
+ * a Trusted Types injection sink (the parsed document is inert and adopted
+ * nodes carry no scripts), so the runtime stays clean under an enforcing
+ * `require-trusted-types-for 'script'` policy (#130).
  */
 
 import type { VfsNode } from './types';
@@ -40,8 +42,8 @@ export function renderEditor(container: HTMLElement, node: VfsNode | null): { li
 	const prerendered = HIGHLIGHTS[node.path];
 	if (prerendered) {
 		// Trusted: build-time shiki output, no runtime user input. See module header.
-		const fragment = document.createRange().createContextualFragment(prerendered);
-		code.appendChild(fragment);
+		const parsed = new DOMParser().parseFromString(prerendered, 'text/html');
+		code.append(...Array.from(parsed.body.childNodes));
 	} else {
 		const pre = document.createElement('pre');
 		pre.className = 'vscode-editor-plain';

@@ -41,7 +41,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 	}
 
 	function clear(): void {
-		output!.innerHTML = '';
+		output!.replaceChildren();
 	}
 
 	function setPrompt(text: string): void {

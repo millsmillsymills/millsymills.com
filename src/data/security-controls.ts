@@ -455,8 +455,8 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Parallel `Content-Security-Policy-Report-Only: require-trusted-types-for \'script\'; trusted-types default` header. Reports DOM-XSS sink usage (`innerHTML`, `Element.outerHTML`, etc.) to `/api/csp-report` without blocking it.',
 		why: 'Trusted Types kill DOM-XSS sinks at the source; promoted from report-only to enforcing once the report stream stays clean for 1-2 weeks.',
-		tradeoffs: 'Currently report-only — violations are logged but allowed. Enforcing requires no violations from any DOM-sink hot path in the site\'s emitted bundles. The codebase uses `textContent` rather than `innerHTML` throughout, so the report stream should stay empty in steady-state.',
-		code: ['infra/cloudfront.tf'],
+		tradeoffs: 'Currently report-only — violations are logged but allowed. Enforcing requires no violations from any DOM-sink hot path in the site\'s emitted bundles. The runtime bundles carry no Trusted Types injection sinks: DOM is built via `createElement`/`textContent`, lists are cleared with `replaceChildren()`, and the one build-time-trusted HTML string (shiki highlights) is parsed with `DOMParser` rather than `innerHTML`/`createContextualFragment` — so the report stream stays empty and the enforce flip is safe.',
+		code: ['infra/cloudfront.tf', 'src/scripts/command-palette.ts', 'src/scripts/vscode/editor.ts'],
 	},
 	{
 		id: 'hsts-preload',
