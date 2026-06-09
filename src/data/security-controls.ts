@@ -456,7 +456,7 @@ export const securityControls: readonly SecurityControl[] = [
 		what: 'The enforcing `Content-Security-Policy` carries `require-trusted-types-for \'script\'; trusted-types default`. DOM-XSS sinks (`innerHTML`, `Element.outerHTML`, `createContextualFragment`, Worker URLs, etc.) throw unless their value is minted by the `default` Trusted Types policy installed in `src/scripts/util/trusted-types.ts`.',
 		why: 'Trusted Types kill DOM-XSS sinks at the source. Promoted from the prior `-Report-Only` slice after the report stream stayed clean.',
 		tradeoffs: 'Enforcing — unwrapped sink writes throw rather than logging. The runtime bundles carry no Trusted Types injection sinks: DOM is built via `createElement`/`textContent`, lists are cleared with `replaceChildren()`, and the one build-time-trusted HTML string (shiki highlights) is parsed with `DOMParser` rather than `innerHTML`/`createContextualFragment`. The single legitimate sink — the PoW Worker URL spawned by `mail-pow.ts` — is wrapped by the fail-closed `default` policy, which only mints same-origin `/_astro/` script URLs and throws on everything else.',
-		code: ['infra/cloudfront.tf', 'src/scripts/util/trusted-types.ts', 'src/scripts/vscode/editor.ts'],
+		code: ['infra/cloudfront.tf', 'src/scripts/util/trusted-types.ts', 'src/scripts/mail-pow.ts'],
 	},
 	{
 		id: 'hsts-preload',
