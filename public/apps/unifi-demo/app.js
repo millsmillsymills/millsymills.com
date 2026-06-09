@@ -99,7 +99,14 @@ function layoutNodes(){
     el.style.left=x+'%'; el.style.top=y+'%';
   });
 }
-mqMobile.addEventListener('change', ()=>{ layoutNodes(); drawWires(); });
+mqMobile.addEventListener('change', ()=>{
+  if(mqMobile.matches){
+    // drop any desktop drag-applied inline geometry so the bottom-sheet CSS wins
+    const con=document.getElementById('console');
+    if(con) con.style.cssText=con.style.cssText.replace(/(left|top|right|bottom)\s*:[^;]*;?/g,'');
+  }
+  layoutNodes(); drawWires();
+});
 function makeNode({id,cls,icon,name,sub,ssid}){
   const el=document.createElement('div');
   el.className='node '+cls; el.dataset.id=id;
@@ -519,7 +526,7 @@ function init(){
 function makeDraggable(panel, handle){
   let sx,sy,sl,st,drag=false;
   handle.addEventListener('mousedown',e=>{
-    if(e.target.closest('.wb')) return;
+    if(mqMobile.matches || e.target.closest('.wb')) return;
     drag=true; handle.classList.add('drag');
     sx=e.clientX; sy=e.clientY;
     const r=panel.getBoundingClientRect();
