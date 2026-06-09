@@ -4,20 +4,21 @@ function init(): void {
 	if (!win || !frame) return;
 
 	let loaded = false;
-	const load = (): void => {
-		if (loaded) return;
+	const maybeLoad = (): void => {
+		if (loaded || win.hidden) return;
 		loaded = true;
 		const src = frame.dataset.unifiSrc;
 		if (src) frame.src = src;
 	};
 
-	// Subscribe to the window-manager's open event for future opens; the
-	// initial !hidden check covers a window restored open before this
-	// listener registers, where the event has already fired.
-	window.addEventListener('mills:window-open', (event) => {
-		if (event.detail.id === 'unifi') load();
-	});
-	if (!win.hidden) load();
+	// Load on first reveal. Watching the window's `hidden` attribute is the
+	// canonical "this app just opened" signal in this codebase: window-manager
+	// flips it on desktop, and the mobile shell mirrors it via
+	// syncDesktopWindowHidden. The desktop-only `mills:window-open` event never
+	// fires in the mobile shell, which left the iframe blank there.
+	const observer = new MutationObserver(maybeLoad);
+	observer.observe(win, { attributes: true, attributeFilter: ['hidden'] });
+	maybeLoad();
 }
 
 if (document.readyState === 'loading') {
