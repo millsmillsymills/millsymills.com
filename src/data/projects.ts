@@ -115,6 +115,16 @@ export const projects: readonly Project[] = [
 		kind: 'tool',
 		tags: ['terraform', 'opentofu', 'github', 'oidc', 'iac'],
 	},
+	{
+		id: 'claude-defaults',
+		name: 'claude-defaults',
+		tagline: 'agent config + skills — installable Claude Code guardrails',
+		description:
+			'A shareable Claude Code baseline: sandboxing, permission policy, MCP defaults, and PreToolUse guardrail hooks that block destructive commands and pushes to main and warn on sensitive-path writes — plus the authored skills that ship with it. Distributed via an idempotent, reversible installer.',
+		repo: 'https://github.com/millsmillsymills/claude-defaults',
+		kind: 'tool',
+		tags: ['claude-code', 'agents', 'hooks', 'skills', 'dotfiles'],
+	},
 ];
 
 export function findProject(id: string): Project | undefined {
