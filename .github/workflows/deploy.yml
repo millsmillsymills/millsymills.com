@@ -410,3 +410,41 @@ jobs:
           aws cloudfront create-invalidation
           --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}"
           --paths "/*"
+
+  # Visibility floor for unattended failures (#705). The monthly
+  # `schedule:` run deploys with no human watching, so a transient — most
+  # commonly a Sigstore public-good timeout in the `provenance` job's
+  # keyless signing (Fulcio/Rekor) — fails silently and lets
+  # security.txt's `Expires:` drift toward stale. This job fires only on
+  # a failed scheduled run (dispatched runs have a human at the console)
+  # and opens, or comments on, a single tracking issue so the failure is
+  # actionable. It does NOT weaken the provenance gate — re-dispatch is
+  # still required; this only surfaces that a re-dispatch is needed.
+  notify-failure:
+    name: Surface unattended deploy failure
+    needs: [build, provenance, deploy]
+    if: ${{ failure() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open or update tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          label="deploy-failure"
+          title="Scheduled deploy failed — security.txt Expires may be drifting"
+          body="The monthly scheduled deploy.yml run failed: ${RUN_URL} . This is the unattended cron that keeps /.well-known/security.txt's Expires: field fresh; the usual cause is a transient Sigstore public-good timeout in the provenance job's keyless signing (see #705), where a plain re-dispatch succeeds. Re-run the workflow from the Actions tab once the transient clears, then close this issue."
+          gh label create "$label" --repo "$REPO" --color b60205 \
+            --description "Unattended scheduled deploy failed" --force >/dev/null 2>&1 || true
+          existing=$(gh issue list --repo "$REPO" --state open --label "$label" \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$title" --label "$label" --body "$body"
+          fi
