@@ -35,6 +35,14 @@ const POS = {
   macbook:[5,82], iphone:[16,82], tv:[27,82], ipad:[10,93], nest:[21,93],
   printer:[42,82], ringcam:[54,82], guest:[48,93],
 };
+/* portrait-phone layout — full width, no right-dock bias (console is a bottom sheet here);
+   max y capped at 86 so the collapsed sheet's header peek never covers a node */
+const POS_MOBILE = {
+  internet:[50,6], udm:[50,19], sw:[50,32],
+  'ap-living':[28,47], 'ap-office':[72,47],
+  macbook:[8,65], iphone:[26,65], tv:[44,65], ipad:[14,84], nest:[31,84],
+  printer:[60,65], ringcam:[82,65], guest:[71,84],
+};
 const LINKS = [
   ['internet','udm'],['udm','sw'],['sw','ap-living'],['sw','ap-office'],
   ['ap-living','macbook'],['ap-living','iphone'],['ap-living','tv'],['ap-living','ipad'],['ap-living','nest'],
@@ -77,12 +85,28 @@ function buildTopo(){
   NET.clients.forEach(c=>{
     nodeEls[c.id] = makeNode({ id:c.id, cls:'client', icon:CLIENT_ICON[c.id]||'phone', name:c.name, sub:c.ip, ssid:c.ssid });
   });
-  Object.entries(nodeEls).forEach(([id,el])=>{
-    const [x,y]=POS[id]; el.style.left=x+'%'; el.style.top=y+'%';
-    stage.appendChild(el);
-  });
+  Object.values(nodeEls).forEach(el=>stage.appendChild(el));
+  layoutNodes();
   applyStatus(); drawWires();
 }
+
+/* breakpoint-aware node placement — POS_MOBILE on portrait phones, POS otherwise */
+const mqMobile = window.matchMedia('(max-width:640px)');
+function layoutNodes(){
+  const map = mqMobile.matches ? POS_MOBILE : POS;
+  Object.entries(nodeEls).forEach(([id,el])=>{
+    const [x,y] = map[id] || POS[id];
+    el.style.left=x+'%'; el.style.top=y+'%';
+  });
+}
+mqMobile.addEventListener('change', ()=>{
+  if(mqMobile.matches){
+    // drop any desktop drag-applied inline geometry so the bottom-sheet CSS wins
+    const con=document.getElementById('console');
+    if(con) con.style.cssText=con.style.cssText.replace(/(left|top|right|bottom)\s*:[^;]*;?/g,'');
+  }
+  layoutNodes(); drawWires();
+});
 function makeNode({id,cls,icon,name,sub,ssid}){
   const el=document.createElement('div');
   el.className='node '+cls; el.dataset.id=id;
@@ -451,6 +475,7 @@ let busy=false;
 async function submit(text){
   text=text.trim(); if(!text||busy) return;
   busy=true; setInputEnabled(false);
+  if(mqMobile.matches) document.getElementById('console').classList.add('open');
   addUser(text);
   const cmd=COMMANDS.find(c=>c.test.test(text));
   if(cmd){ await cmd.run(); }
@@ -481,11 +506,13 @@ function init(){
   document.getElementById('mlRo').classList.add('act-ro');
 
   // console window controls
-  const con=document.getElementById('console'), relaunch=document.getElementById('relaunch');
+  const con=document.getElementById('console'), relaunch=document.getElementById('relaunch'), chead=document.getElementById('chead');
   document.getElementById('wbMin').onclick=()=>con.classList.toggle('min');
   document.getElementById('wbClose').onclick=()=>{ con.style.display='none'; relaunch.style.display='block'; };
   relaunch.onclick=()=>{ con.style.display='flex'; con.classList.remove('min'); relaunch.style.display='none'; };
-  makeDraggable(con, document.getElementById('chead'));
+  // mobile: the header is a bottom-sheet grabber (tap to expand/collapse); desktop keeps drag
+  chead.addEventListener('click', e=>{ if(mqMobile.matches && !e.target.closest('.wb')) con.classList.toggle('open'); });
+  makeDraggable(con, chead);
 
   // seed ticker
   logCall('unifi_network_list_devices','ok','4 devices');
@@ -499,7 +526,7 @@ function init(){
 function makeDraggable(panel, handle){
   let sx,sy,sl,st,drag=false;
   handle.addEventListener('mousedown',e=>{
-    if(e.target.closest('.wb')) return;
+    if(mqMobile.matches || e.target.closest('.wb')) return;
     drag=true; handle.classList.add('drag');
     sx=e.clientX; sy=e.clientY;
     const r=panel.getBoundingClientRect();
