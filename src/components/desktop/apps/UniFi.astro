@@ -8,11 +8,11 @@
 // Google Fonts) was swapped for a self-hosted/system monospace stack so
 // the app stays within the site's no-third-party / strict-CSP posture.
 //
-// The iframe src is assigned on first window-open so the demo's scripts
-// don't run for every visitor who never opens the window. The trigger is
-// the window-manager's canonical `mills:window-open` event, which fires on
-// every open path (launcher click, session restore, ?open= deep-link), so
-// the load can't be missed.
+// The iframe src is assigned on first reveal so the demo's scripts don't
+// run for every visitor who never opens the window. The trigger is a
+// MutationObserver on the window's `hidden` attribute — the canonical
+// "just opened" signal that fires on both the desktop window-manager and
+// the mobile shell (see src/scripts/unifi-demo.ts).
 ---
 
 <div class="unifi-demo">

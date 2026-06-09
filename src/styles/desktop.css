@@ -1260,6 +1260,22 @@ a {
 	font-size: 18px;
 }
 
+/* The unifi demo is a full-bleed iframe canvas, not prose. When it's the
+   open app, drop the prose padding and give the container a real height so
+   the iframe's `height: 100%` resolves (a `min-height` parent leaves it at
+   zero). `dvh` tracks the mobile address bar; 80px is the status bar + app
+   chrome, matching the `min-height` above. */
+.mshell__app-body:has([data-mobile-app='unifi']:not([hidden])) {
+	padding: 0;
+	min-height: 0;
+	height: calc(100dvh - 80px);
+}
+
+.mshell__app-body [data-mobile-app='unifi'],
+.mshell__app-body [data-mobile-app='unifi'] > .unifi-demo {
+	height: 100%;
+}
+
 .mshell__app-body h1 {
 	font-family: var(--font-pixel);
 	font-size: 18px;
