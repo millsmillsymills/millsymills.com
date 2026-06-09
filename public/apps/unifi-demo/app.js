@@ -90,8 +90,11 @@ function buildTopo(){
   applyStatus(); drawWires();
 }
 
-/* breakpoint-aware node placement — POS_MOBILE on portrait phones, POS otherwise */
+/* breakpoint-aware node placement — POS_MOBILE on portrait phones; POS (left-biased)
+   doubles for the landscape right side-sheet, which reserves the right ~42% */
 const mqMobile = window.matchMedia('(max-width:640px)');
+const mqLandscape = window.matchMedia('(max-height:480px) and (orientation:landscape)');
+const mqPhone = window.matchMedia('(max-width:640px), (max-height:480px) and (orientation:landscape)');
 function layoutNodes(){
   const map = mqMobile.matches ? POS_MOBILE : POS;
   Object.entries(nodeEls).forEach(([id,el])=>{
@@ -99,14 +102,16 @@ function layoutNodes(){
     el.style.left=x+'%'; el.style.top=y+'%';
   });
 }
-mqMobile.addEventListener('change', ()=>{
-  if(mqMobile.matches){
-    // drop any desktop drag-applied inline geometry so the bottom-sheet CSS wins
+function onBreakpoint(){
+  if(mqPhone.matches){
+    // drop any desktop drag-applied inline geometry so the sheet CSS wins
     const con=document.getElementById('console');
     if(con) con.style.cssText=con.style.cssText.replace(/(left|top|right|bottom)\s*:[^;]*;?/g,'');
   }
   layoutNodes(); drawWires();
-});
+}
+mqMobile.addEventListener('change', onBreakpoint);
+mqLandscape.addEventListener('change', onBreakpoint);
 function makeNode({id,cls,icon,name,sub,ssid}){
   const el=document.createElement('div');
   el.className='node '+cls; el.dataset.id=id;
@@ -526,7 +531,7 @@ function init(){
 function makeDraggable(panel, handle){
   let sx,sy,sl,st,drag=false;
   handle.addEventListener('mousedown',e=>{
-    if(mqMobile.matches || e.target.closest('.wb')) return;
+    if(mqPhone.matches || e.target.closest('.wb')) return;
     drag=true; handle.classList.add('drag');
     sx=e.clientX; sy=e.clientY;
     const r=panel.getBoundingClientRect();
