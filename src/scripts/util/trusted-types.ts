@@ -1,8 +1,8 @@
 /*
  * Trusted Types `default` policy.
  *
- * `require-trusted-types-for 'script'; trusted-types default` ships in
- * report-only today (infra/cloudfront.tf, issue #130). Under enforce the
+ * `require-trusted-types-for 'script'; trusted-types default unifi-demo` is
+ * enforced (infra/cloudfront.tf, issue #130). Under enforce the
  * Worker script URL spawned in mail-pow.ts must be a TrustedScriptURL.
  * The browser consults a policy named `default` automatically for any
  * otherwise-unwrapped sink value, so registering one here means call sites
@@ -10,8 +10,11 @@
  *
  * The policy fails closed: only same-origin /_astro/ script URLs (where
  * Vite emits hashed bundles, including the PoW worker) are allowed; every
- * other script URL throws. No createHTML/createScript is defined, so HTML
- * and inline-script sinks remain blocked under enforce.
+ * other script URL throws. This `default` policy defines no
+ * createHTML/createScript, so HTML and inline-script sinks stay blocked in
+ * the Astro bundles; the standalone /apps/unifi-demo asset mints its static
+ * markup through its own allowlisted `unifi-demo` createHTML policy
+ * (public/apps/unifi-demo/app.js).
  */
 export function installDefaultTrustedTypesPolicy(): void {
 	const tt = window.trustedTypes;

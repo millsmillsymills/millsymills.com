@@ -191,13 +191,18 @@ export const securityControls: readonly SecurityControl[] = [
 	},
 	{
 		id: 'trusted-types',
-		title: 'Trusted Types (report-only)',
+		title: 'Trusted Types (enforced)',
 		category: 'web',
 		status: 'shipped',
-		what: 'Parallel `Content-Security-Policy-Report-Only: require-trusted-types-for \'script\'; trusted-types default unifi-demo` header. Reports DOM-XSS sink usage (`innerHTML`, `Element.outerHTML`, etc.) to `/api/csp-report` without blocking it.',
-		why: 'Trusted Types kill DOM-XSS sinks at the source; promoted from report-only to enforcing once the report stream stays clean for 1-2 weeks.',
-		tradeoffs: 'Currently report-only — violations are logged but allowed. The Astro-emitted bundles carry no Trusted Types injection sinks: DOM is built via `createElement`/`textContent`, lists are cleared with `replaceChildren()`, and the one build-time-trusted HTML string (shiki highlights) is parsed with `DOMParser` rather than `innerHTML`. The standalone `/apps/unifi-demo` asset is the exception — it renders its own static markup through `innerHTML`, so it routes those writes through a scoped, named `unifi-demo` TrustedTypes policy (allowlisted alongside `default` in the directive) rather than the origin-wide `default` policy. With both policies in place the report stream stays empty and the enforce flip is safe.',
-		code: ['infra/cloudfront.tf', 'src/scripts/util/trusted-types.ts', 'public/apps/unifi-demo/app.js'],
+		what: 'The enforcing `Content-Security-Policy` carries `require-trusted-types-for \'script\'; trusted-types default unifi-demo`. DOM-XSS sinks (`innerHTML`, `Element.outerHTML`, `createContextualFragment`, Worker URLs, etc.) throw unless their value is minted by an allowlisted Trusted Types policy.',
+		why: 'Trusted Types kill DOM-XSS sinks at the source. Promoted from the prior `-Report-Only` slice after the report stream stayed clean.',
+		tradeoffs: 'Enforcing — unwrapped sink writes throw rather than logging. The Astro-emitted bundles carry no Trusted Types injection sinks: DOM is built via `createElement`/`textContent`, lists are cleared with `replaceChildren()`, and the one build-time-trusted HTML string (shiki highlights) is parsed with `DOMParser` rather than `innerHTML`. The single legitimate bundle sink — the PoW Worker URL spawned by `mail-pow.ts` — is wrapped by the fail-closed `default` policy, which only mints same-origin `/_astro/` script URLs and throws on everything else. The standalone `/apps/unifi-demo` asset renders its own static markup through `innerHTML`, routed through the scoped, named `unifi-demo` createHTML policy (allowlisted alongside `default` in the directive); if the directive ever drops the name, the demo fails visibly rather than silently.',
+		code: [
+			'infra/cloudfront.tf',
+			'src/scripts/util/trusted-types.ts',
+			'src/scripts/mail-pow.ts',
+			'public/apps/unifi-demo/app.js',
+		],
 	},
 	{
 		id: 'hsts-preload',
