@@ -189,6 +189,26 @@ export const securityControls: readonly SecurityControl[] = [
 		],
 		prs: [631],
 	},
+	{
+		id: 'trusted-types',
+		title: 'Trusted Types (report-only)',
+		category: 'web',
+		status: 'shipped',
+		what: 'Parallel `Content-Security-Policy-Report-Only: require-trusted-types-for \'script\'; trusted-types default unifi-demo` header. Reports DOM-XSS sink usage (`innerHTML`, `Element.outerHTML`, etc.) to `/api/csp-report` without blocking it.',
+		why: 'Trusted Types kill DOM-XSS sinks at the source; promoted from report-only to enforcing once the report stream stays clean for 1-2 weeks.',
+		tradeoffs: 'Currently report-only — violations are logged but allowed. The Astro-emitted bundles carry no Trusted Types injection sinks: DOM is built via `createElement`/`textContent`, lists are cleared with `replaceChildren()`, and the one build-time-trusted HTML string (shiki highlights) is parsed with `DOMParser` rather than `innerHTML`. The standalone `/apps/unifi-demo` asset is the exception — it renders its own static markup through `innerHTML`, so it routes those writes through a scoped, named `unifi-demo` TrustedTypes policy (allowlisted alongside `default` in the directive) rather than the origin-wide `default` policy. With both policies in place the report stream stays empty and the enforce flip is safe.',
+		code: ['infra/cloudfront.tf', 'src/scripts/util/trusted-types.ts', 'public/apps/unifi-demo/app.js'],
+	},
+	{
+		id: 'hsts-preload',
+		title: 'HSTS preload-list submission',
+		category: 'web',
+		status: 'shipped',
+		what: 'Submitted `millsymills.com` to https://hstspreload.org/ on 2026-05-21 with `includeSubDomains`. The submission was accepted ("pending inclusion") immediately after the eligibility check (`Status: not preloaded; Eligibility: eligible`) confirmed the live header `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` met all requirements.',
+		why: 'Closes the first-visit TLS-stripping window for browsers that haven\'t yet seen the HSTS header.',
+		tradeoffs: 'Chrome propagates the preload list to stable channel via the browser release train — entries typically appear in `chrome://net-internals/#hsts` weeks-to-months after acceptance. Firefox/Safari pull from Chrome\'s list, so they trail. Removal is asymmetric: publish `max-age=0` first, verify live, then file at https://hstspreload.org/removal/ — Chrome propagates removals over ~12 weeks via the same release train. Don\'t flip the header value back without going through the removal process first.',
+		code: ['infra/cloudfront.tf'],
+	},
 
 	// ─── dns + domain ──────────────────────────────────────────────────
 	{
@@ -286,6 +306,16 @@ export const securityControls: readonly SecurityControl[] = [
 		tradeoffs: 'Operational only when MX records point at a Proton MX host whose zone publishes TLSA. Once Proton activation completes for a given stack, the property is automatic: we contribute the DNSSEC-signed MX RRset; Proton contributes the TLSA. Switching MX away from Proton to an MX host that doesn\'t publish TLSA would silently demote DANE-aware senders to opportunistic TLS — a hidden trust regression — so MX changes must verify TLSA presence on the new host before flipping. Proton also owns the TLSA rotation cadence; an unannounced re-key would temporarily break inbound delivery.',
 		code: ['infra/email.tf', 'infra/dnssec.tf'],
 	},
+	{
+		id: 'bimi',
+		title: 'BIMI (logo on authenticated mail)',
+		category: 'email',
+		status: 'shipped',
+		what: 'Tiny-PS SVG logo at `/bimi/logo.svg` + `default._bimi.millsymills.com` TXT record advertising it.',
+		why: 'Surfaces the brand logo in supporting clients (Fastmail, Proton, some Apple Mail) for mail that already passed DMARC alignment. DMARC at `p=reject` clears the strong-policy precondition.',
+		tradeoffs: 'No Verified Mark Certificate (VMC) — Gmail and Yahoo will not render the logo without one (~$1.5K/yr issuance cost). Proton and Fastmail render BIMI without a VMC, so the record still earns its keep on supporting clients. Mail flows on `millsymills.com` as of the 2026-05-14 activation, so BIMI takes effect on the first DMARC-pass message to a supporting client.',
+		code: ['public/bimi/logo.svg', 'infra/email.tf'],
+	},
 
 	// ─── supply chain ──────────────────────────────────────────────────
 	{
@@ -345,6 +375,17 @@ export const securityControls: readonly SecurityControl[] = [
 		code: ['infra/ct_monitor.tf', 'infra/ct_monitor.py'],
 		prs: [198],
 	},
+	{
+		id: 'canarytoken',
+		title: 'AWS access-key canarytoken',
+		category: 'monitoring',
+		status: 'shipped',
+		what: 'A deny-all IAM bait user whose access key is planted in a public decoy at `/files/account-recovery-keys.pdf`. A dedicated multi-region CloudTrail watches for any use of that key; a CloudWatch metric filter matched on its access-key id fires an SNS-email alert the moment the key is exercised.',
+		why: 'Any authentication attempt with the bait key is, by construction, an intruder — the key grants nothing and exists only to be tripped over. Turns a silent recon/credential-harvest step into a high-confidence, zero-false-positive alarm.',
+		tradeoffs: 'The bait key necessarily lands in Terraform state (no PGP wrapping) — acceptable because the key is deny-all and any use of it IS the signal. The decoy PDF self-declares as a canary, so it deters honest readers while still tripping automated credential scrapers; a sophisticated attacker who reads the disclosure simply won\'t use the key, which is an acceptable outcome (no access either way).',
+		code: ['infra/canary.tf', 'public/files/account-recovery-keys.pdf'],
+		prs: [663],
+	},
 
 	// ─── identity + contact ────────────────────────────────────────────
 	{
@@ -374,7 +415,7 @@ export const securityControls: readonly SecurityControl[] = [
 		status: 'shipped',
 		what: 'Branch protection on `main` requires a verified signature on every commit (`required_signatures.enabled = true`, `enforce_admins = true`); GitHub rejects an unsigned push with `GH006: Protected branch update failed -- Commits must have verified signatures`. The rule is enforced server-side via the GitHub UI; the parked `github_branch_protection_v3` resource (`infra/github_branch_protection.tf.disabled`) holds the Terraform codification of the same rule, ready to enable once a fine-grained PAT with `Administration: Read` is wired up so `terraform plan` can surface UI toggle-off as drift. `CONTRIBUTING.md` documents the SSH signing setup contributors run once: reuse the GitHub auth key, `git config gpg.format ssh`, register a Signing Key in GitHub Settings, verify with `git log --show-signature`.',
 		why: 'Branch protection bypassed via stolen credentials becomes visibly broken: pushes without a signature get rejected at the remote, and squash-merges through the GitHub UI use GitHub\'s own signing key. Provenance of every new change on `main` has a rooted chain to the signer\'s identity.',
-		tradeoffs: 'Existing pre-rule history on `main` stays unsigned -- no force-push backfill. Direct CLI pushes to `main` (rare; PR squash-merge is the merge path) require the contributor\'s host to have signing wired up; squash-merges from the GitHub UI are auto-signed by GitHub regardless. Drift detection currently relies on the build-time signed-commits check in `deploy.yml`, which is non-blocking until the PAT lands (tracked in #478).',
+		tradeoffs: 'Existing pre-rule history on `main` stays unsigned -- no force-push backfill. Direct CLI pushes to `main` (rare; PR squash-merge is the merge path) require the contributor\'s host to have signing wired up; squash-merges from the GitHub UI are auto-signed by GitHub regardless. Drift detection runs as a blocking build-time check in `deploy.yml` (reads `branches/main/protection/required_signatures` via the `BRANCH_PROTECTION_READ_TOKEN` PAT and fails the deploy on mismatch, #478).',
 		code: ['CONTRIBUTING.md', 'infra/github_branch_protection.tf.disabled'],
 		prs: [321],
 	},
@@ -431,41 +472,11 @@ export const securityControls: readonly SecurityControl[] = [
 
 	// ─── roadmap ───────────────────────────────────────────────────────
 	{
-		id: 'bimi',
-		title: 'BIMI (logo on authenticated mail)',
-		category: 'email',
-		status: 'shipped',
-		what: 'Tiny-PS SVG logo at `/bimi/logo.svg` + `default._bimi.millsymills.com` TXT record advertising it.',
-		why: 'Surfaces the brand logo in supporting clients (Fastmail, Proton, some Apple Mail) for mail that already passed DMARC alignment. DMARC at `p=reject` clears the strong-policy precondition.',
-		tradeoffs: 'No Verified Mark Certificate (VMC) — Gmail and Yahoo will not render the logo without one (~$1.5K/yr issuance cost). Proton and Fastmail render BIMI without a VMC, so the record still earns its keep on supporting clients. Mail flows on `millsymills.com` as of the 2026-05-14 activation, so BIMI takes effect on the first DMARC-pass message to a supporting client.',
-		code: ['public/bimi/logo.svg', 'infra/email.tf'],
-	},
-	{
 		id: 'csp-nonces',
 		title: 'Strict CSP with per-request nonces',
 		category: 'web',
 		status: 'roadmap',
 		what: 'CloudFront Function injects a per-request nonce, replacing the `\'unsafe-inline\'` concession in `style-src` (and any inline scripts) with `\'nonce-XXX\'`.',
 		why: 'Closes the remaining XSS-via-injected-style vector and removes the only weak link in the current CSP allow-list.',
-	},
-	{
-		id: 'trusted-types',
-		title: 'Trusted Types (report-only)',
-		category: 'web',
-		status: 'shipped',
-		what: 'Parallel `Content-Security-Policy-Report-Only: require-trusted-types-for \'script\'; trusted-types default` header. Reports DOM-XSS sink usage (`innerHTML`, `Element.outerHTML`, etc.) to `/api/csp-report` without blocking it.',
-		why: 'Trusted Types kill DOM-XSS sinks at the source; promoted from report-only to enforcing once the report stream stays clean for 1-2 weeks.',
-		tradeoffs: 'Currently report-only — violations are logged but allowed. Enforcing requires no violations from any DOM-sink hot path in the site\'s emitted bundles. The runtime bundles carry no Trusted Types injection sinks: DOM is built via `createElement`/`textContent`, lists are cleared with `replaceChildren()`, and the one build-time-trusted HTML string (shiki highlights) is parsed with `DOMParser` rather than `innerHTML`/`createContextualFragment` — so the report stream stays empty and the enforce flip is safe.',
-		code: ['infra/cloudfront.tf', 'src/scripts/command-palette.ts', 'src/scripts/vscode/editor.ts'],
-	},
-	{
-		id: 'hsts-preload',
-		title: 'HSTS preload-list submission',
-		category: 'web',
-		status: 'shipped',
-		what: 'Submitted `millsymills.com` to https://hstspreload.org/ on 2026-05-21 with `includeSubDomains`. The submission was accepted ("pending inclusion") immediately after the eligibility check (`Status: not preloaded; Eligibility: eligible`) confirmed the live header `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` met all requirements.',
-		why: 'Closes the first-visit TLS-stripping window for browsers that haven\'t yet seen the HSTS header.',
-		tradeoffs: 'Chrome propagates the preload list to stable channel via the browser release train — entries typically appear in `chrome://net-internals/#hsts` weeks-to-months after acceptance. Firefox/Safari pull from Chrome\'s list, so they trail. Removal is asymmetric: publish `max-age=0` first, verify live, then file at https://hstspreload.org/removal/ — Chrome propagates removals over ~12 weeks via the same release train. Don\'t flip the header value back without going through the removal process first.',
-		code: ['infra/cloudfront.tf'],
 	},
 ];
