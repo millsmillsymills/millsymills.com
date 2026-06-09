@@ -50,6 +50,11 @@ name: Deploy
 # verify command.
 on:
   workflow_dispatch:
+    inputs:
+      is_retry:
+        description: 'Internal: true when this run is an auto-retry of a failed scheduled run (set by the retry job). Leave false for manual dispatches.'
+        type: boolean
+        default: false
   schedule:
     # 1st of each month, 03:00 UTC. Closes #153.
     - cron: '0 3 1 * *'
@@ -411,19 +416,58 @@ jobs:
           --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}"
           --paths "/*"
 
-  # Visibility floor for unattended failures (#705). The monthly
-  # `schedule:` run deploys with no human watching, so a transient — most
-  # commonly a Sigstore public-good timeout in the `provenance` job's
-  # keyless signing (Fulcio/Rekor) — fails silently and lets
-  # security.txt's `Expires:` drift toward stale. This job fires only on
-  # a failed scheduled run (dispatched runs have a human at the console)
-  # and opens, or comments on, a single tracking issue so the failure is
-  # actionable. It does NOT weaken the provenance gate — re-dispatch is
-  # still required; this only surfaces that a re-dispatch is needed.
-  notify-failure:
-    name: Surface unattended deploy failure
+  # Self-heal a transient failure on the unattended monthly cron (#708).
+  # The dominant deploy.yml failure mode is a Sigstore public-good timeout
+  # (Fulcio/Rekor keyless signing) in the `provenance` job — a one-off blip
+  # a plain re-run clears. GitHub Actions has no native retry around a
+  # reusable-workflow `uses:` job, and a job cannot `gh run rerun` its own
+  # still-in-progress run, so this re-DISPATCHES deploy.yml once via
+  # workflow_dispatch with `is_retry=true`.
+  #
+  # Loop bound: the re-dispatched run is a `workflow_dispatch` event, not
+  # `schedule`, so this job's `if` guard is false on the retry run — exactly
+  # one retry per failed scheduled run, no recursion. `gh workflow run` with
+  # the default GITHUB_TOKEN does start a new run (workflow_dispatch is an
+  # explicit exception to the no-recursion rule — GitHub changelog
+  # 2022-09-08), so no PAT is needed; the job only needs `actions: write`.
+  #
+  # The re-dispatched run still executes deploy.yml@refs/heads/main, so its
+  # OIDC sub (environment:production) + job_workflow_ref pin are unchanged —
+  # the IAM trust boundary documented at the top of this file still holds.
+  retry:
+    name: Auto-retry failed scheduled run (once)
     needs: [build, provenance, deploy]
     if: ${{ always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - name: Re-dispatch deploy.yml once
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          echo "Scheduled run failed (${RUN_URL}); re-dispatching deploy.yml once as is_retry=true."
+          gh workflow run deploy.yml --repo "$REPO" --ref main -f is_retry=true
+
+  # Visibility floor for a PERSISTENT unattended failure (#705 / #708). The
+  # `retry` job above already absorbs the common transient Sigstore blip by
+  # re-dispatching once, so this only fires when a failure survives that
+  # retry — i.e. the auto-retry run (`is_retry=true`) itself failed, or the
+  # scheduled `retry` job couldn't even re-dispatch. Either way a human is
+  # needed, so it opens / comments a single tracking issue. Manual dispatches
+  # (a human at the console, `is_retry=false`) deliberately don't notify.
+  notify-failure:
+    name: Surface persistent unattended deploy failure
+    needs: [build, provenance, deploy, retry]
+    if: >-
+      ${{ always() &&
+          (
+            (github.event_name == 'schedule' && needs.retry.result == 'failure') ||
+            (github.event_name == 'workflow_dispatch' && github.event.inputs.is_retry == 'true' && contains(needs.*.result, 'failure'))
+          ) }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -437,8 +481,8 @@ jobs:
         run: |
           set -euo pipefail
           label="deploy-failure"
-          title="Scheduled deploy failed — security.txt Expires may be drifting"
-          body="The monthly scheduled deploy.yml run failed: ${RUN_URL} . This is the unattended cron that keeps /.well-known/security.txt's Expires: field fresh; the usual cause is a transient Sigstore public-good timeout in the provenance job's keyless signing (see #705), where a plain re-dispatch succeeds. Re-run the workflow from the Actions tab once the transient clears, then close this issue."
+          title="Scheduled deploy failed (after auto-retry) — security.txt Expires may be drifting"
+          body="The monthly scheduled deploy.yml run failed AND its one automatic retry did not recover it: ${RUN_URL} . This is the unattended cron that keeps /.well-known/security.txt's Expires: field fresh. Because the auto-retry (#708) already cleared the common one-off Sigstore public-good timeout, a failure that reaches here is likely persistent (see #705) — investigate the linked run rather than just re-dispatching, then close this issue."
           gh label create "$label" --repo "$REPO" --color b60205 \
             --description "Unattended scheduled deploy failed" --force >/dev/null 2>&1 || true
           existing=$(gh issue list --repo "$REPO" --state open --label "$label" \
