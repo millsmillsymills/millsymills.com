@@ -17,7 +17,7 @@ PUBLIC_DIR="public"
 printf '\n\033[1;36m== assert-icon-assets-exist ==\033[0m\n'
 
 # The pattern in apps.ts is always single-quoted, leading slash, e.g.
-#   iconUrl: '/images/icons/vaporwave/crest.png',
+#   iconUrl: '/images/icons/vaporwave/floppy-disk.png',
 # If we ever switch to double quotes or template literals the extraction
 # regex below will need to widen.
 missing=0
