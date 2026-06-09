@@ -57,6 +57,22 @@ const tickerRow = document.getElementById('trow');
 const appEl   = document.getElementById('app');
 const nodeEls = {};
 
+/* ---------- Trusted Types ----------
+   This demo writes only author-authored static markup (<b>/<span>/<svg>/…); the
+   one viewer-typed string reaches the DOM through textContent (addUser), never
+   innerHTML. The site ships `require-trusted-types-for 'script'` (report-only
+   today, infra/cloudfront.tf), and this asset is served via the default behavior,
+   so it inherits that header. Route the static innerHTML writes through a scoped,
+   named policy so the report stream stays empty and the enforce flip can't brick
+   the demo. Deliberately NOT the origin-wide `default` policy — the `unifi-demo`
+   name is allowlisted only for this surface in the trusted-types directive. */
+const ttHTML = (() => {
+  const tt = window.trustedTypes;
+  if (!tt) return (s) => s;
+  const policy = tt.createPolicy('unifi-demo', { createHTML: (s) => s });
+  return (s) => policy.createHTML(s);
+})();
+
 /* ---------- pixel-art icons (hand-authored, 16-grid, crispEdges) ---------- */
 const CLIENT_ICON={ macbook:'laptop', iphone:'phone', tv:'tv', ipad:'tablet', nest:'thermostat', printer:'printer', ringcam:'camera', guest:'phone' };
 function svgIcon(kind){
@@ -115,9 +131,9 @@ mqLandscape.addEventListener('change', onBreakpoint);
 function makeNode({id,cls,icon,name,sub,ssid}){
   const el=document.createElement('div');
   el.className='node '+cls; el.dataset.id=id;
-  el.innerHTML=`<div class="glyph">${svgIcon(icon)}</div><div class="nm">${name}</div>`+
+  el.innerHTML=ttHTML(`<div class="glyph">${svgIcon(icon)}</div><div class="nm">${name}</div>`+
     (sub?`<div class="sub">${sub}</div>`:'')+
-    (ssid?`<div class="ssidtag">${ssid.replace('millsy-','')}</div>`:'');
+    (ssid?`<div class="ssidtag">${ssid.replace('millsy-','')}</div>`:''));
   return el;
 }
 
@@ -157,16 +173,16 @@ function drawWires(){
     const my=(y1+y2)/2;
     html+=`<path class="${cls}" d="M${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}"/>`;
   });
-  wiresSvg.innerHTML=html;
+  wiresSvg.innerHTML=ttHTML(html);
 }
 window.addEventListener('resize', ()=>{ clearTimeout(window._wr); window._wr=setTimeout(drawWires,80); });
 
 /* ---------- ssid bar + counts ---------- */
 function renderSsidBar(){
   const bar=document.getElementById('ssidbar');
-  bar.innerHTML='<div class="ttl">// SSIDS</div>'+NET.wlans.map(w=>
+  bar.innerHTML=ttHTML('<div class="ttl">// SSIDS</div>'+NET.wlans.map(w=>
     `<div class="ssidchip ${w.enabled?'':'off'}"><span class="d"></span><span class="nm">${w.name}</span><span class="sec">${w.security}</span></div>`
-  ).join('');
+  ).join(''));
 }
 function updateCounts(){
   const onClients=NET.clients.filter(c=>c.status==='online' && isReachable(c)).length;
@@ -186,8 +202,8 @@ function flashNode(id,red){ const el=nodeEls[id]; if(!el)return; const cls=red?'
    ============================================================ */
 function scrollChat(){ cbody.scrollTop=cbody.scrollHeight; }
 function addUser(text){ const d=document.createElement('div'); d.className='msg user'; d.textContent=text; cbody.appendChild(d); scrollChat(); }
-function addBot(html){ const d=document.createElement('div'); d.className='msg bot'; d.innerHTML=html; cbody.appendChild(d); scrollChat(); return d; }
-function showTyping(){ const d=document.createElement('div'); d.className='typing'; d.innerHTML='<i></i><i></i><i></i>'; cbody.appendChild(d); scrollChat(); return d; }
+function addBot(html){ const d=document.createElement('div'); d.className='msg bot'; d.innerHTML=ttHTML(html); cbody.appendChild(d); scrollChat(); return d; }
+function showTyping(){ const d=document.createElement('div'); d.className='typing'; d.innerHTML=ttHTML('<i></i><i></i><i></i>'); cbody.appendChild(d); scrollChat(); return d; }
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 
 async function botType(html, ms=650){ const t=showTyping(); await delay(ms); t.remove(); return addBot(html); }
@@ -195,10 +211,10 @@ async function botType(html, ms=650){ const t=showTyping(); await delay(ms); t.r
 /* inline tool card; returns a function to resolve it */
 function addToolCard({name,write,args}){
   const d=document.createElement('div'); d.className='toolcard'+(write?' write':'');
-  d.innerHTML=`<div class="tline"><span class="tname">▸ ${name}</span>`+
+  d.innerHTML=ttHTML(`<div class="tline"><span class="tname">▸ ${name}</span>`+
     `<span class="wtag ${write?'write':'read'}">${write?'WRITE':'READ'}</span>`+
     `<span class="res run">running…</span></div>`+
-    (args?`<div class="args">${args}</div>`:'');
+    (args?`<div class="args">${args}</div>`:''));
   cbody.appendChild(d); scrollChat();
   return (state,txt)=>{ const r=d.querySelector('.res'); r.className='res '+state; r.textContent=txt; scrollChat(); };
 }
@@ -207,8 +223,8 @@ function addToolCard({name,write,args}){
 function askConfirm(text){
   return new Promise(resolve=>{
     const d=document.createElement('div'); d.className='confirm';
-    d.innerHTML=`<div class="ct">⚠ DESTRUCTIVE WRITE · CONFIRM</div><div>${text}</div>`+
-      `<div class="cbtns"><button class="yes">CONFIRM</button><button class="no">CANCEL</button></div>`;
+    d.innerHTML=ttHTML(`<div class="ct">⚠ DESTRUCTIVE WRITE · CONFIRM</div><div>${text}</div>`+
+      `<div class="cbtns"><button class="yes">CONFIRM</button><button class="no">CANCEL</button></div>`);
     cbody.appendChild(d); scrollChat();
     const done=v=>{ d.querySelectorAll('button').forEach(b=>b.disabled=true);
       d.querySelector('.ct').textContent = v?'✓ CONFIRMED':'✕ CANCELLED'; resolve(v); };
@@ -224,9 +240,9 @@ function logCall(name, state, detail){
   tickN++;
   const cls = state==='ok'?'ok':state==='warn'?'warn':state==='err'?'err':'in';
   const ent=document.createElement('span'); ent.className='ent fresh';
-  ent.innerHTML=`<span class="ts">${ts()}</span><span class="in">▸ ${name}</span>`+
+  ent.innerHTML=ttHTML(`<span class="ts">${ts()}</span><span class="in">▸ ${name}</span>`+
     (state?`<span class="${cls}">[${state.toUpperCase()}]</span>`:'')+
-    (detail?`<span class="dim">${detail}</span>`:'');
+    (detail?`<span class="dim">${detail}</span>`:''));
   tickerRow.appendChild(ent);
   while(tickerRow.children.length>7) tickerRow.removeChild(tickerRow.firstChild);
 }
@@ -342,7 +358,7 @@ const COMMANDS = [
       await delay(3200);
       d.status='online'; applyStatus(); drawWires(); flashNode('ap-office');
       logCall('unifi_network_get_device','ok','ap-office up');
-      m.innerHTML='<b>ap-office</b> is back up and provisioned. clients reconnected.';
+      m.innerHTML=ttHTML('<b>ap-office</b> is back up and provisioned. clients reconnected.');
       scrollChat();
     }},
   { // ── WRITE: guest off
@@ -396,7 +412,7 @@ const COMMANDS = [
       await delay(5000);
       el.classList.remove('locate'); flashNode('ap-living');
       logCall('unifi_network_unlocate_device','ok','ap-living');
-      m.innerHTML='<b>ap-living</b> locate LED stopped.'; scrollChat();
+      m.innerHTML=ttHTML('<b>ap-living</b> locate LED stopped.'); scrollChat();
     }},
   { // ── WRITE: authorize a guest
     test:/authoriz|authorise|grant.*guest|guest.*(2h|two hours)/i, write:true,
