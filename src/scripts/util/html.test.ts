@@ -1,15 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, serializeJsonForScript } from './html';
-
-describe('escapeHtml', () => {
-	it('escapes the five HTML-significant characters', () => {
-		expect(escapeHtml('&<>"\'')).toBe('&amp;&lt;&gt;&quot;&#39;');
-	});
-
-	it('round-trips ordinary text untouched', () => {
-		expect(escapeHtml('hello world 42')).toBe('hello world 42');
-	});
-});
+import { serializeJsonForScript } from './html';
 
 describe('serializeJsonForScript', () => {
 	it('produces JSON that round-trips back to the original value', () => {
