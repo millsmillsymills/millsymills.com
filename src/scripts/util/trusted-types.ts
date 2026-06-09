@@ -1,8 +1,8 @@
 /*
  * Trusted Types `default` policy.
  *
- * `require-trusted-types-for 'script'; trusted-types default` ships in
- * report-only today (infra/cloudfront.tf, issue #130). Under enforce the
+ * `require-trusted-types-for 'script'; trusted-types default` is enforced
+ * (infra/cloudfront.tf, issue #130). Under enforce the
  * Worker script URL spawned in mail-pow.ts must be a TrustedScriptURL.
  * The browser consults a policy named `default` automatically for any
  * otherwise-unwrapped sink value, so registering one here means call sites
