@@ -300,6 +300,19 @@ else
 	printf '\033[2mskipped (set MMS_SMOKE_STACK=<stack> to run)\033[0m\n'
 fi
 
+section "post-deploy: passkey register + authenticate ceremony (opt-in)"
+# Drives the full /demo/passkey ceremony headlessly via a Chrome CDP virtual
+# authenticator against a live origin (issue #650 — the reproducible validation
+# path that replaced the deleted rehearsal stack). Off by default: needs Chrome
+# on PATH and creates an ephemeral (24h-TTL) demo credential server-side, so it
+# can't run on a credential-less CI runner. Set MMS_PASSKEY_ORIGIN=https://...
+if [[ -n "${MMS_PASSKEY_ORIGIN:-}" ]]; then
+	node scripts/validate-passkey-ceremony.mjs "$MMS_PASSKEY_ORIGIN"
+	ok "passkey register + authenticate verified at $MMS_PASSKEY_ORIGIN"
+else
+	printf '\033[2mskipped (set MMS_PASSKEY_ORIGIN=https://<domain> to run)\033[0m\n'
+fi
+
 section "audit: terraform state bucket controls (opt-in)"
 # Off by default — requires AWS creds. Set MMS_VERIFY_STATE_BUCKET=true
 # to run. Asserts the live `millsymills-terraform-state` bucket matches
