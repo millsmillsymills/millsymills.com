@@ -46,7 +46,7 @@ name: Deploy
 # the slsa-framework reusable workflow — that's the trusted-builder
 # requirement for L3 — so a visitor can `cosign verify-blob` and
 # `slsa-verifier verify-artifact` against a fresh download. See the
-# `slsa-provenance` entry in src/data/security-controls.ts for the
+# `slsa-cosign` entry in src/data/security-controls.ts for the
 # verify command.
 on:
   workflow_dispatch:

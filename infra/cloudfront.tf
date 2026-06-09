@@ -1,3 +1,22 @@
+# Single source of truth for the two security-header strings that must stay
+# byte-identical across every response-headers policy that serves HTML (the
+# default `site` behavior and the `passkey_demo` behavior). Hand-duplicated
+# string literals drifted in review (a weakened script-src on one behavior
+# would ship green); referencing these locals makes the lockstep structural.
+locals {
+  # Enforcing CSP for all HTML responses. `script-src 'self'` with no inline
+  # allowance — every bundled script is external. assert-no-stray-inline-scripts.mjs
+  # fails CI if an executable inline script this policy would block ever ships.
+  html_csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
+
+  # Trusted Types report-only slice (#130), promoted into the enforcing CSP once
+  # the report stream stays clean. Allowlisted policy names: `default` (the
+  # site bundle's createScriptURL policy, src/scripts/util/trusted-types.ts) and
+  # `unifi-demo` (the /apps/unifi-demo asset's scoped createHTML policy for its
+  # static markup, public/apps/unifi-demo/app.js).
+  html_tt_report_only = "require-trusted-types-for 'script'; trusted-types default unifi-demo; report-uri /api/csp-report; report-to csp"
+}
+
 resource "aws_cloudfront_function" "index_rewrite" {
   count = var.enable_index_rewrite ? 1 : 0
 
@@ -165,7 +184,7 @@ resource "aws_cloudfront_response_headers_policy" "site" {
       # `script-src` is 'self' with no inline allowance — every bundled script
       # is external and covered by 'self'. scripts/assert-no-stray-inline-scripts.mjs
       # fails CI if any executable inline script ships that this policy would block.
-      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
+      content_security_policy = local.html_csp
       override                = true
     }
   }
@@ -206,21 +225,13 @@ resource "aws_cloudfront_response_headers_policy" "site" {
       override = true
     }
 
-    # Trusted Types — report-only first slice (#130). The enforcing CSP
-    # above stays unchanged; this is a parallel `-Report-Only` header
-    # carrying ONLY the Trusted Types directives. Senders get a 1-2 week
-    # observation window (or however long it takes to see clean reports)
-    # to surface any DOM-XSS sink (innerHTML, outerHTML, etc.) before
-    # promotion. Once reports stay clean, the same two directives fold
-    # into the enforcing CSP above.
-    #
-    # `trusted-types default` means a single policy named `default` is
-    # allowed; Astro's emitted code does not create one today (every
-    # script-emitted output is `textContent`-based, see #130 comment),
-    # so the expected steady-state report stream is empty.
+    # Trusted Types — report-only first slice (#130). The enforcing CSP above
+    # stays unchanged; this parallel `-Report-Only` header carries ONLY the
+    # Trusted Types directives so senders surface any DOM sink before promotion.
+    # Value (and the allowlisted policy names) live in local.html_tt_report_only.
     items {
       header   = "Content-Security-Policy-Report-Only"
-      value    = "require-trusted-types-for 'script'; trusted-types default; report-uri /api/csp-report; report-to csp"
+      value    = local.html_tt_report_only
       override = true
     }
 
@@ -386,7 +397,7 @@ resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
     content_security_policy {
       # Byte-identical to the site policy above. Kept in lockstep so the two
       # surfaces never drift on script-src/style-src posture.
-      content_security_policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
+      content_security_policy = local.html_csp
       override                = true
     }
   }
@@ -423,7 +434,7 @@ resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
     # stream here is also empty.
     items {
       header   = "Content-Security-Policy-Report-Only"
-      value    = "require-trusted-types-for 'script'; trusted-types default; report-uri /api/csp-report; report-to csp"
+      value    = local.html_tt_report_only
       override = true
     }
 
