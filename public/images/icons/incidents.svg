@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 128 128" width="128" height="128">
+  <defs>
+    <g id="incidents-sil"><rect x="46" y="42" width="8" height="8" rx="2"></rect><path d="M32 68 A18 18 0 0 1 68 68 Z"></path><rect x="29" y="68" width="42" height="20" rx="3"></rect></g>
+
+      <radialGradient id="in-lens" cx="0.5" cy="0.45" r="0.7">
+        <stop offset="0" stop-color="#fff0a8"></stop>
+        <stop offset="0.5" stop-color="#ff77c8"></stop>
+        <stop offset="1" stop-color="#b3306e"></stop>
+      </radialGradient>
+      <linearGradient id="in-base" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1a294a"></stop>
+        <stop offset="1" stop-color="#0b1530"></stop>
+      </linearGradient>
+    <filter id="incidents-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="b1"></feGaussianBlur>
+      <feGaussianBlur stdDeviation="4.6" in="SourceGraphic" result="b2"></feGaussianBlur>
+      <feMerge><feMergeNode in="b2"></feMergeNode><feMergeNode in="b1"></feMergeNode></feMerge>
+    </filter>
+    <filter id="incidents-grain" x="-14" y="-14" width="128" height="128">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="71"></feTurbulence>
+      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0"></feColorMatrix>
+    </filter>
+    <pattern id="incidents-scan" x="0" y="0" width="4" height="2.6" patternUnits="userSpaceOnUse">
+      <rect x="-1" y="0" width="6" height="1.3" fill="#000"></rect>
+    </pattern>
+    <clipPath id="incidents-clip"><path d="M32 68 A18 18 0 0 1 68 68 Z"></path><rect x="29" y="68" width="42" height="20" rx="3"></rect></clipPath>
+  </defs>
+
+
+  <g filter="url(#incidents-glow)" opacity="0.6"><use href="#incidents-sil" fill="#ff77c8"></use></g>
+
+
+  <use href="#incidents-sil" fill="#ff4fa8" transform="translate(2.6 0)" opacity="0.5"></use>
+  <use href="#incidents-sil" fill="#00e5ff" transform="translate(-2.6 0)" opacity="0.5"></use>
+
+
+  <g stroke="#ff4fa8" stroke-width="3.2" stroke-linecap="round" opacity="0.85">
+    <path d="M50 38 V30"></path>
+    <path d="M26 50 L20 44"></path>
+    <path d="M74 50 L80 44"></path>
+  </g>
+
+
+  <g>
+      <rect x="29" y="68" width="42" height="20" rx="3" fill="url(#in-base)" stroke="#00e5ff" stroke-width="3"></rect>
+      <rect x="46" y="42" width="8" height="8" rx="2" fill="#0e1b33" stroke="#00e5ff" stroke-width="2.4"></rect>
+      <path d="M32 68 A18 18 0 0 1 68 68 Z" fill="url(#in-lens)" stroke="#ff77c8" stroke-width="3"></path>
+      <path d="M37 67 A13 13 0 0 1 63 67" fill="none" stroke="#fff0a8" stroke-width="1.4" opacity="0.7"></path>
+      <rect x="29" y="74" width="42" height="2.4" fill="#00e5ff" opacity="0.45"></rect></g>
+
+
+
+  <g opacity="0.4">
+    <use href="#incidents-sil" fill="#00e5ff" transform="translate(3 0)" style="clip-path: inset(46% 0 38% 0)"></use>
+    <use href="#incidents-sil" fill="#ff4fa8" transform="translate(-2 0)" style="clip-path: inset(72% 0 14% 0)"></use>
+  </g>
+
+
+  <g clip-path="url(#incidents-clip)">
+    <rect x="-14" y="-14" width="128" height="128" fill="url(#incidents-scan)" opacity="0.30"></rect>
+    <rect x="-14" y="-14" width="128" height="128" filter="url(#incidents-grain)" opacity="0.10"></rect>
+  </g>
+</svg>
