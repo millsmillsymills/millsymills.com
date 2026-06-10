@@ -72,6 +72,9 @@ jobs:
       - name: Assert /api/tls/* response-headers policy attached
         run: ./scripts/assert-api-tls-headers-policy.sh
 
+      - name: Assert Trusted Types policy names sync (CSP directive ↔ createPolicy)
+        run: ./scripts/assert-tt-policy-names.sh
+
       - name: Assert SLSA generator pin fresh before Node 24 deadline
         run: ./scripts/assert-slsa-pin-fresh.sh
 

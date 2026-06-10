@@ -55,6 +55,10 @@ section "node: assert /api/tls/* response-headers policy attached"
 ./scripts/assert-api-tls-headers-policy.sh
 ok "/api/tls/* ordered_cache_behavior has response_headers_policy_id"
 
+section "node: assert Trusted Types policy names sync (CSP directive vs createPolicy)"
+./scripts/assert-tt-policy-names.sh
+ok "trusted-types directive names match createPolicy() call sites"
+
 section "node: assert SLSA generator pin moves off Node 20 before deadline"
 ./scripts/assert-slsa-pin-fresh.sh
 ok "slsa-github-generator pin tracked against 2026-06-02 deadline"
