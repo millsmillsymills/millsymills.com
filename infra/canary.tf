@@ -249,6 +249,17 @@ resource "aws_cloudwatch_log_group" "canary_cf_function" {
   provider          = aws.us_east_1
   name              = "/aws/cloudfront/function/${local.domain_slug}-index-rewrite"
   retention_in_days = 90
+
+  # The robots tripwire reads CANARY_TRIPWIRE lines emitted by the index-rewrite
+  # CloudFront Function. If that function isn't deployed, nothing ever writes
+  # here and the whole alarm chain sits silent -- the exact failure this tripwire
+  # exists to prevent. Fail the plan loudly rather than ship a dead tripwire.
+  lifecycle {
+    precondition {
+      condition     = var.enable_index_rewrite
+      error_message = "enable_canary requires enable_index_rewrite: the robots tripwire alarms on logs from the index-rewrite CloudFront Function, which enable_index_rewrite gates."
+    }
+  }
 }
 
 resource "aws_cloudwatch_log_metric_filter" "canary_robots_tripwire" {

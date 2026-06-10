@@ -384,7 +384,7 @@ export const securityControls: readonly SecurityControl[] = [
 		why: 'Any authentication attempt with the bait key — or any request to the robots decoy — is, by construction, someone poking where nothing legitimate lives. Turns silent recon and credential-harvest steps into high-confidence, near-zero-false-positive alarms.',
 		tradeoffs: 'The bait key necessarily lands in Terraform state (no PGP wrapping) — acceptable because the key is deny-all and any use of it IS the signal. The decoy PDF self-declares as a canary, so it deters honest readers while still tripping automated credential scrapers; a sophisticated attacker who reads the disclosure simply won\'t use the key, which is an acceptable outcome (no access either way). The robots tripwire alarms in us-east-1 (CloudFront Function logs only land there), so it carries its own SNS topic separate from the key-used alarm.',
 		code: ['infra/canary.tf', 'infra/cloudfront_function_index.js', 'public/files/account-recovery-keys.pdf'],
-		prs: [663],
+		prs: [663, 721],
 	},
 
 	// ─── identity + contact ────────────────────────────────────────────

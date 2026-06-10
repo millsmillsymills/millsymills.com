@@ -23,8 +23,21 @@ repo is a placeholder — the real, key-bearing PDF is uploaded straight to S3.
 
 ## Activation (one-time, per stack)
 
-Prereq: `enable_canary = true` and `canary_alert_address = "<inbox you check>"`
-are set in the stack's tfvars (already committed for millsymills.com).
+Prereq: `enable_canary = true`, `enable_index_rewrite = true` (the robots
+tripwire alarms on logs from the index-rewrite CloudFront Function — the plan
+fails loudly if the canary is enabled without it), and
+`canary_alert_address = "<inbox you check>"` are set in the stack's tfvars
+(already committed for millsymills.com).
+
+Before the first apply, confirm AWS hasn't already auto-created the function log
+group (Terraform owns it; a pre-existing group fails the apply with "already
+exists"). Expect empty output:
+
+```bash
+aws logs describe-log-groups --region us-east-1 \
+  --log-group-name-prefix "/aws/cloudfront/function/<slug>-index-rewrite" \
+  --query 'logGroups[].logGroupName'
+```
 
 1. **Apply.** `./scripts/tf.sh <stack> apply`. This creates the IAM bait user +
    access key, the CloudTrail + its bucket + CloudWatch log group, both metric
@@ -90,7 +103,7 @@ item). Minimum fields per token:
 
 ## Rotation
 
-Re-mint the access key (`terraform taint aws_iam_access_key.canary[0]` → apply),
+Re-mint the access key (`./scripts/tf.sh <stack> apply -replace='aws_iam_access_key.canary[0]'`),
 re-plant per step 4, and update the registry. No fixed cadence — rotate if you
 suspect the PDF was indexed/cached somewhere it shouldn't be.
 
