@@ -230,3 +230,72 @@ resource "aws_cloudwatch_metric_alarm" "canary_used" {
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.canary[0].arn]
 }
+
+# --- Robots-decoy tripwire: alert on any hit to the /admin/backup/ lure ------
+#
+# robots.txt Disallows /admin/backup/ -- a path that serves nothing and exists
+# only as bait. The viewer-request CloudFront Function (cloudfront_function_index.js)
+# console.logs a CANARY_TRIPWIRE sentinel on any request whose URI starts with
+# /admin/backup. CloudFront Function logs always land in CloudWatch Logs in
+# us-east-1 under /aws/cloudfront/function/<name>, so the metric filter, alarm,
+# and its SNS topic all live in us-east-1 -- a CloudWatch alarm can only notify
+# an SNS topic in its own region, which is why this can't reuse the primary-region
+# aws_sns_topic.canary above. The function emits no log lines today, so Terraform
+# owns the log group cleanly (no pre-existing auto-created group to import).
+
+resource "aws_cloudwatch_log_group" "canary_cf_function" {
+  count = var.enable_canary ? 1 : 0
+
+  provider          = aws.us_east_1
+  name              = "/aws/cloudfront/function/${local.domain_slug}-index-rewrite"
+  retention_in_days = 90
+}
+
+resource "aws_cloudwatch_log_metric_filter" "canary_robots_tripwire" {
+  count = var.enable_canary ? 1 : 0
+
+  provider       = aws.us_east_1
+  name           = "${local.canary_name}-robots-tripwire"
+  log_group_name = aws_cloudwatch_log_group.canary_cf_function[0].name
+  pattern        = "CANARY_TRIPWIRE"
+
+  metric_transformation {
+    name          = "RobotsTripwireHit"
+    namespace     = "MillsymillsCom/Canary"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+resource "aws_sns_topic" "canary_robots" {
+  count = var.enable_canary ? 1 : 0
+
+  provider = aws.us_east_1
+  name     = "${local.canary_name}-robots"
+}
+
+resource "aws_sns_topic_subscription" "canary_robots_email" {
+  count = var.enable_canary ? 1 : 0
+
+  provider  = aws.us_east_1
+  topic_arn = aws_sns_topic.canary_robots[0].arn
+  protocol  = "email"
+  endpoint  = local.canary_alert_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "canary_robots_tripwire" {
+  count = var.enable_canary ? 1 : 0
+
+  provider            = aws.us_east_1
+  alarm_name          = "${local.canary_name}-robots-tripwire"
+  alarm_description   = "A request hit the /admin/backup/ decoy Disallowed in robots.txt -- the path is bait and serves nothing. Treat as recon/probing."
+  namespace           = "MillsymillsCom/Canary"
+  metric_name         = "RobotsTripwireHit"
+  statistic           = "Sum"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 1
+  period              = 300
+  evaluation_periods  = 1
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.canary_robots[0].arn]
+}
