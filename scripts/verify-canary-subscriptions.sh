@@ -47,15 +47,28 @@ FOUND=0
 
 # Assert that no email subscription on a topic is stuck PendingConfirmation.
 # A missing topic means enable_canary hasn't been applied -- note and skip,
-# don't fail (the canary is opt-in per stack).
+# don't fail (the canary is opt-in per stack). Any OTHER AWS failure
+# (expired token, throttling, AccessDenied from a scoped-down policy) must
+# fail loud: a verifier whose purpose is catching silent alerting gaps can't
+# itself silently downgrade an error to "nothing to check, all clear".
 check_topic() {
 	local arn="$1" region="$2"
-	local subs
+	local subs err errfile
+	errfile=$(mktemp)
 	if ! subs=$(aws sns list-subscriptions-by-topic --topic-arn "$arn" --region "$region" \
-		--query 'Subscriptions[].SubscriptionArn' --output text 2>/dev/null); then
-		dim "  - $arn not found in $region (enable_canary not applied?) -- skipped"
+		--query 'Subscriptions[].SubscriptionArn' --output text 2>"$errfile"); then
+		err=$(tr '\n' ' ' <"$errfile")
+		rm -f "$errfile"
+		if [[ "$err" == *NotFound* ]]; then
+			dim "  - $arn not found in $region (enable_canary not applied?) -- skipped"
+			return 0
+		fi
+		FOUND=1
+		FAILS+=("$arn: SNS query failed -- ${err:-unknown error}")
+		red "  ✗ $arn: SNS query failed (not a missing-topic skip): ${err:-unknown error}"
 		return 0
 	fi
+	rm -f "$errfile"
 	FOUND=1
 	if [[ -z "$subs" ]]; then
 		FAILS+=("$arn has no subscriptions (expected one email subscription)")
