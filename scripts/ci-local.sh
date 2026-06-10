@@ -330,5 +330,17 @@ else
 	printf '\033[2mskipped (set MMS_VERIFY_STATE_BUCKET=true to run)\033[0m\n'
 fi
 
+section "audit: canary SNS subscriptions confirmed (opt-in)"
+# Off by default — requires AWS creds. Set MMS_VERIFY_CANARY_SUBS=true to
+# run. Asserts neither canarytoken SNS topic has an email subscription
+# stuck PendingConfirmation, which would silently drop every alarm (#722).
+# No-ops cleanly when enable_canary hasn't been applied (topics absent).
+if [[ "${MMS_VERIFY_CANARY_SUBS:-}" == "true" ]]; then
+	./scripts/verify-canary-subscriptions.sh
+	ok "canary SNS subscriptions confirmed"
+else
+	printf '\033[2mskipped (set MMS_VERIFY_CANARY_SUBS=true to run)\033[0m\n'
+fi
+
 section "done"
 ok "all CI checks passed locally"
