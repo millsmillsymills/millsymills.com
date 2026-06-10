@@ -3,7 +3,12 @@
 # Runs on the self-hosted GitHub Actions runner colocated with chimera
 # (the unraid box). Calls the locally-installed `unraid-mcp` server,
 # composes a snapshot matching the shape `Status.astro` consumes, and
-# pushes it back to the repo. The site rebuild that picks up the new
+# publishes it back to the repo. `main` is guarded by a ruleset
+# (PR-only, verified signatures, linear history, required status
+# checks), so the runner cannot push to it directly — instead it opens
+# a one-file snapshot PR and enables auto-merge. GitHub squash-merges it
+# (the squash commit is GitHub-verified, satisfying the signature rule)
+# once the required checks pass. The site rebuild that picks up the new
 # JSON is whichever deploy fires next (monthly cron or manual dispatch
 # via `gh workflow run deploy.yml`).
 #
@@ -19,18 +24,23 @@
 #   2. On chimera: `uv pip install git+https://github.com/millsmillsymills/unraid-mcp.git`
 #      then export `UNRAID_HOST` and `UNRAID_API_KEY` in the runner env.
 #      Confirm `unraid-mcp --check-config` exits 0.
-#   3. Mint a fine-grained PAT (Contents: Write) on this repo and store
-#      as repo secret `CHIMERA_RUNNER_PUSH_TOKEN`. The default
-#      GITHUB_TOKEN cannot push from a self-hosted runner without
-#      `workflow` scope, hence the explicit PAT.
+#   3. Mint a fine-grained PAT on this repo with **Contents: Write** and
+#      **Pull requests: Write**, and store as repo secret
+#      `CHIMERA_RUNNER_PUSH_TOKEN`. Contents:Write pushes the snapshot
+#      branch; PullRequests:Write opens the PR and enables auto-merge.
+#      It must be a PAT, not GITHUB_TOKEN: branches/PRs created with
+#      GITHUB_TOKEN do not trigger the required CI checks, so auto-merge
+#      would stall forever.
 #
 # Failure modes worth flagging:
 #   - `unraid-mcp` schema drift: `unraid-mcp --check-schema` exits 2 if
 #     the live Unraid GraphQL surface changed shape. Job fails loud
 #     before producing a stale snapshot.
-#   - Push conflict: if the snapshot commit collides with a concurrent
-#     human PR, the rebase step retries once; subsequent collision is
-#     a manual-resolve case.
+#   - Token missing Pull requests: Write: `gh pr create` fails. Re-mint
+#     the PAT with both scopes (see step 3).
+#   - Required check fails on a snapshot PR: auto-merge holds the PR
+#     open; the branch `chimera-status/snapshot-<run id>` is left for
+#     manual inspection rather than landing a bad snapshot.
 
 name: chimera-status
 
@@ -69,8 +79,9 @@ jobs:
       - name: Fetch snapshot
         run: python3 scripts/fetch-chimera-status.py
 
-      - name: Commit + push if changed
+      - name: Open snapshot PR + enable auto-merge
         env:
+          GH_TOKEN: ${{ secrets.CHIMERA_RUNNER_PUSH_TOKEN }}
           GIT_AUTHOR_NAME: 'chimera-runner'
           GIT_AUTHOR_EMAIL: 'chimera-runner@millsymills.com'
           GIT_COMMITTER_NAME: 'chimera-runner'
@@ -78,13 +89,29 @@ jobs:
         run: |
           set -euo pipefail
           if git diff --quiet src/data/chimera-status.json; then
-            echo "no change -- skipping commit"
+            echo "no change -- nothing to publish"
             exit 0
           fi
+          # main is ruleset-guarded (PR-only + signatures + checks), so
+          # land the snapshot through an auto-merging PR rather than a
+          # direct push. The branch push uses the PAT (persist-credentials
+          # wired it as the origin credential) so the required CI checks
+          # fire; GITHUB_TOKEN-authored pushes would not trigger them.
+          branch="chimera-status/snapshot-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
           git add src/data/chimera-status.json
-          git commit -m "chore(chimera): daily status snapshot [skip ci]"
-          # [skip ci] keeps the snapshot push from re-triggering the
-          # deploy workflow on every cron -- freshness is best-effort,
-          # not deploy-critical.
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git commit -m "chore(chimera): daily status snapshot"
+          git push origin "$branch"
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore(chimera): daily status snapshot" \
+            --body "Automated daily status snapshot. Auto-merges once required checks pass."
+          # [skip ci] on the squash subject keeps the resulting push to
+          # main from re-triggering deploy -- the checks already ran on
+          # the PR. Freshness is best-effort, not deploy-critical.
+          gh pr merge "$branch" \
+            --auto \
+            --squash \
+            --delete-branch \
+            --subject "chore(chimera): daily status snapshot [skip ci]"
