@@ -38,6 +38,45 @@ describe('cloudfront viewer-request function', () => {
 		});
 	});
 
+	describe('canary robots tripwire (#141, #723)', () => {
+		it('logs the sentinel for the lowercase bait path', () => {
+			const logs: string[] = [];
+			const original = console.log;
+			console.log = (msg: string) => logs.push(msg);
+			try {
+				run('/admin/backup/db.sql');
+			} finally {
+				console.log = original;
+			}
+			expect(logs.some((m) => m.startsWith('CANARY_TRIPWIRE'))).toBe(true);
+		});
+
+		it('logs the sentinel for mixed-case probes (case-insensitive)', () => {
+			const logs: string[] = [];
+			const original = console.log;
+			console.log = (msg: string) => logs.push(msg);
+			try {
+				run('/Admin/Backup');
+				run('/ADMIN/BACKUP/');
+			} finally {
+				console.log = original;
+			}
+			expect(logs.filter((m) => m.startsWith('CANARY_TRIPWIRE')).length).toBe(2);
+		});
+
+		it('does not log the sentinel for unrelated paths', () => {
+			const logs: string[] = [];
+			const original = console.log;
+			console.log = (msg: string) => logs.push(msg);
+			try {
+				run('/security/');
+			} finally {
+				console.log = original;
+			}
+			expect(logs.some((m) => m.startsWith('CANARY_TRIPWIRE'))).toBe(false);
+		});
+	});
+
 	describe('directory index rewrite (existing behavior)', () => {
 		it('appends index.html to a trailing-slash directory uri', () => {
 			expect(run('/security/').uri).toBe('/security/index.html');
