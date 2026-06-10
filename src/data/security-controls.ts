@@ -377,14 +377,14 @@ export const securityControls: readonly SecurityControl[] = [
 	},
 	{
 		id: 'canarytoken',
-		title: 'AWS access-key canarytoken',
+		title: 'Canarytokens (AWS key + robots decoy)',
 		category: 'monitoring',
 		status: 'shipped',
-		what: 'A deny-all IAM bait user whose access key is planted in a public decoy at `/files/account-recovery-keys.pdf`. A dedicated multi-region CloudTrail watches for any use of that key; a CloudWatch metric filter matched on its access-key id fires an SNS-email alert the moment the key is exercised.',
-		why: 'Any authentication attempt with the bait key is, by construction, an intruder — the key grants nothing and exists only to be tripped over. Turns a silent recon/credential-harvest step into a high-confidence, zero-false-positive alarm.',
-		tradeoffs: 'The bait key necessarily lands in Terraform state (no PGP wrapping) — acceptable because the key is deny-all and any use of it IS the signal. The decoy PDF self-declares as a canary, so it deters honest readers while still tripping automated credential scrapers; a sophisticated attacker who reads the disclosure simply won\'t use the key, which is an acceptable outcome (no access either way).',
-		code: ['infra/canary.tf', 'public/files/account-recovery-keys.pdf'],
-		prs: [663],
+		what: 'Two inert tripwires. (1) A deny-all IAM bait user whose access key is planted in a public decoy at `/files/account-recovery-keys.pdf`; a dedicated multi-region CloudTrail and a CloudWatch metric filter on its access-key id fire an SNS-email alert the moment the key is exercised. (2) A `/admin/backup/` path Disallowed in `robots.txt`; the viewer-request CloudFront Function logs a sentinel on any hit, and a us-east-1 metric filter alarms to SNS — so probing the decoy is an actionable alert, not just a deterrent.',
+		why: 'Any authentication attempt with the bait key — or any request to the robots decoy — is, by construction, someone poking where nothing legitimate lives. Turns silent recon and credential-harvest steps into high-confidence, near-zero-false-positive alarms.',
+		tradeoffs: 'The bait key necessarily lands in Terraform state (no PGP wrapping) — acceptable because the key is deny-all and any use of it IS the signal. The decoy PDF self-declares as a canary, so it deters honest readers while still tripping automated credential scrapers; a sophisticated attacker who reads the disclosure simply won\'t use the key, which is an acceptable outcome (no access either way). The robots tripwire alarms in us-east-1 (CloudFront Function logs only land there), so it carries its own SNS topic separate from the key-used alarm.',
+		code: ['infra/canary.tf', 'infra/cloudfront_function_index.js', 'public/files/account-recovery-keys.pdf'],
+		prs: [663, 721],
 	},
 
 	// ─── identity + contact ────────────────────────────────────────────

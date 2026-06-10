@@ -2,6 +2,15 @@ function handler(event) {
   var req = event.request;
   var uri = req.uri;
 
+  // Canarytoken tripwire (#141): /admin/backup/ is a decoy Disallowed in
+  // robots.txt -- it serves nothing and exists only as bait. console.log lands
+  // in CloudWatch Logs (us-east-1, /aws/cloudfront/function/<name>), where a
+  // metric filter on this CANARY_TRIPWIRE sentinel alarms to SNS. See
+  // infra/canary.tf and docs/runbooks/canarytokens.md.
+  if (uri.indexOf('/admin/backup') === 0) {
+    console.log('CANARY_TRIPWIRE admin-backup ' + uri);
+  }
+
   // Framed deep-link: the bare /apps/<assetSlug> URL boots the desktop with
   // the demo window auto-opened, by 302-ing to the app's canonical permalink
   // (/unifi/ renders DesktopLayout with initialOpen). Only the bare path and
