@@ -55,6 +55,11 @@ aws logs describe-log-groups --region us-east-1 \
      --topic-arn "$(terraform -chdir=infra output -raw canary_robots_sns_topic_arn 2>/dev/null)"
    ```
    Each should show `SubscriptionArn` as an ARN, not `PendingConfirmation`.
+   Or run the assertion (also opt-in in `ci-local.sh` via
+   `MMS_VERIFY_CANARY_SUBS=true`), which fails if either is unconfirmed:
+   ```bash
+   ./scripts/verify-canary-subscriptions.sh
+   ```
 
 3. **Extract the key (out-of-band, never to disk in the repo).**
    ```bash
