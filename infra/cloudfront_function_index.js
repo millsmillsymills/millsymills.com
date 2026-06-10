@@ -7,7 +7,9 @@ function handler(event) {
   // in CloudWatch Logs (us-east-1, /aws/cloudfront/function/<name>), where a
   // metric filter on this CANARY_TRIPWIRE sentinel alarms to SNS. See
   // infra/canary.tf and docs/runbooks/canarytokens.md.
-  if (uri.indexOf('/admin/backup') === 0) {
+  // Case-insensitive: CloudFront does not normalize case before the viewer
+  // request, so a probe to /Admin/Backup would otherwise slip past undetected.
+  if (uri.toLowerCase().indexOf('/admin/backup') === 0) {
     console.log('CANARY_TRIPWIRE admin-backup ' + uri);
   }
 
