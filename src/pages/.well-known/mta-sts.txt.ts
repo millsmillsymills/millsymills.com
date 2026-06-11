@@ -28,14 +28,13 @@ import type { APIRoute } from 'astro';
 export const GET: APIRoute = () => {
 	const body = [
 		'version: STSv1',
-		'mode: testing',
+		'mode: enforce',
 		'mx: mail.protonmail.ch',
 		'mx: mailsec.protonmail.ch',
-		// RFC 8461 §3.2 SHOULDs max_age >= 604800 (7 days) — applied
-		// once the testing-mode rollout was confirmed stable. Promotion
-		// from testing -> enforce remains pending on 2-4 weeks of clean
-		// TLS-RPT reports; until that flip, max_age controls how long
-		// senders cache the testing policy, not enforcement window.
+		// RFC 8461 §3.2 SHOULDs max_age >= 604800 (7 days). In enforce
+		// mode this is also the rollback window: after publishing
+		// `mode: none` here, enforcing senders keep refusing non-policy
+		// delivery until their cached policy ages out over max_age.
 		'max_age: 604800',
 		'',
 	].join('\n');
