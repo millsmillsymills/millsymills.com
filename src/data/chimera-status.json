@@ -1,16 +1,15 @@
 {
-	"$schema-note": "Shape contract for the chimera status card. Updated by scripts/fetch-chimera-status.py running on a self-hosted GitHub Actions runner colocated with chimera (see .github/workflows/chimera-status.yml). Until the runner is registered, this seed file stays as the placeholder snapshot the UI renders against.",
-	"generated_at": null,
-	"uptime_seconds": null,
-	"containers": {
-		"running": null,
-		"stopped": null
-	},
-	"array": {
-		"used_tb": null,
-		"total_tb": null,
-		"parity_state": null
-	},
-	"smart_warnings": null,
-	"last_updated": "2026-05-21T00:00:00Z"
+  "generated_at": "2026-06-11T10:15:20Z",
+  "uptime_seconds": 128329,
+  "containers": {
+    "running": 17,
+    "stopped": 14
+  },
+  "array": {
+    "used_tb": 82.6,
+    "total_tb": 82.9,
+    "parity_state": "DISK_OK"
+  },
+  "smart_warnings": 13,
+  "last_updated": "2026-06-11T10:15:20Z"
 }

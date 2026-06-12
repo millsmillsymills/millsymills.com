@@ -45,19 +45,25 @@ DynamoDBDocumentClient.prototype.send = async function send(cmd) {
 let registrationVerifyResult;
 let authenticationVerifyResult;
 
-// `namedExports` (not the newer single `exports` option) because CI runs on
-// Node 22, where `mock.module`'s only supported option shape is
-// `namedExports`/`defaultExport`; `options.exports` landed in Node 25. On a
-// future Node bump, `namedExports` starts emitting a DeprecationWarning and
-// should migrate to `exports`.
-mock.module('@simplewebauthn/server', {
-	namedExports: {
-		generateRegistrationOptions: async () => ({ challenge: 'c' }),
-		generateAuthenticationOptions: async () => ({ challenge: 'c' }),
-		verifyRegistrationResponse: async () => registrationVerifyResult,
-		verifyAuthenticationResponse: async () => authenticationVerifyResult,
-	},
-});
+// `mock.module`'s option shape changed across Node versions: the single
+// `exports` option (and the `DeprecationWarning` for the legacy
+// `namedExports`/`defaultExport` keys) landed in Node 25.9.0 (nodejs/node
+// #61727). CI pins Node 22, which only understands `namedExports` and silently
+// ignores `exports`. Pick the shape the running Node supports so the suite
+// stays warning-free on both the pinned CI runtime and newer local toolchains
+// (where `namedExports` would otherwise trip the zero-warnings policy).
+const webauthnServerMock = {
+	generateRegistrationOptions: async () => ({ challenge: 'c' }),
+	generateAuthenticationOptions: async () => ({ challenge: 'c' }),
+	verifyRegistrationResponse: async () => registrationVerifyResult,
+	verifyAuthenticationResponse: async () => authenticationVerifyResult,
+};
+const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+const supportsExportsOption = nodeMajor > 25 || (nodeMajor === 25 && nodeMinor >= 9);
+mock.module(
+	'@simplewebauthn/server',
+	supportsExportsOption ? { exports: webauthnServerMock } : { namedExports: webauthnServerMock },
+);
 
 const { handler } = await import('../index.mjs');
 

@@ -26,6 +26,16 @@ output "canary_secret_access_key" {
   sensitive   = true
 }
 
+output "canary_sns_topic_arn" {
+  description = "ARN of the key-used canary SNS topic (#141, primary region). Confirm its email subscription after apply. Empty unless enable_canary = true."
+  value       = var.enable_canary ? aws_sns_topic.canary[0].arn : ""
+}
+
+output "canary_robots_sns_topic_arn" {
+  description = "ARN of the robots-decoy tripwire SNS topic (#141, us-east-1). Confirm its email subscription after apply. Empty unless enable_canary = true."
+  value       = var.enable_canary ? aws_sns_topic.canary_robots[0].arn : ""
+}
+
 output "dnssec_ds_record" {
   description = "DS record to paste into the registrar's DNSSEC field to chain the parent-zone trust. Paste this LAST, after Route53 is signing the zone — see infra/dnssec.tf for the safe ordering. Format: `<key-tag> <algorithm> <digest-type> <digest-hex>`."
   value       = aws_route53_key_signing_key.ksk.ds_record
