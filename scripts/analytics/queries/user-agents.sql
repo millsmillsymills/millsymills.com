@@ -5,6 +5,7 @@
 -- Substituted by scripts/analytics/run.sh:
 --   <bucket>       → <stack>.com-logs
 --   <since_date>   → today - <days>, ISO YYYY-MM-DD
+--   <since_ts>     → exact UTC cutoff (YYYY-MM-DD HH:MM:SS)
 
 SELECT
 	cs_User_Agent AS user_agent,
@@ -18,6 +19,7 @@ FROM read_parquet(
 	hive_partitioning = true
 )
 WHERE date >= '<since_date>'
+	AND date || ' ' || time >= '<since_ts>'
 	AND cs_User_Agent IS NOT NULL
 	AND cs_User_Agent <> '-'
 GROUP BY 1

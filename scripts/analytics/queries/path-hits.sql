@@ -4,6 +4,7 @@
 -- Substituted by scripts/analytics/run.sh:
 --   <bucket>       → <stack>.com-logs
 --   <since_date>   → today - <days>, ISO YYYY-MM-DD
+--   <since_ts>     → exact UTC cutoff (YYYY-MM-DD HH:MM:SS)
 --   <path>         → positional arg after [days], e.g. /demo/passkey/
 --
 -- The `LIKE '<path>%'` form is a prefix match on cs_uri_stem (no query
@@ -18,6 +19,7 @@ FROM read_parquet(
 	hive_partitioning = true
 )
 WHERE date >= '<since_date>'
+	AND date || ' ' || time >= '<since_ts>'
 	AND cs_uri_stem LIKE '<path>%'
 GROUP BY 1
 ORDER BY 2 DESC, 1
