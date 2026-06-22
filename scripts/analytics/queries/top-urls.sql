@@ -3,6 +3,7 @@
 -- Substituted by scripts/analytics/run.sh:
 --   <bucket>       → <stack>.com-logs
 --   <since_date>   → today - <days>, ISO YYYY-MM-DD
+--   <since_ts>     → exact UTC cutoff (YYYY-MM-DD HH:MM:SS)
 --
 -- CloudFront standard-logs v2 Parquet only carries `aws-account-id` as a
 -- hive partition; year/month/day are not partition columns. Each row's
@@ -20,6 +21,7 @@ FROM read_parquet(
 	hive_partitioning = true
 )
 WHERE date >= '<since_date>'
+	AND date || ' ' || time >= '<since_ts>'
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 50;

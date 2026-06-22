@@ -53,7 +53,7 @@ set -- "${POSITIONALS[@]+"${POSITIONALS[@]}"}"
 
 usage() {
 	cat <<'EOF'
-usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--csv] [--save]
+usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--hours N] [--since "T"] [--csv] [--save]
 
   <stack>       millsymills
   <query-name>  basename (no .sql) of a file under scripts/analytics/queries/
@@ -98,6 +98,19 @@ esac
 DOMAIN="${STACK}.com"
 BUCKET="${DOMAIN}-logs"
 
+if [[ -n "$HOURS" && -n "$SINCE" ]]; then
+	printf '\033[1;31mrefusing: --hours and --since are mutually exclusive\033[0m\n' >&2
+	exit 2
+fi
+if [[ -n "$HOURS" ]] && { ! [[ "$HOURS" =~ ^[0-9]+$ ]] || ((HOURS == 0)); }; then
+	printf '\033[1;31mrefusing: --hours must be a positive integer, got %q\033[0m\n' "$HOURS" >&2
+	exit 2
+fi
+if [[ -n "$SINCE" ]] && ! [[ "$SINCE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}$ ]]; then
+	printf '\033[1;31mrefusing: --since must be "YYYY-MM-DD HH:MM" (local time), got %q\033[0m\n' "$SINCE" >&2
+	exit 2
+fi
+
 QUERY_NAME="${1:-}"
 shift || true
 
@@ -126,19 +139,6 @@ fi
 if ((DAYS > 90)); then
 	printf '\033[1;33mnote: days capped at 90 (current-retention ceiling)\033[0m\n' >&2
 	DAYS=90
-fi
-
-if [[ -n "$HOURS" && -n "$SINCE" ]]; then
-	printf '\033[1;31mrefusing: --hours and --since are mutually exclusive\033[0m\n' >&2
-	exit 2
-fi
-if [[ -n "$HOURS" ]] && ! [[ "$HOURS" =~ ^[0-9]+$ ]]; then
-	printf '\033[1;31mrefusing: --hours must be a positive integer, got %q\033[0m\n' "$HOURS" >&2
-	exit 2
-fi
-if [[ -n "$SINCE" ]] && ! [[ "$SINCE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}$ ]]; then
-	printf '\033[1;31mrefusing: --since must be "YYYY-MM-DD HH:MM" (local time), got %q\033[0m\n' "$SINCE" >&2
-	exit 2
 fi
 
 # Optional <path> positional, used by queries that take a URI-prefix bind
