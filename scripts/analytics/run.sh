@@ -235,6 +235,8 @@ SQL=$(sed "${SED_ARGS[@]}" "$QUERY_FILE")
 #
 # `REGION 'us-west-2'` matches the primary region declared in
 # `infra/variables.tf` (and the logs bucket's actual `LocationConstraint`).
+CLASSIFY_SQL=$(cat "${QUERIES_DIR%/queries}/lib/classify.sql")
+
 FULL_SQL="
 INSTALL httpfs;
 LOAD httpfs;
@@ -244,6 +246,7 @@ CREATE OR REPLACE SECRET cloudfront_logs (
 	REGION 'us-west-2',
 	URL_STYLE 'path'
 );
+${CLASSIFY_SQL}
 ${SQL}
 "
 

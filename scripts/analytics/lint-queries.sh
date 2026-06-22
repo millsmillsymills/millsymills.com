@@ -68,6 +68,8 @@ SELECT
 	CAST('123456789012' AS VARCHAR)        AS \"aws-account-id\";
 "
 
+CLASSIFY_SQL=$(cat scripts/analytics/lib/classify.sql)
+
 fail=0
 for q in scripts/analytics/queries/*.sql; do
 	[[ -f "$q" ]] || continue
@@ -88,11 +90,11 @@ for q in scripts/analytics/queries/*.sql; do
 	rewritten=${rewritten//<days>/30}
 	rewritten=${rewritten//<path>/\/example\/}
 
-	if duckdb -c "${FAKE_SCHEMA} EXPLAIN ANALYZE ${rewritten}" >/dev/null 2>&1; then
+	if duckdb -c "${CLASSIFY_SQL} ${FAKE_SCHEMA} EXPLAIN ANALYZE ${rewritten}" >/dev/null 2>&1; then
 		printf '\033[1;32m✓ %s\033[0m\n' "$q"
 	else
 		printf '\033[1;31m✗ %s\033[0m\n' "$q" >&2
-		duckdb -c "${FAKE_SCHEMA} EXPLAIN ANALYZE ${rewritten}" 2>&1 | sed 's/^/    /' >&2 || true
+		duckdb -c "${CLASSIFY_SQL} ${FAKE_SCHEMA} EXPLAIN ANALYZE ${rewritten}" 2>&1 | sed 's/^/    /' >&2 || true
 		fail=1
 	fi
 done
