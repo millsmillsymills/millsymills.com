@@ -23,18 +23,31 @@ QUERIES_DIR="scripts/analytics/queries"
 EMIT_CSV=0
 SAVE=0
 SHOW_HELP=0
+SINCE=""
+HOURS=""
 POSITIONALS=()
-for arg in "$@"; do
-	case "$arg" in
+while (($#)); do
+	case "$1" in
 		--csv) EMIT_CSV=1 ;;
 		--save) SAVE=1 ;;
 		-h | --help) SHOW_HELP=1 ;;
+		--hours)
+			shift
+			HOURS="${1:-}"
+			;;
+		--hours=*) HOURS="${1#*=}" ;;
+		--since)
+			shift
+			SINCE="${1:-}"
+			;;
+		--since=*) SINCE="${1#*=}" ;;
 		--*)
-			printf '\033[1;31mrefusing: unknown flag %q (expected --csv, --save, --help)\033[0m\n' "$arg" >&2
+			printf '\033[1;31mrefusing: unknown flag %q (expected --csv, --save, --hours, --since, --help)\033[0m\n' "$1" >&2
 			exit 2
 			;;
-		*) POSITIONALS+=("$arg") ;;
+		*) POSITIONALS+=("$1") ;;
 	esac
+	shift
 done
 set -- "${POSITIONALS[@]+"${POSITIONALS[@]}"}"
 
@@ -47,6 +60,9 @@ usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--c
                 run with just <stack> to list available queries
   [days]        lookback window. Default 30. Capped at 90 (current-retention
                 ceiling on the logs bucket).
+  --hours N     window = now - N hours (UTC). Mutually exclusive with --since.
+  --since "T"   window start at local time T ("YYYY-MM-DD HH:MM"), converted
+                to UTC. Mutually exclusive with --hours. Overrides [days].
   [<path>]      URI-prefix bind value for queries that take one (e.g.
                 path-hits). Refused for queries that don't reference <path>.
                 Must start with `/` and contain only [A-Za-z0-9/_.-].
@@ -112,6 +128,19 @@ if ((DAYS > 90)); then
 	DAYS=90
 fi
 
+if [[ -n "$HOURS" && -n "$SINCE" ]]; then
+	printf '\033[1;31mrefusing: --hours and --since are mutually exclusive\033[0m\n' >&2
+	exit 2
+fi
+if [[ -n "$HOURS" ]] && ! [[ "$HOURS" =~ ^[0-9]+$ ]]; then
+	printf '\033[1;31mrefusing: --hours must be a positive integer, got %q\033[0m\n' "$HOURS" >&2
+	exit 2
+fi
+if [[ -n "$SINCE" ]] && ! [[ "$SINCE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}$ ]]; then
+	printf '\033[1;31mrefusing: --since must be "YYYY-MM-DD HH:MM" (local time), got %q\033[0m\n' "$SINCE" >&2
+	exit 2
+fi
+
 # Optional <path> positional, used by queries that take a URI-prefix bind
 # value. Required iff the query SQL references <path>; refused for queries
 # that don't (so typos surface instead of silently being ignored). Validate
@@ -151,16 +180,30 @@ if ! aws sts get-caller-identity >/dev/null 2>&1; then
 	exit 1
 fi
 
-# Compute the since-date ISO string for `today - DAYS`.  The v2 Parquet
-# logs carry the date as a varchar in the `date` column (YYYY-MM-DD), so a
-# lexical compare against this ISO string is correct without parsing.
-# Python over `date` to stay portable across BSD (macOS) and GNU (CI) coreutils.
-SINCE_DATE=$(
-	python3 -c "
+# Resolve the window cutoff. Precedence: --since > --hours > days default.
+# SINCE_TS is the exact UTC cutoff (YYYY-MM-DD HH:MM:SS); SINCE_DATE is its
+# UTC day-floor, kept for Parquet row-group pruning. Python3 (already a
+# dependency) handles tz math portably across BSD/GNU coreutils.
+if [[ -n "$SINCE" ]]; then
+	SINCE_TS=$(python3 -c "
+from datetime import datetime
+from zoneinfo import ZoneInfo
+print(datetime.strptime('${SINCE}', '%Y-%m-%d %H:%M').astimezone().astimezone(ZoneInfo('UTC')).strftime('%Y-%m-%d %H:%M:%S'))
+")
+	SINCE_DATE="${SINCE_TS%% *}"
+elif [[ -n "$HOURS" ]]; then
+	SINCE_TS=$(python3 -c "
+from datetime import datetime, timedelta, timezone
+print((datetime.now(timezone.utc) - timedelta(hours=${HOURS})).strftime('%Y-%m-%d %H:%M:%S'))
+")
+	SINCE_DATE="${SINCE_TS%% *}"
+else
+	SINCE_DATE=$(python3 -c "
 from datetime import date, timedelta
 print((date.today() - timedelta(days=${DAYS})).isoformat())
-"
-)
+")
+	SINCE_TS="${SINCE_DATE} 00:00:00"
+fi
 
 # Textual substitution into the query SQL. Bucket, date, and path values
 # are validated above (stack whitelist, days = positive integer, path =
@@ -169,6 +212,7 @@ print((date.today() - timedelta(days=${DAYS})).isoformat())
 SED_ARGS=(
 	-e "s|<bucket>|${BUCKET}|g"
 	-e "s|<since_date>|${SINCE_DATE}|g"
+	-e "s|<since_ts>|${SINCE_TS}|g"
 	-e "s|<days>|${DAYS}|g"
 )
 if [[ -n "$PATH_ARG" ]]; then

@@ -84,6 +84,7 @@ for q in scripts/analytics/queries/*.sql; do
 	# Substitute stand-ins for runtime bind values.
 	rewritten=${rewritten//<bucket>/example-bucket}
 	rewritten=${rewritten//<since_date>/2026-01-01}
+	rewritten=${rewritten//<since_ts>/2026-01-01 00:00:00}
 	rewritten=${rewritten//<days>/30}
 	rewritten=${rewritten//<path>/\/example\/}
 
