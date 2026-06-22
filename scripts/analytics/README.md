@@ -15,7 +15,7 @@ already exist in S3. Design:
 ## Usage
 
 ```
-./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--csv] [--save]
+./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--hours N] [--since "T"] [--csv] [--save]
 ```
 
 - `<stack>` — `millsymills`.
@@ -26,6 +26,12 @@ already exist in S3. Design:
 - `[<path>]` — URI-prefix bind value for queries that take one (currently
   `path-hits`). Must start with `/` and contain only `[A-Za-z0-9/_.-]`. Refused
   for queries that don't reference `<path>` so typos surface.
+- `--hours N` — sub-day lookback: query the last N hours of logs. Mutually
+  exclusive with `--since`; overrides `[days]`. The runner converts to a UTC
+  `<since_ts>` before handing to DuckDB.
+- `--since "YYYY-MM-DD HH:MM"` — query from a specific local timestamp forward.
+  Mutually exclusive with `--hours`; overrides `[days]`. Local time is converted
+  to UTC by the runner.
 - `--csv` — emit DuckDB CSV instead of the default markdown table. Pipe-friendly
   (`| q -H -d, "SELECT ..."`, `| ddgrep`, etc.). Can appear anywhere in `$@`.
 - `--save` — also write the rendered output to
@@ -104,6 +110,31 @@ Markdown table to stdout AND copy at
 `.cache/analytics/millsymills-top-urls-<UTC-timestamp>.md` for sharing in
 a PR description or pasting into a notebook.
 
+```
+./scripts/analytics/run.sh millsymills bot-split --since "2026-06-18 22:00"
+```
+
+Automated vs human split (requests, unique IPs, 2xx vs 404) since 10pm local
+on 2026-06-18. `--hours N` and `--since "YYYY-MM-DD HH:MM"` (local→UTC) give
+sub-day windows; omit both for the whole-day `days` lookback.
+
+```
+./scripts/analytics/run.sh millsymills geography 7
+```
+
+Requests + unique IPs by edge POP, decoded via `edge-locations.csv`. Edge POP
+is a proxy for viewer region, not a geo-IP lookup. Ordered by unique IPs since
+single-IP bots inflate request counts.
+
+```
+./scripts/analytics/run.sh millsymills device-split 7
+./scripts/analytics/run.sh millsymills deep-sessions 7
+```
+
+Device class (mobile/tablet/desktop/bot) and engaged visitors (≥3 distinct
+`/_astro/*.js` bundles). Both are UA-based heuristics — deep-sessions is
+best-effort and can include browser-UA-spoofing scanners.
+
 ## How to add a new query
 
 1. Copy an existing file in `queries/`, rename to `<question>.sql`.
@@ -119,6 +150,18 @@ a PR description or pasting into a notebook.
 The queries are deliberately small and self-contained. Don't build a "query
 framework" — three similar `SELECT count(*), ... FROM ... GROUP BY ... ORDER BY
 ...` files is better than one parameterised mega-template at this scale.
+
+### Shared classifier
+
+`lib/classify.sql` defines the `is_automated(ua)` macro — the single source of
+truth for human/bot classification. `run.sh` and `lint-queries.sh` both prepend
+it, so any query can call it. Add a new scanner by extending the alternation
+there; it is UA-based and will under-count UAs that spoof a browser.
+
+### edge-locations.csv
+
+`pop,city,country` decode table for `geography`. Unknown POPs fall through to
+the raw code, so it degrades gracefully and is updated lazily as AWS adds POPs.
 
 ## Log schema (CloudFront v2 standard-logging Parquet)
 

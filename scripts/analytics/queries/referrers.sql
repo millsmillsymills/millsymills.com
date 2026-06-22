@@ -4,6 +4,7 @@
 -- Substituted by scripts/analytics/run.sh:
 --   <bucket>       → <stack>.com-logs
 --   <since_date>   → today - <days>, ISO YYYY-MM-DD
+--   <since_ts>     → exact UTC cutoff (YYYY-MM-DD HH:MM:SS)
 --
 -- CloudFront writes `-` for the Referer when the request didn't carry one;
 -- that's not interesting traffic. Drop it alongside SQL NULL.
@@ -16,6 +17,7 @@ FROM read_parquet(
 	hive_partitioning = true
 )
 WHERE date >= '<since_date>'
+	AND date || ' ' || time >= '<since_ts>'
 	AND cs_Referer IS NOT NULL
 	AND cs_Referer <> '-'
 	AND NOT (
