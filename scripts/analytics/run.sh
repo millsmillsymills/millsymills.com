@@ -32,13 +32,29 @@ while (($#)); do
 		--save) SAVE=1 ;;
 		-h | --help) SHOW_HELP=1 ;;
 		--hours)
+			if (($# < 2)) || [[ "$2" == --* ]]; then
+				printf '\033[1;31mrefusing: --hours requires a value\033[0m\n' >&2
+				exit 2
+			fi
 			shift
-			HOURS="${1:-}"
+			HOURS="$1"
+			;;
+		--hours=)
+			printf '\033[1;31mrefusing: --hours requires a value\033[0m\n' >&2
+			exit 2
 			;;
 		--hours=*) HOURS="${1#*=}" ;;
 		--since)
+			if (($# < 2)) || [[ "$2" == --* ]]; then
+				printf '\033[1;31mrefusing: --since requires a value\033[0m\n' >&2
+				exit 2
+			fi
 			shift
-			SINCE="${1:-}"
+			SINCE="$1"
+			;;
+		--since=)
+			printf '\033[1;31mrefusing: --since requires a value\033[0m\n' >&2
+			exit 2
 			;;
 		--since=*) SINCE="${1#*=}" ;;
 		--*)
