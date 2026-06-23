@@ -43,13 +43,13 @@ protonmail_dkim_selectors = {
 }
 
 # MTA-STS on the production stack per #134. millsymills serves the
-# policy file (src/pages/.well-known/mta-sts.txt.ts, mode: testing)
+# policy file (src/pages/.well-known/mta-sts.txt.ts, mode: enforce)
 # with the per-stack discovery-TXT switch enabled.
 enable_mta_sts = true
-# Bumped 2026-05-17 alongside the mta-sts.txt.ts max_age 86400 -> 604800
-# change (RFC 8461 §3.2). Senders refresh their cached policy when this
-# value changes; the bump is what makes the new max_age propagate.
-mta_sts_id = "20260517000000"
+# Bumped 2026-06-11 alongside the mta-sts.txt.ts testing -> enforce flip
+# (#385). Senders refresh their cached policy when this value changes;
+# the bump is what makes the enforce mode propagate.
+mta_sts_id = "20260611000000"
 
 # Google Workspace site-verification CNAME salvaged from the old DNS
 # provider (Squarespace-managed zone) on the 2026-05 cutover (step 8).
