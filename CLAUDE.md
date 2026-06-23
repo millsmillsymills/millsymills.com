@@ -110,9 +110,9 @@ DMARC stays at `p=reject; adkim=s; aspf=s` throughout — we deliberately skip t
 
 Managed in `infra/mta_sts.tf`. The `mta-sts.<domain>` ACM SAN, CloudFront alias, and A/AAAA records ship unconditionally; the `_mta-sts.<domain>` discovery TXT is gated on `var.enable_mta_sts`. The policy file lives at `src/pages/.well-known/mta-sts.txt.ts` and is served from `https://mta-sts.<domain>/.well-known/mta-sts.txt`.
 
-millsymills.com ships `mode: testing` with `max_age: 604800` (the RFC 8461 §3.2 SHOULD floor) — `enable_mta_sts = true` in `infra/stacks/millsymills.tfvars`. Senders log policy mismatches via TLS-RPT but still deliver, so the rollout stays reversible. Watch the TLS-RPT report cycle for `policy-type: sts` (vs `no-policy-found`) to confirm senders picked up the policy before flipping to enforce.
+millsymills.com ships `mode: enforce` with `max_age: 604800` (the RFC 8461 §3.2 SHOULD floor) — `enable_mta_sts = true` in `infra/stacks/millsymills.tfvars`. The testing→enforce flip landed via #734 (2026-06-22) after a clean TLS-RPT soak; enforcing senders now refuse delivery to any MX not covered by the policy. `mta_sts_id` in the stack tfvars is the policy version senders cache against.
 
-Flipping to `mode: enforce` (after 2-4 weeks of clean TLS-RPT reports):
+The flip procedure, for reference (already done for millsymills; reapply only if standing up MTA-STS on another stack, which starts at `mode: testing` and soaks 2-4 weeks of clean TLS-RPT reports first):
 
 1. Edit `src/pages/.well-known/mta-sts.txt.ts`: `mode: enforce`, `max_age: 604800`.
 2. Bump `mta_sts_id` in the matching `infra/stacks/<stack>.tfvars` (timestamp). Senders refresh their cached policy when the id changes.
