@@ -304,22 +304,61 @@ class WindowManager {
 		this.state.open = [];
 		open.forEach((id) => this.open(id, { skipPosition: false, silent: true }));
 
+		let deepLinked = false;
 		try {
 			const params = new URLSearchParams(window.location.search);
 			const requested = params.get('open');
 			if (requested) {
-				requested
+				const ids = requested
 					.split(',')
 					.map((s) => s.trim())
-					.filter(Boolean)
-					.forEach((id) => this.open(id, { silent: true }));
+					.filter(Boolean);
+				ids.forEach((id) => this.open(id, { silent: true }));
+				if (ids.length) deepLinked = true;
 			}
 		} catch (err) {
 			console.warn('[mills.desktop] failed to read ?open= query param', err);
 		}
 
 		const bodyInitial = document.body?.dataset.initialOpen;
-		if (bodyInitial) this.open(bodyInitial, { silent: true });
+		if (bodyInitial) {
+			this.open(bodyInitial, { silent: true });
+			deepLinked = true;
+		}
+
+		// A deep-link (?open= / per-app permalink) means the visitor arrived
+		// at a specific app, not the desktop — don't cover it with the
+		// first-visit welcome, and leave the flag unset so they still get it
+		// on a later plain desktop visit. Mirrors mobile-shell, which only
+		// auto-opens welcome when no deep-link target is present.
+		if (!deepLinked) this.maybeFirstVisitWelcome();
+	}
+
+	// First arrival auto-opens the welcome window exactly once, gated on a
+	// localStorage flag shared with the mobile shell. Returning visitors
+	// never see it; it stays re-openable forever via /welcome/,
+	// ?open=welcome, the start menu, and the command palette. Mobile is
+	// handled by mobile-shell.ts — skip here so the flag isn't burned by
+	// the (display:none) desktop window before the mshell can act on it.
+	// Storage-blocked browsers degrade to "always show" rather than throw,
+	// mirroring clippy.ts. Opened non-silently so Clippy can narrate via
+	// the `open` trigger when it's awake and not dismissed.
+	private maybeFirstVisitWelcome() {
+		if (window.matchMedia('(max-width: 768px)').matches) return;
+
+		const KEY = 'mills.welcome.seen';
+		try {
+			if (localStorage.getItem(KEY) === '1') return;
+		} catch (err) {
+			console.warn('[mills.desktop] welcome flag read failed', err);
+		}
+		try {
+			localStorage.setItem(KEY, '1');
+		} catch (err) {
+			console.warn('[mills.desktop] welcome flag write failed', err);
+		}
+		if (this.state.open.includes('welcome')) return;
+		this.open('welcome');
 	}
 
 	// ----------------------------------------------------------------

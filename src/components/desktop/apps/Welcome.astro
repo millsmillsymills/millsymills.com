@@ -1,0 +1,146 @@
+---
+// First-visit orientation. The auto-open gate + re-open paths live in
+// src/scripts/window-manager.ts (desktop) and src/scripts/mobile-shell.ts
+// (mobile); this component is the static surface that stands on its own
+// when Clippy is absent (touch / reduced-motion / dismissed-forever).
+---
+
+<style>
+	.welcome__lede {
+		font-family: var(--font-screen);
+		font-size: 17px;
+		color: var(--ink-soft);
+		margin: 0 0 18px;
+	}
+
+	.welcome__list {
+		list-style: none;
+		margin: 0 0 20px;
+		padding: 0;
+		display: grid;
+		gap: 12px;
+	}
+
+	.welcome__list li {
+		font-family: var(--font-screen);
+		font-size: 15px;
+		color: var(--ink);
+		line-height: 1.45;
+	}
+
+	.welcome__k {
+		display: inline-block;
+		min-width: 7.5rem;
+		margin-right: 8px;
+		font-family: var(--font-pixel);
+		font-size: 12px;
+		letter-spacing: 1px;
+		color: var(--neon-pink-hi);
+		text-transform: lowercase;
+		vertical-align: baseline;
+	}
+
+	.welcome kbd {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		background: var(--bg-deep);
+		color: var(--neon-cyan);
+		border: 1px solid var(--border);
+		border-radius: 3px;
+		padding: 1px 5px;
+	}
+
+	.welcome code {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--neon-cyan);
+	}
+
+	.welcome__try-label {
+		font-family: var(--font-pixel);
+		font-size: 12px;
+		letter-spacing: 1px;
+		color: var(--pink-600);
+		text-transform: lowercase;
+		margin: 0 0 10px;
+	}
+
+	.welcome__chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin: 0 0 22px;
+	}
+
+	.welcome__chip {
+		font-family: var(--font-screen);
+		font-size: 14px;
+		color: var(--ink);
+		background: var(--lilac-100);
+		border: 1px solid var(--lilac-300);
+		border-radius: 4px;
+		padding: 6px 14px;
+		cursor: pointer;
+	}
+
+	.welcome__chip:hover {
+		border-color: var(--neon-pink);
+		color: var(--neon-pink-hi);
+	}
+
+	.welcome__footer {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-soft);
+		border-top: 1px dashed var(--neon-cyan);
+		padding-top: 14px;
+		margin: 0;
+	}
+
+	/* On mobile the chips call the desktop window-manager, which is
+	   display:none in the mobile shell — tapping them does nothing
+	   visible. Hide them; the list above still orients touch visitors. */
+	@media (max-width: 768px) {
+		.welcome__chips,
+		.welcome__try-label {
+			display: none;
+		}
+	}
+</style>
+
+<div class="welcome">
+	<h1>welcome to mills' desktop</h1>
+	<p class="welcome__lede">
+		this is a fake desktop OS. every icon opens a real app window. here's how to drive it.
+	</p>
+
+	<ul class="welcome__list">
+		<li><span class="welcome__k">icons</span>double-click (or tap) to launch an app.</li>
+		<li>
+			<span class="welcome__k">taskbar + start</span>the bottom strip switches between open
+			windows; the start button lists every app.
+		</li>
+		<li>
+			<span class="welcome__k"><kbd>⌘</kbd>/<kbd>ctrl</kbd>+<kbd>K</kbd></span>command palette —
+			jump to any app by name.
+		</li>
+		<li><span class="welcome__k"><kbd>?</kbd></span>opens the keyboard-shortcut help.</li>
+		<li>
+			<span class="welcome__k">deep links</span>every app has its own URL —
+			<code>/about/</code>, <code>/terminal/</code>, …
+		</li>
+	</ul>
+
+	<p class="welcome__try-label">try one:</p>
+	<div class="welcome__chips">
+		<button type="button" class="welcome__chip" data-open-window="about">about</button>
+		<button type="button" class="welcome__chip" data-open-window="terminal">terminal</button>
+		<button type="button" class="welcome__chip" data-open-window="projects">projects</button>
+		<button type="button" class="welcome__chip" data-open-window="security">security</button>
+	</div>
+
+	<p class="welcome__footer">
+		this only opens on your first visit. relaunch anytime from the start menu or
+		<kbd>⌘</kbd>/<kbd>ctrl</kbd>+<kbd>K</kbd> → <em>welcome</em>.
+	</p>
+</div>

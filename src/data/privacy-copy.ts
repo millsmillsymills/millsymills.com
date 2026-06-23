@@ -35,6 +35,7 @@ export const browserStorageKeys: BrowserStorageKey[] = [
 	{ key: 'mills.passkey-demo.v1', storage: 'local', purpose: '/demo/passkey credential id + display name (sandbox)' },
 	{ key: 'mills.sounds.enabled', storage: 'local', purpose: 'XP system-sounds opt-in toggle (default off)' },
 	{ key: 'mills.mobile-nudge.dismissed', storage: 'session', purpose: 'desktop-nudge banner dismissed for this tab' },
+	{ key: 'mills.welcome.seen', storage: 'local', purpose: 'first-visit welcome window shown already ("don\'t auto-open again")' },
 ];
 
 export const copy = {
