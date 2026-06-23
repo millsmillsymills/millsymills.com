@@ -61,7 +61,7 @@ ok "trusted-types directive names match createPolicy() call sites"
 
 section "node: assert SLSA generator pin moves off Node 20 before deadline"
 ./scripts/assert-slsa-pin-fresh.sh
-ok "slsa-github-generator pin tracked against 2026-06-02 deadline"
+ok "slsa-github-generator pin freshness checked (script owns the deadline date)"
 
 section "node: vitest"
 npm run test

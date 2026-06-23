@@ -35,7 +35,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 readonly DEADLINE="2026-09-16"
 readonly UPSTREAM_ISSUE="https://github.com/slsa-framework/slsa-github-generator/issues/4490"
-readonly LOCAL_ISSUE="#389"
+readonly LOCAL_ISSUE="#661"
 readonly USES_PATTERN='slsa-framework/slsa-github-generator/\.github/workflows/generator_generic_slsa3\.yml@v[0-9]+\.[0-9]+\.[0-9]+'
 
 # Versions confirmed to embed Node-20 internal action refs. v2.1.0 is the
@@ -77,6 +77,29 @@ if [[ -z "${deploy_pin}" ]]; then
 fi
 
 current_version="${deploy_pin##*@}"
+
+# Opt-in upstream check (network): when MMS_CHECK_SLSA_UPSTREAM=true, query
+# the public releases API and surface whether upstream has cut a release
+# newer than the pinned one — the human-action trigger this guardrail
+# otherwise waits on (slsa-github-generator#4490). Off by default so the
+# default lint stays offline and deterministic, matching the
+# MMS_VERIFY_STATE_BUCKET opt-in in scripts/verify-state-bucket.sh.
+if [[ "${MMS_CHECK_SLSA_UPSTREAM:-}" == "true" ]]; then
+	if command -v gh >/dev/null 2>&1; then
+		latest_tag=$(gh api repos/slsa-framework/slsa-github-generator/releases/latest \
+			--jq '.tag_name' 2>/dev/null || true)
+		if [[ -z "${latest_tag}" ]]; then
+			echo "INFO: MMS_CHECK_SLSA_UPSTREAM set but upstream releases API unreachable — skipping"
+		elif [[ "${latest_tag}" != "${current_version}" ]]; then
+			echo "ACTION: upstream slsa-github-generator latest is ${latest_tag}, pinned ${current_version}."
+			echo "        Evaluate it for Node-24 readiness and bump deploy.yml if ready (${UPSTREAM_ISSUE})."
+		else
+			echo "OK: upstream latest (${latest_tag}) matches the pinned version — nothing newer to evaluate"
+		fi
+	else
+		echo "INFO: MMS_CHECK_SLSA_UPSTREAM set but gh not installed — skipping upstream check"
+	fi
+fi
 
 is_node20=false
 for v in "${NODE20_VERSIONS[@]}"; do
