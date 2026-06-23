@@ -28,13 +28,20 @@ deploy_environment = "production"
 enable_canary        = true
 canary_alert_address = "security@millsymills.com"
 
-# Slack delivery for canary alarms (alongside the email subscriptions). One-time
-# human step first: authorize the AWS Chatbot app in the Slack workspace (that's
-# what surfaces the team id), then fill both ids below (workspace identifiers,
-# not secrets) and flip the flag. See docs/runbooks/canarytokens.md.
-# enable_canary_slack     = true
-# canary_slack_team_id    = "T0123ABCDEF"
-# canary_slack_channel_id = "C0123ABCDEF"
+# Slack delivery for canary alarms (alongside the email subscriptions). The
+# AWS Chatbot Slack config "slack-qdev-chatbot" was created in the console
+# (workspace OAuth + #infra-alerts channel) and is adopted into Terraform via
+# `terraform import` -- NOT a plain apply, which would fail on the existing
+# config. Run the import before the first apply with these set. Values are
+# workspace identifiers (not secrets) read from the live config. Terraform's
+# only change on apply is adding the us-west-2 key-used topic alongside the
+# us-east-1 robots topic the console already wired. See
+# docs/runbooks/canarytokens.md.
+enable_canary_slack       = true
+canary_slack_config_name  = "slack-qdev-chatbot"
+canary_slack_team_id      = "T016XEDEFBM"
+canary_slack_channel_id   = "C05LVBZHM17"
+canary_slack_iam_role_arn = "arn:aws:iam::025507317036:role/service-role/Slack-qdev-chatbot-role"
 
 # ProtonMail activated 2026-05-14 per
 # docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md.

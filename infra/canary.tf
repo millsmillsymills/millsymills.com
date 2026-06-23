@@ -316,53 +316,29 @@ resource "aws_cloudwatch_metric_alarm" "canary_robots_tripwire" {
 #
 # Optional second channel (var.enable_canary_slack) on top of the SNS email
 # subscriptions, which stay put -- an intrusion alarm should not hinge on a
-# single delivery path. AWS Chatbot subscribes to SNS topics from multiple
-# regions in one Slack channel configuration, so a single resource covers both
-# the primary-region key-used topic and the us-east-1 robots topic.
+# single delivery path. One AWS Chatbot Slack channel configuration subscribes
+# to SNS topics from multiple regions, so a single resource covers both the
+# primary-region key-used topic and the us-east-1 robots topic.
 #
-# A one-time human step gates this: the Slack workspace must be authorized in
-# the AWS Chatbot console before apply (that authorization is what surfaces the
-# team id). The team/channel ids are workspace identifiers, not secrets, so they
-# live in the committed stack tfvars. See docs/runbooks/canarytokens.md.
-
-resource "aws_iam_role" "canary_chatbot" {
-  count = local.canary_slack_enabled ? 1 : 0
-
-  name = "${local.canary_name}-chatbot"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "chatbot.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-# Read-only by construction: the channel can pull CloudWatch alarm context when
-# someone clicks into an alert, but nothing in the role (or the guardrail that
-# caps it) can mutate anything. The notification path itself needs no policy.
-resource "aws_iam_role_policy_attachment" "canary_chatbot" {
-  count = local.canary_slack_enabled ? 1 : 0
-
-  role       = aws_iam_role.canary_chatbot[0].name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
-}
+# This config is created in the AWS Chatbot console first (the Slack-workspace
+# OAuth and the channel role are console-only steps), then ADOPTED into
+# Terraform with `terraform import` -- which is why configuration_name, the
+# team/channel ids, and the channel role ARN come from variables matching the
+# live config rather than being minted here. After import the only managed drift
+# is sns_topic_arns: the console wires the robots topic, Terraform adds the
+# key-used topic so the higher-severity alarm reaches Slack too. The channel
+# role and its ReadOnlyAccess guardrail stay as the console created them. See
+# docs/runbooks/canarytokens.md.
 
 resource "aws_chatbot_slack_channel_configuration" "canary" {
   count = local.canary_slack_enabled ? 1 : 0
 
-  configuration_name = local.canary_name
-  iam_role_arn       = aws_iam_role.canary_chatbot[0].arn
-  slack_team_id      = var.canary_slack_team_id
-  slack_channel_id   = var.canary_slack_channel_id
-  logging_level      = "ERROR"
-
-  # Hard cap on what the channel role can ever do, independent of the role's own
-  # policy -- keeps a future role-policy widening from leaking write access into
-  # Slack.
-  guardrail_policy_arns = ["arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"]
+  configuration_name    = var.canary_slack_config_name
+  iam_role_arn          = var.canary_slack_iam_role_arn
+  slack_team_id         = var.canary_slack_team_id
+  slack_channel_id      = var.canary_slack_channel_id
+  logging_level         = "ERROR"
+  guardrail_policy_arns = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
 
   sns_topic_arns = [
     aws_sns_topic.canary[0].arn,
@@ -371,8 +347,8 @@ resource "aws_chatbot_slack_channel_configuration" "canary" {
 
   lifecycle {
     precondition {
-      condition     = var.canary_slack_team_id != "" && var.canary_slack_channel_id != ""
-      error_message = "enable_canary_slack requires canary_slack_team_id and canary_slack_channel_id. Authorize the Slack workspace in the AWS Chatbot console first, then set both ids in the stack tfvars."
+      condition     = var.canary_slack_config_name != "" && var.canary_slack_team_id != "" && var.canary_slack_channel_id != "" && var.canary_slack_iam_role_arn != ""
+      error_message = "enable_canary_slack requires canary_slack_config_name, canary_slack_team_id, canary_slack_channel_id, and canary_slack_iam_role_arn. Create the config in the AWS Chatbot console, read those values from it, then `terraform import` per docs/runbooks/canarytokens.md."
     }
   }
 }
