@@ -5,8 +5,8 @@ trips them is, by construction, someone poking where they shouldn't.
 
 | Tripwire | Bait | Detection | Alert |
 |---|---|---|---|
-| AWS access-key canary | A deny-all IAM user's access key, planted in `/files/account-recovery-keys.pdf` | Dedicated multi-region CloudTrail → CloudWatch metric filter on the key id | SNS email (primary region) |
-| Robots decoy | `/admin/backup/`, Disallowed in `robots.txt` | CloudFront Function `console.log` → us-east-1 metric filter on the `CANARY_TRIPWIRE` sentinel | SNS email (us-east-1) |
+| AWS access-key canary | A deny-all IAM user's access key, planted in `/files/account-recovery-keys.pdf` | Dedicated multi-region CloudTrail → CloudWatch metric filter on the key id | SNS email (primary region) + Slack (optional) |
+| Robots decoy | `/admin/backup/`, Disallowed in `robots.txt` | CloudFront Function `console.log` → us-east-1 metric filter on the `CANARY_TRIPWIRE` sentinel | SNS email (us-east-1) + Slack (optional) |
 
 All resources are gated on `enable_canary` and `canary_alert_address` in
 `infra/stacks/<stack>.tfvars`. Code lives in `infra/canary.tf` and
@@ -80,6 +80,62 @@ aws logs describe-log-groups --region us-east-1 \
    > A `deploy.yml` run with `aws s3 sync --delete` will restore the repo
    > placeholder and wipe the keyed copy. Re-upload after any full deploy, or
    > exclude the path from the sync.
+
+## Slack delivery (optional, second channel)
+
+Both alarms can also post to Slack via AWS Chatbot, alongside the email
+subscriptions (which stay — an intrusion alarm shouldn't ride a single delivery
+path). One Chatbot channel configuration subscribes to both SNS topics (the
+primary-region key-used topic and the us-east-1 robots topic). Code lives in
+`infra/canary.tf`, gated on `enable_canary_slack`.
+
+The config is **console-created, then imported** — AWS Chatbot's Slack-workspace
+OAuth and channel role are console-only, so Terraform adopts the existing config
+rather than minting it. A plain `apply` (without importing first) would fail on
+the already-existing config, so the import step is not optional.
+
+1. **Create the config in the console.** AWS console → **Amazon Q Developer in
+   chat applications** (formerly AWS Chatbot) → **Configure new client → Slack**
+   → approve the OAuth prompt → create a Slack channel configuration. Pick the
+   target channel (invite the AWS app first for a private channel: `/invite
+   @aws`), an existing or new channel role, and the `ReadOnlyAccess` guardrail.
+   Wire at least one of the canary SNS topics so the console lets you save; the
+   test-message button confirms delivery.
+2. **Read the live values** (none are secrets — workspace identifiers + a role
+   ARN, safe in committed tfvars). The config is homed in the primary region:
+   ```bash
+   aws chatbot describe-slack-channel-configurations --region us-west-2 \
+     --query 'SlackChannelConfigurations[].{name:ConfigurationName,arn:ChatConfigurationArn,team:SlackTeamId,channel:SlackChannelId,role:IamRoleArn,topics:SnsTopicArns}'
+   ```
+3. **Set them in the stack tfvars** (already filled for millsymills.com in
+   `infra/stacks/millsymills.tfvars`):
+   ```hcl
+   enable_canary_slack       = true
+   canary_slack_config_name  = "slack-qdev-chatbot"
+   canary_slack_team_id      = "T016XEDEFBM"
+   canary_slack_channel_id   = "C05LVBZHM17"
+   canary_slack_iam_role_arn = "arn:aws:iam::025507317036:role/service-role/Slack-qdev-chatbot-role"
+   ```
+4. **Import the config, then apply.** Import adopts the live config into state;
+   apply then reconciles the one managed difference — adding the key-used topic
+   alongside the robots topic:
+   ```bash
+   # tf.sh does NOT auto-load the stack tfvars for `import` (it does for
+   # plan/apply), so pass it explicitly here -- otherwise enable_canary_slack
+   # defaults false, the resource counts to zero, and import fails with
+   # "resource address does not exist in configuration".
+   ./scripts/tf.sh <stack> import -var-file=stacks/<stack>.tfvars \
+     'aws_chatbot_slack_channel_configuration.canary[0]' \
+     'arn:aws:chatbot::<account-id>:chat-configuration/slack-channel/<config-name>'
+   ./scripts/tf.sh <stack> plan    # expect: ~ sns_topic_arns += key-used topic, nothing else
+   ./scripts/tf.sh <stack> apply
+   ```
+   There is no confirmation click as with SNS email — delivery is live once the
+   config exists.
+5. **Test** with the robots decoy (`curl -s https://<domain>/admin/backup/`);
+   the alarm should post to the Slack channel within the ~5-min alarm period.
+   For the key-used topic, trust the wiring rather than exercising the real bait
+   key (see "Testing the tripwires").
 
 ## The location → meaning registry (out-of-band, encrypted)
 

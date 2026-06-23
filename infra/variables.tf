@@ -100,6 +100,36 @@ variable "canary_alert_address" {
   default     = ""
 }
 
+variable "enable_canary_slack" {
+  description = "Also route canarytoken alarms (key-used + robots-tripwire) to Slack via an AWS Chatbot Slack channel configuration, alongside the SNS email subscriptions. Requires `enable_canary = true` and the four `canary_slack_*` identity values set. Off by default. The Chatbot config is created in the AWS console once (workspace OAuth + channel pick), then adopted into Terraform via `terraform import` — see docs/runbooks/canarytokens.md. The email subscriptions stay as a second channel either way."
+  type        = bool
+  default     = false
+}
+
+variable "canary_slack_config_name" {
+  description = "Name of the AWS Chatbot Slack channel configuration (the `<name>` in its `chat-configuration/slack-channel/<name>` ARN). Set this to the name of the console-created config so `terraform import` adopts it instead of creating a duplicate. Required when `enable_canary_slack = true`."
+  type        = string
+  default     = ""
+}
+
+variable "canary_slack_team_id" {
+  description = "Slack workspace (team) id that AWS Chatbot delivers canarytoken alerts to, e.g. `T0123ABCDEF`. Read from the live config (`aws chatbot describe-slack-channel-configurations`) or the Chatbot console. Not a secret (a workspace identifier, not a token), so it lives in the committed stack tfvars. Required when `enable_canary_slack = true`."
+  type        = string
+  default     = ""
+}
+
+variable "canary_slack_channel_id" {
+  description = "Slack channel id that AWS Chatbot posts canarytoken alerts into, e.g. `C0123ABCDEF` (Slack → channel → View channel details → bottom). Not a secret, so it lives in the committed stack tfvars. Required when `enable_canary_slack = true`."
+  type        = string
+  default     = ""
+}
+
+variable "canary_slack_iam_role_arn" {
+  description = "ARN of the IAM role the AWS Chatbot Slack config assumes (a `ReadOnlyAccess`-guardrailed channel role). Reference the service role the Chatbot console created with the config so `terraform import` adopts the existing setup without swapping its role. Not a secret. Required when `enable_canary_slack = true`."
+  type        = string
+  default     = ""
+}
+
 variable "ct_monitor_extra_issuers" {
   description = "Extra issuer organization names to add to the CT-monitor allow-list, alongside the always-included `Amazon`. Each value is matched against the `O=` or `CN=` component of the issuer DN (case-insensitive); free-substring matching was tightened to avoid silently allow-listing future CAs whose DN happens to contain an allow-listed name in an unrelated component. Use only if you start issuing certs for this domain from a CA other than ACM (e.g. `[\"Let's Encrypt\"]`)."
   type        = list(string)
