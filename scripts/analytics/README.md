@@ -31,7 +31,12 @@ already exist in S3. Design:
   `<since_ts>` before handing to DuckDB.
 - `--since "YYYY-MM-DD HH:MM"` — query from a specific local timestamp forward.
   Mutually exclusive with `--hours`; overrides `[days]`. Local time is converted
-  to UTC by the runner.
+  to UTC by the runner. Calendar-impossible values (e.g. `2026-02-30 10:00`) are
+  refused with a styled message, not a raw traceback.
+
+When a window flag (`--hours`/`--since`) is given alongside an explicitly-typed
+`[days]`, the runner prints a `note:` that the `[days]` value was overridden, so
+the shadowed value isn't dropped silently.
 - `--csv` — emit DuckDB CSV instead of the default markdown table. Pipe-friendly
   (`| q -H -d, "SELECT ..."`, `| ddgrep`, etc.). Can appear anywhere in `$@`.
 - `--save` — also write the rendered output to
