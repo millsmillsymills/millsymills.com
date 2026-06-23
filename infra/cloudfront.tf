@@ -7,14 +7,14 @@ locals {
   # Enforcing CSP for all HTML responses. `script-src 'self'` with no inline
   # allowance — every bundled script is external. assert-no-stray-inline-scripts.mjs
   # fails CI if an executable inline script this policy would block ever ships.
-  html_csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; report-uri /api/csp-report; report-to csp"
-
-  # Trusted Types report-only slice (#130), promoted into the enforcing CSP once
-  # the report stream stays clean. Allowlisted policy names: `default` (the
-  # site bundle's createScriptURL policy, src/scripts/util/trusted-types.ts) and
-  # `unifi-demo` (the /apps/unifi-demo asset's scoped createHTML policy for its
-  # static markup, public/apps/unifi-demo/app.js).
-  html_tt_report_only = "require-trusted-types-for 'script'; trusted-types default unifi-demo; report-uri /api/csp-report; report-to csp"
+  #
+  # Trusted Types are enforced (#130), promoted from the prior `-Report-Only`
+  # slice after the report stream stayed clean: DOM-XSS sinks (innerHTML,
+  # Worker URLs, etc.) throw unless wrapped by an allowlisted policy.
+  # Allowlisted names: `default` (the site bundle's createScriptURL policy,
+  # src/scripts/util/trusted-types.ts) and `unifi-demo` (the /apps/unifi-demo
+  # asset's scoped createHTML policy, public/apps/unifi-demo/app.js).
+  html_csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types default unifi-demo; report-uri /api/csp-report; report-to csp"
 }
 
 resource "aws_cloudfront_function" "index_rewrite" {
@@ -225,16 +225,6 @@ resource "aws_cloudfront_response_headers_policy" "site" {
       override = true
     }
 
-    # Trusted Types — report-only first slice (#130). The enforcing CSP above
-    # stays unchanged; this parallel `-Report-Only` header carries ONLY the
-    # Trusted Types directives so senders surface any DOM sink before promotion.
-    # Value (and the allowlisted policy names) live in local.html_tt_report_only.
-    items {
-      header   = "Content-Security-Policy-Report-Only"
-      value    = local.html_tt_report_only
-      override = true
-    }
-
     # Permissions-Policy. Strict-deny baseline for every powerful feature the
     # site does not use. The site is a static personal page with zero JS use
     # of geolocation, camera/mic, USB/serial/HID, payments, fullscreen, etc.
@@ -396,7 +386,8 @@ resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
 
     content_security_policy {
       # Byte-identical to the site policy above. Kept in lockstep so the two
-      # surfaces never drift on script-src/style-src posture.
+      # surfaces never drift on script-src/style-src posture — including the
+      # enforced Trusted Types directives (#130).
       content_security_policy = local.html_csp
       override                = true
     }
@@ -424,17 +415,6 @@ resource "aws_cloudfront_response_headers_policy" "passkey_demo" {
     items {
       header   = "Reporting-Endpoints"
       value    = "csp=\"https://${var.domain}/api/csp-report\""
-      override = true
-    }
-
-    # Trusted Types — report-only (#130). Mirrors the directive shape on
-    # `aws_cloudfront_response_headers_policy.site`. The WebAuthn demo
-    # surface uses standard DOM APIs (`textContent`, `addEventListener`)
-    # for credential UI rendering, so the expected steady-state report
-    # stream here is also empty.
-    items {
-      header   = "Content-Security-Policy-Report-Only"
-      value    = local.html_tt_report_only
       override = true
     }
 
