@@ -76,9 +76,10 @@ usage: ./scripts/analytics/run.sh <stack> [<query-name>] [days=30] [<path>] [--h
                 run with just <stack> to list available queries
   [days]        lookback window. Default 30. Capped at 90 (current-retention
                 ceiling on the logs bucket).
-  --hours N     window = now - N hours (UTC). Mutually exclusive with --since.
+  --hours N     window = now - N hours (UTC). Mutually exclusive with --since;
+                overrides [days].
   --since "T"   window start at local time T ("YYYY-MM-DD HH:MM"), converted
-                to UTC. Mutually exclusive with --hours. Overrides [days].
+                to UTC. Mutually exclusive with --hours; overrides [days].
   [<path>]      URI-prefix bind value for queries that take one (e.g.
                 path-hits). Refused for queries that don't reference <path>.
                 Must start with `/` and contain only [A-Za-z0-9/_.-].
@@ -146,6 +147,10 @@ if [[ ! -f "$QUERY_FILE" ]]; then
 fi
 
 # DAYS is the next positional. Flags were already split out of $@ above.
+# Track whether it was typed explicitly so a window flag that overrides it
+# can say so instead of silently dropping the value.
+DAYS_EXPLICIT=0
+[[ -n "${1:-}" ]] && DAYS_EXPLICIT=1
 DAYS="${1:-30}"
 shift || true
 if ! [[ "$DAYS" =~ ^[0-9]+$ ]] || ((DAYS == 0)); then
@@ -184,28 +189,33 @@ if (($# > 0)); then
 	exit 2
 fi
 
-if ! command -v duckdb >/dev/null 2>&1; then
-	printf '\033[1;31mrefusing: duckdb not on PATH. Install: brew install duckdb\033[0m\n' >&2
-	exit 127
+# Resolve the window cutoff before the duckdb/aws gates so bad input fails
+# fast (and without needing live credentials). Precedence: --since > --hours
+# > days default. A window flag overrides an explicitly-typed [days]; surface
+# that so the shadowed value isn't silently dropped. SINCE_TS is the exact UTC
+# cutoff (YYYY-MM-DD HH:MM:SS); SINCE_DATE is its UTC day-floor, kept for
+# Parquet row-group pruning. Python3 (already a dependency) handles tz math
+# portably across BSD/GNU coreutils.
+WINDOW_FLAG=""
+if [[ -n "$HOURS" ]]; then WINDOW_FLAG="--hours"; fi
+if [[ -n "$SINCE" ]]; then WINDOW_FLAG="--since"; fi
+if [[ -n "$WINDOW_FLAG" ]] && ((DAYS_EXPLICIT)); then
+	printf '\033[1;33mnote: [days] (%s) ignored — %s takes precedence\033[0m\n' "$DAYS" "$WINDOW_FLAG" >&2
 fi
 
-if ! aws sts get-caller-identity >/dev/null 2>&1; then
-	printf '\033[1;31mrefusing: aws sts get-caller-identity failed — refresh credentials, e.g.:\033[0m\n' >&2
-	# shellcheck disable=SC2016
-	printf '  eval "$(aws configure export-credentials --format env-no-export | sed '\''s/^/export /'\'')"\n' >&2
-	exit 1
-fi
-
-# Resolve the window cutoff. Precedence: --since > --hours > days default.
-# SINCE_TS is the exact UTC cutoff (YYYY-MM-DD HH:MM:SS); SINCE_DATE is its
-# UTC day-floor, kept for Parquet row-group pruning. Python3 (already a
-# dependency) handles tz math portably across BSD/GNU coreutils.
 if [[ -n "$SINCE" ]]; then
-	SINCE_TS=$(python3 -c "
+	# The shape regex validated above keeps the value injection-safe and
+	# catches malformed input, but it can't reject calendar-impossible
+	# values (month 13, day 45). strptime is the real calendar validator;
+	# guard it so a bad value yields the styled refusal, not a raw traceback.
+	if ! SINCE_TS=$(python3 -c "
 from datetime import datetime
 from zoneinfo import ZoneInfo
 print(datetime.strptime('${SINCE}', '%Y-%m-%d %H:%M').astimezone().astimezone(ZoneInfo('UTC')).strftime('%Y-%m-%d %H:%M:%S'))
-")
+" 2>/dev/null); then
+		printf '\033[1;31mrefusing: --since is not a valid calendar date/time, got %q\033[0m\n' "$SINCE" >&2
+		exit 2
+	fi
 	SINCE_DATE="${SINCE_TS%% *}"
 elif [[ -n "$HOURS" ]]; then
 	SINCE_TS=$(python3 -c "
@@ -219,6 +229,18 @@ from datetime import date, timedelta
 print((date.today() - timedelta(days=${DAYS})).isoformat())
 ")
 	SINCE_TS="${SINCE_DATE} 00:00:00"
+fi
+
+if ! command -v duckdb >/dev/null 2>&1; then
+	printf '\033[1;31mrefusing: duckdb not on PATH. Install: brew install duckdb\033[0m\n' >&2
+	exit 127
+fi
+
+if ! aws sts get-caller-identity >/dev/null 2>&1; then
+	printf '\033[1;31mrefusing: aws sts get-caller-identity failed — refresh credentials, e.g.:\033[0m\n' >&2
+	# shellcheck disable=SC2016
+	printf '  eval "$(aws configure export-credentials --format env-no-export | sed '\''s/^/export /'\'')"\n' >&2
+	exit 1
 fi
 
 # Textual substitution into the query SQL. Bucket, date, and path values
