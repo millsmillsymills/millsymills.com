@@ -304,24 +304,34 @@ class WindowManager {
 		this.state.open = [];
 		open.forEach((id) => this.open(id, { skipPosition: false, silent: true }));
 
+		let deepLinked = false;
 		try {
 			const params = new URLSearchParams(window.location.search);
 			const requested = params.get('open');
 			if (requested) {
-				requested
+				const ids = requested
 					.split(',')
 					.map((s) => s.trim())
-					.filter(Boolean)
-					.forEach((id) => this.open(id, { silent: true }));
+					.filter(Boolean);
+				ids.forEach((id) => this.open(id, { silent: true }));
+				if (ids.length) deepLinked = true;
 			}
 		} catch (err) {
 			console.warn('[mills.desktop] failed to read ?open= query param', err);
 		}
 
 		const bodyInitial = document.body?.dataset.initialOpen;
-		if (bodyInitial) this.open(bodyInitial, { silent: true });
+		if (bodyInitial) {
+			this.open(bodyInitial, { silent: true });
+			deepLinked = true;
+		}
 
-		this.maybeFirstVisitWelcome();
+		// A deep-link (?open= / per-app permalink) means the visitor arrived
+		// at a specific app, not the desktop — don't cover it with the
+		// first-visit welcome, and leave the flag unset so they still get it
+		// on a later plain desktop visit. Mirrors mobile-shell, which only
+		// auto-opens welcome when no deep-link target is present.
+		if (!deepLinked) this.maybeFirstVisitWelcome();
 	}
 
 	// First arrival auto-opens the welcome window exactly once, gated on a
