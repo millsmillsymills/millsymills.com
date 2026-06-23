@@ -114,6 +114,9 @@ jobs:
       - name: Assert llms.txt enumerates every app + well-known path
         run: ./scripts/assert-llms-txt-completeness.sh
 
+      - name: Assert MTA-STS policy present + well-formed
+        run: ./scripts/assert-mta-sts-policy.sh
+
   terraform:
     name: Terraform fmt + validate + stack consistency
     runs-on: ubuntu-24.04

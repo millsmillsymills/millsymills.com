@@ -102,6 +102,10 @@ section "node: assert llms.txt enumerates every app + well-known path"
 ./scripts/assert-llms-txt-completeness.sh
 ok "dist/llms.txt covers apps.ts + well-known paths + PGP fingerprint"
 
+section "node: assert MTA-STS policy present + well-formed"
+./scripts/assert-mta-sts-policy.sh
+ok "dist/.well-known/mta-sts.txt matches source mode + RFC 8461 shape"
+
 section "node: astro check"
 # Set CI=true so astro.config.mjs's CI guard is exercised locally — without
 # this, the local run silently bypasses the SITE_URL assertion that fires in
