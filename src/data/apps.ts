@@ -317,13 +317,6 @@ const _APPS_DATA = [
 		glyph: '📊',
 		title: 'chimera.status',
 		ogDescription: 'live snapshot of the chimera homelab box — uptime, container counts, array fill, parity, SMART. refreshed daily.',
-		// Hidden until the self-hosted GH Actions runner on chimera is
-		// registered and the first daily sync writes real data into
-		// src/data/chimera-status.json — until then the placeholder
-		// renders "awaiting first sync" and there's nothing worth
-		// advertising on the desktop. Flip to hidden:false once the
-		// runner is live and the first cron lands real data.
-		hidden: true,
 		x: 280,
 		y: 140,
 		width: 520,
