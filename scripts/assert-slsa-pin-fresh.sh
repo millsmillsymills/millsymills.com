@@ -2,11 +2,12 @@
 #
 # Assert the SLSA generator pin in deploy.yml has moved off a Node 20
 # release before GitHub removes Node 20 from the runner image entirely
-# on 2026-09-16. The 2026-06-02 default-flip date came and went with no
-# Node-24 upstream release to bump to (latest is still v2.1.0); the flip
-# only auto-bumps Node-20 actions to the Node-24 runtime, it does not
-# break them, so the tripwire is set to the hard-removal date — the point
-# at which a still-Node-20 pin genuinely stops working.
+# on 2026-09-16. The 2026-06-16 default-flip date (GitHub changelog,
+# actions/runner#4462) only auto-bumps Node-20 actions to the Node-24
+# runtime — it does not break them, and `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true`
+# opts back into Node 20 until the fall-2026 hard removal. So the tripwire
+# is set to the hard-removal date — the point at which a still-Node-20 pin
+# genuinely stops working, with no opt-out left.
 #
 # Why a guardrail and not a bump:
 #   The fix is upstream — slsa-framework/slsa-github-generator's
@@ -99,8 +100,8 @@ fi
 if [[ "${today}" < "${DEADLINE}" ]]; then
 	# Pin both sides of the subtraction to UTC so the countdown can't drift
 	# by ±1 day across timezones; macOS `date -j` defaults to local time.
-	deadline_epoch=$(TZ=UTC date -j -f "%Y-%m-%d" "${DEADLINE}" +%s 2>/dev/null \
-		|| date -u -d "${DEADLINE}" +%s)
+	deadline_epoch=$(TZ=UTC date -j -f "%Y-%m-%d" "${DEADLINE}" +%s 2>/dev/null ||
+		date -u -d "${DEADLINE}" +%s)
 	days_left=$(((deadline_epoch - $(date -u +%s)) / 86400))
 	echo "WARN: SLSA generator pin ${current_version} embeds Node-20 actions (${days_left} days until ${DEADLINE})"
 	echo "      Upstream tracking: ${UPSTREAM_ISSUE}"
