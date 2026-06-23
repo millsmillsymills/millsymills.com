@@ -124,6 +124,18 @@ export const quips: QuipBank = {
 	},
 
 	perApp: {
+		welcome: {
+			open: [
+				{ quip: 'it looks like you are trying to enter the desktop. need a hand?', pose: 'wakeup' },
+				{ quip: 'first time? double-click anything. nothing here bites.', pose: 'cool' },
+				{ quip: 'i used to do this for a living, you know.' },
+			],
+			idle: [
+				{ quip: 'press ? for the shortcuts. or just click around.' },
+				{ quip: 'every icon is a door. go on.' },
+			],
+		},
+
 		trash: {
 			idle: [
 				{ quip: "don't put me in there" },

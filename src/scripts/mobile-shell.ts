@@ -65,8 +65,29 @@ class MobileShell {
 			} catch (err) {
 				console.warn('[mills.mobile] failed to read ?open= query param', err);
 			}
+			if (!initial && this.mql.matches) initial = this.firstVisitWelcome();
 		}
 		this.show(initial, /* fromPop */ true);
+	}
+
+	// First arrival opens the welcome app once. The flag is shared with the
+	// desktop window-manager, but only the active surface's controller ever
+	// touches it (window-manager skips on the mobile breakpoint), so the
+	// two can't race to burn it. Storage-blocked browsers degrade to
+	// "always show". Callers must confirm the mobile breakpoint first.
+	private firstVisitWelcome(): string | null {
+		const KEY = 'mills.welcome.seen';
+		try {
+			if (localStorage.getItem(KEY) === '1') return null;
+		} catch (err) {
+			console.warn('[mills.mobile] welcome flag read failed', err);
+		}
+		try {
+			localStorage.setItem(KEY, '1');
+		} catch (err) {
+			console.warn('[mills.mobile] welcome flag write failed', err);
+		}
+		return 'welcome';
 	}
 
 	private bindLaunchers(): void {

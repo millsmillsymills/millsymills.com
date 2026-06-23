@@ -86,6 +86,17 @@ export interface AppDef {
 // happen to omit the field.
 const _APPS_DATA = [
 	{
+		id: 'welcome',
+		label: 'welcome',
+		glyph: '👋',
+		title: 'welcome.exe',
+		ogDescription: 'new here? a quick tour of the desktop — icons, taskbar, command palette, and deep-linkable apps.',
+		x: 200,
+		y: 96,
+		width: 560,
+		height: 460,
+	},
+	{
 		id: 'about',
 		label: 'about.me',
 		glyph: '🪪',

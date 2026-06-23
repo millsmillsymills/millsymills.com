@@ -320,6 +320,35 @@ class WindowManager {
 
 		const bodyInitial = document.body?.dataset.initialOpen;
 		if (bodyInitial) this.open(bodyInitial, { silent: true });
+
+		this.maybeFirstVisitWelcome();
+	}
+
+	// First arrival auto-opens the welcome window exactly once, gated on a
+	// localStorage flag shared with the mobile shell. Returning visitors
+	// never see it; it stays re-openable forever via /welcome/,
+	// ?open=welcome, the start menu, and the command palette. Mobile is
+	// handled by mobile-shell.ts — skip here so the flag isn't burned by
+	// the (display:none) desktop window before the mshell can act on it.
+	// Storage-blocked browsers degrade to "always show" rather than throw,
+	// mirroring clippy.ts. Opened non-silently so Clippy can narrate via
+	// the `open` trigger when it's awake and not dismissed.
+	private maybeFirstVisitWelcome() {
+		if (window.matchMedia('(max-width: 768px)').matches) return;
+
+		const KEY = 'mills.welcome.seen';
+		try {
+			if (localStorage.getItem(KEY) === '1') return;
+		} catch (err) {
+			console.warn('[mills.desktop] welcome flag read failed', err);
+		}
+		try {
+			localStorage.setItem(KEY, '1');
+		} catch (err) {
+			console.warn('[mills.desktop] welcome flag write failed', err);
+		}
+		if (this.state.open.includes('welcome')) return;
+		this.open('welcome');
 	}
 
 	// ----------------------------------------------------------------

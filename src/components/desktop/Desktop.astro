@@ -2,6 +2,7 @@
 import DesktopIcon from './DesktopIcon.astro';
 import Window from './Window.astro';
 import Taskbar from './Taskbar.astro';
+import Welcome from './apps/Welcome.astro';
 import About from './apps/About.astro';
 import Resume from './apps/Resume.astro';
 import Photos from './apps/Photos.astro';
@@ -25,6 +26,8 @@ import { apps } from '../../data/apps';
 
 const contentFor = (id: string) => {
 	switch (id) {
+		case 'welcome':
+			return Welcome;
 		case 'about':
 			return About;
 		case 'resume':
