@@ -5,8 +5,8 @@ trips them is, by construction, someone poking where they shouldn't.
 
 | Tripwire | Bait | Detection | Alert |
 |---|---|---|---|
-| AWS access-key canary | A deny-all IAM user's access key, planted in `/files/account-recovery-keys.pdf` | Dedicated multi-region CloudTrail → CloudWatch metric filter on the key id | SNS email (primary region) |
-| Robots decoy | `/admin/backup/`, Disallowed in `robots.txt` | CloudFront Function `console.log` → us-east-1 metric filter on the `CANARY_TRIPWIRE` sentinel | SNS email (us-east-1) |
+| AWS access-key canary | A deny-all IAM user's access key, planted in `/files/account-recovery-keys.pdf` | Dedicated multi-region CloudTrail → CloudWatch metric filter on the key id | SNS email (primary region) + Slack (optional) |
+| Robots decoy | `/admin/backup/`, Disallowed in `robots.txt` | CloudFront Function `console.log` → us-east-1 metric filter on the `CANARY_TRIPWIRE` sentinel | SNS email (us-east-1) + Slack (optional) |
 
 All resources are gated on `enable_canary` and `canary_alert_address` in
 `infra/stacks/<stack>.tfvars`. Code lives in `infra/canary.tf` and
@@ -80,6 +80,42 @@ aws logs describe-log-groups --region us-east-1 \
    > A `deploy.yml` run with `aws s3 sync --delete` will restore the repo
    > placeholder and wipe the keyed copy. Re-upload after any full deploy, or
    > exclude the path from the sync.
+
+## Slack delivery (optional, second channel)
+
+Both alarms can also post to Slack via AWS Chatbot, alongside the email
+subscriptions (which stay — an intrusion alarm shouldn't ride a single delivery
+path). A single Chatbot channel configuration subscribes to both SNS topics
+(the primary-region key-used topic and the us-east-1 robots topic). Code lives
+in `infra/canary.tf`, gated on `enable_canary_slack`.
+
+One-time human step before apply: AWS Chatbot needs the Slack workspace
+authorized in the console — Terraform can't do this, and it's what surfaces the
+team id.
+
+1. **Authorize the workspace.** AWS console → **Amazon Q Developer in chat
+   applications** (formerly AWS Chatbot) → **Configure new client → Slack** →
+   approve the OAuth prompt in your Slack workspace.
+2. **Grab the ids** (neither is a secret — both are workspace identifiers, safe
+   in committed tfvars):
+   - **Team id** — shown in the Chatbot console after authorization
+     (`T0123ABCDEF`).
+   - **Channel id** — Slack → the target channel → **View channel details** →
+     id at the bottom (`C0123ABCDEF`). Invite the AWS Chatbot app to a private
+     channel (`/invite @aws`) before pointing alerts at it.
+3. **Set them in the stack tfvars** and flip the flag (already stubbed,
+   commented, in `infra/stacks/millsymills.tfvars`):
+   ```hcl
+   enable_canary_slack     = true
+   canary_slack_team_id    = "T0123ABCDEF"
+   canary_slack_channel_id = "C0123ABCDEF"
+   ```
+4. **Apply.** `./scripts/tf.sh <stack> apply`. Creates the Chatbot role
+   (CloudWatch read-only, same as its guardrail cap) and the channel
+   configuration wired to both topics. Unlike SNS email, there is no
+   confirmation click — delivery starts as soon as apply lands.
+5. **Test** with the robots decoy (`curl -s https://<domain>/admin/backup/`);
+   the alarm should post to the Slack channel within the ~5-min alarm period.
 
 ## The location → meaning registry (out-of-band, encrypted)
 

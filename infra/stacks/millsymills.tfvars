@@ -28,6 +28,14 @@ deploy_environment = "production"
 enable_canary        = true
 canary_alert_address = "security@millsymills.com"
 
+# Slack delivery for canary alarms (alongside the email subscriptions). One-time
+# human step first: authorize the AWS Chatbot app in the Slack workspace (that's
+# what surfaces the team id), then fill both ids below (workspace identifiers,
+# not secrets) and flip the flag. See docs/runbooks/canarytokens.md.
+# enable_canary_slack     = true
+# canary_slack_team_id    = "T0123ABCDEF"
+# canary_slack_channel_id = "C0123ABCDEF"
+
 # ProtonMail activated 2026-05-14 per
 # docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md.
 # Verification token is supplied at apply time via
