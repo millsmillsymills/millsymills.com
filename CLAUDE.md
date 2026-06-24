@@ -150,7 +150,6 @@ The OIDC trust policy pins each stack's role to a specific workflow file via the
    - `AWS_REGION` — `us-west-2` (matches `infra/variables.tf` default and the per-stack tfvars; ACM/DNSSEC pinning to us-east-1 happens inside Terraform via the provider alias regardless).
    - `SITE_DOMAIN` — `millsymills.com`.
    - `CLOUDFRONT_DISTRIBUTION_ID` — from `terraform output cloudfront_distribution_id`.
-   - `SITE_URL` — `https://millsymills.com`. **Required** — `astro.config.mjs` refuses CI builds that do not set `SITE_URL`.
 5. In GitHub repo settings → **Environments → production → Secrets**, set:
    - `BRANCH_PROTECTION_READ_TOKEN` — a fine-grained PAT scoped to **this repo only** with **Repository permissions → Administration: Read** and nothing else. Consumed by the "Verify signed-commits enforcement on main" step in `deploy.yml` (#478) — the default `GITHUB_TOKEN` cannot read `branches/main/protection/required_signatures` regardless of `permissions:` block. See "Secrets and PAT rotation" below for cadence.
 
@@ -172,12 +171,11 @@ PAT mint flow (BRANCH_PROTECTION_READ_TOKEN):
 
 ### Build-time env vars
 
-- `SITE_URL` (required in CI) — the canonical site URL baked into the build. Must be a valid URL.
-- `NO_INDEX=true` — adds noindex to the build. `astro.config.mjs` refuses to build if `NO_INDEX=true` is combined with a `SITE_URL` containing `millsymills.com`, to prevent accidentally shipping a noindexed prod build.
+The canonical site URL is hardcoded as `site:` in `astro.config.mjs` (single stack — there is no per-deploy URL override). Under `CI=true`, `astro.config.mjs` refuses to ship a build whose git SHA can't be resolved (`GITHUB_SHA`, falling back to `git rev-parse`) — the `/privacy/` attestation footer depends on it. GitHub Actions sets `GITHUB_SHA` automatically; `ci-local.sh` exports `CI=true` to exercise the same guard locally.
 
 ### Manual deploy (fallback)
 
-1. `SITE_URL=https://millsymills.com npm run build` — outputs static files to `dist/`
+1. `npm run build` — outputs static files to `dist/`
 2. `aws s3 sync dist/ s3://millsymills.com --delete`
 3. `aws cloudfront create-invalidation --distribution-id <ID> --paths "/*"`
 

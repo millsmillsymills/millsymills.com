@@ -82,11 +82,9 @@ jobs:
           (github.event.workflow_run.conclusion == 'success' &&
            github.event.workflow_run.head_branch == 'main') }}
 
-    # Pull `vars.SITE_URL` (and friends) from the production environment.
-    # Required because typecheck + build read env-scoped vars; without this
-    # binding, `vars.SITE_URL` resolves to '' and astro.config.mjs rejects
-    # the build. The deploy job below targets the same environment for
-    # OIDC + IAM scoping.
+    # Target the production environment for OIDC + IAM scoping; the deploy
+    # job below binds the same environment. `vars.SITE_DOMAIN` populates the
+    # deployment URL surfaced in the GitHub UI.
     environment:
       name: production
       url: https://${{ vars.SITE_DOMAIN }}
@@ -157,18 +155,10 @@ jobs:
       # Without this, a manual workflow_dispatch could ship code that fails
       # `astro check`. Drop this step when the CI workflow_run gate is
       # re-enabled.
-      #
-      # `astro check` loads astro.config.mjs, which exits 1 when CI=true
-      # without SITE_URL. GitHub sets CI=true on every step, so the
-      # typecheck step needs SITE_URL too — not just the build step.
       - name: Typecheck (astro check)
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
         run: npm run check
 
       - name: Build
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
         run: npm run build
 
       # Generate an SPDX-JSON SBOM from the source tree and place it
