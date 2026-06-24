@@ -111,11 +111,10 @@ section "node: assert MTA-STS policy present + well-formed"
 ok "dist/.well-known/mta-sts.txt matches source mode + RFC 8461 shape"
 
 section "node: astro check"
-# Set CI=true so astro.config.mjs's CI guard is exercised locally — without
-# this, the local run silently bypasses the SITE_URL assertion that fires in
-# real GitHub Actions. SITE_URL is required by that same guard.
+# Set CI=true so astro.config.mjs's CI guard is exercised locally — under
+# CI it refuses to ship a build whose git SHA can't be resolved (the
+# /privacy/ attestation footer depends on it).
 export CI=true
-export SITE_URL="${SITE_URL:-https://millsymills.com}"
 # Prefer the `check` script if defined; otherwise fall back to npx.
 if node -e "process.exit(require('./package.json').scripts.check ? 0 : 1)" 2>/dev/null; then
 	npm run check
