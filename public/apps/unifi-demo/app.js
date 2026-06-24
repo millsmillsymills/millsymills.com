@@ -68,13 +68,42 @@ const nodeEls = {};
    `unifi-demo` name keeps this demo's writes identifiable in the directive
    allowlist (`trusted-types default unifi-demo`), which the header serves
    origin-wide, not per-surface. If an enforcing directive ever drops the name,
-   createPolicy throws — surface that visibly instead of dying as a blank shell. */
+   createPolicy throws — surface that visibly instead of dying as a blank shell.
+
+   createHTML is NOT a passthrough. Every template this demo builds is
+   author-authored and draws only from the static NET/PROTECT/SITES tables, so
+   the markup is structurally constrained: a fixed set of presentational tags,
+   no event-handler attributes, no script-bearing URIs. assertSafeMarkup
+   enforces exactly that shape and throws otherwise. Today nothing untrusted
+   reaches here, so the guard is invisible — but the moment a future edit
+   interpolates viewer-typed or fetched input into a string passed to ttHTML
+   (the latent DOM-XSS this guard exists to stop), the offending markup
+   (`<img onerror=…>`, `<script>`, a `javascript:` URI, …) throws here instead
+   of slipping through a policy that gave zero protection. */
+const TT_ALLOWED_TAGS = new Set([
+  'b', 'br', 'button', 'circle', 'div', 'i', 'path', 'rect', 'span', 'svg',
+]);
+function assertSafeMarkup(s) {
+  for (const m of s.matchAll(/<\/?\s*([a-zA-Z][a-zA-Z0-9-]*)/g)) {
+    const tag = m[1].toLowerCase();
+    if (!TT_ALLOWED_TAGS.has(tag)) {
+      throw new TypeError(`unifi-demo trusted-types: disallowed tag <${tag}>`);
+    }
+  }
+  if (/\son[a-z]+\s*=/i.test(s)) {
+    throw new TypeError('unifi-demo trusted-types: event-handler attribute');
+  }
+  if (/javascript:/i.test(s)) {
+    throw new TypeError('unifi-demo trusted-types: javascript: URI');
+  }
+  return s;
+}
 const ttHTML = (() => {
   const tt = window.trustedTypes;
-  if (!tt) return (s) => s;
+  if (!tt) return assertSafeMarkup;
   let policy;
   try {
-    policy = tt.createPolicy('unifi-demo', { createHTML: (s) => s });
+    policy = tt.createPolicy('unifi-demo', { createHTML: assertSafeMarkup });
   } catch (err) {
     const banner = document.createElement('p');
     banner.className = 'tt-blocked';
