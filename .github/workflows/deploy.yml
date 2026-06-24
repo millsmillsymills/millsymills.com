@@ -99,10 +99,11 @@ jobs:
       hashes: ${{ steps.hash.outputs.hashes }}
 
     steps:
-      # Belt-and-braces alongside the Terraform-managed branch protection
-      # rule in infra/github_branch_protection.tf (#432). The Terraform
-      # rule is enforced at apply time; this check gates the deploy if
-      # the UI gets toggled out from under it.
+      # Branch protection on main is governed by the GitHub-UI
+      # `default-branch-protection` ruleset + out-of-band required_signatures
+      # (not Terraform-managed; see CLAUDE.md). This check is the sole drift
+      # detector — it gates the deploy if required_signatures gets toggled
+      # off in the UI.
       #
       # `GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures`
       # requires admin permission on the repo, which the default
