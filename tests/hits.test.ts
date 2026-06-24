@@ -76,6 +76,10 @@ describe('hits handler', () => {
 		expect(cmd.input.UpdateExpression).toBe('ADD #c :one');
 		expect(cmd.input.ReturnValues).toBe('UPDATED_NEW');
 		expect(cmd.input.Key).toEqual({ pk: { S: 'hits' } });
+		// Without these the ADD expression's #c/:one placeholders are unbound and
+		// the real UpdateItem call is rejected by DynamoDB.
+		expect(cmd.input.ExpressionAttributeNames).toEqual({ '#c': 'count' });
+		expect(cmd.input.ExpressionAttributeValues).toEqual({ ':one': { N: '1' } });
 	});
 
 	it('sets no-store cache headers so counts never serve stale', async () => {
@@ -133,5 +137,21 @@ describe('hits handler', () => {
 		expect(logged.msg).toBe('hits ddb update failed');
 		expect(logged.errName).toBe('ProvisionedThroughputExceededException');
 		expect(logged.errCode).toBe(400);
+	});
+
+	it('falls back to Error/null when a non-AWS rejection lacks name and metadata', async () => {
+		const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+		// A failure originating outside the AWS SDK (e.g. a raw rejected value
+		// with no `name` and no `$metadata` envelope) must still log cleanly.
+		sendMock.mockRejectedValueOnce({ message: 'connection reset' });
+
+		const res = await invoke(getEvent());
+
+		expect(res.statusCode).toBe(500);
+		expect(JSON.parse(res.body)).toEqual({ error: 'counter unavailable' });
+		const logged = JSON.parse(logSpy.mock.calls[0]?.[0] as string);
+		expect(logged.msg).toBe('hits ddb update failed');
+		expect(logged.errName).toBe('Error');
+		expect(logged.errCode).toBe(null);
 	});
 });
