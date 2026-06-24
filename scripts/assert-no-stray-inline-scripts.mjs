@@ -43,9 +43,15 @@ function inlineScriptType(attrs) {
 // executable inline script in dist/ is therefore a violation.
 const allowed = allowedHashes();
 
+const htmlFiles = distHtmlFiles();
+if (htmlFiles.length === 0) {
+	console.error('✗ no HTML files in dist/ — refusing to assert blind');
+	process.exit(1);
+}
+
 const re = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi;
 const violations = new Map();
-for (const file of distHtmlFiles()) {
+for (const file of htmlFiles) {
 	const html = readFileSync(file, 'utf8');
 	for (const m of html.matchAll(re)) {
 		const body = m[2];
