@@ -15,6 +15,10 @@ export default defineConfig({
 			'@aws-sdk/client-s3': fileURLToPath(
 				new URL('./tests/stubs/aws-sdk-client-s3.ts', import.meta.url),
 			),
+			// Same rationale for `infra/hits.mjs`'s DynamoDB client.
+			'@aws-sdk/client-dynamodb': fileURLToPath(
+				new URL('./tests/stubs/aws-sdk-client-dynamodb.ts', import.meta.url),
+			),
 		},
 	},
 });
