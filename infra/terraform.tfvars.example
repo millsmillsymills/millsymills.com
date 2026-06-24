@@ -24,30 +24,6 @@ github_repo = "owner/repo"
 # role. Defaults to "main".
 # deploy_branch = "main"
 
-# GitHub token used by the `github` provider to manage the `main`
-# branch protection rule (see infra/github_branch_protection.tf).
-# Required for every plan/apply once the resource is in state — Terraform
-# refreshes all managed resources on each run, so a blank token fails on
-# the GitHub API refresh with `401 Bad credentials`.
-#
-# Recommended: a fine-grained personal access token scoped to this
-# single repo, with `Repository permissions → Administration:
-# Read and write` (no other scopes — branch protection is the only
-# resource managed). Pass at apply time via:
-#
-#   TF_VAR_github_token=$(gh auth token) ./scripts/tf.sh millsymills apply
-#
-# so the token never lands in tfvars on disk. Setting it here works too
-# (terraform.tfvars is gitignored) but loses the rotation property.
-#
-# Note: `$(gh auth token)` returns the gh CLI's own OAuth token — broad
-# scope (whatever the CLI was authenticated with), no per-token expiry,
-# rotated only when you re-auth the CLI. Fine for one-off applies, but
-# loses the per-PAT rotation property of a fine-grained PAT (explicit
-# expiry, scoped to a single repo, revocable on its own). For routine
-# ops, export a fine-grained PAT as `TF_VAR_github_token` instead.
-# github_token = ""
-
 # ProtonMail verification token: put it in
 # `infra/stacks/<stack>.secrets.tfvars`, NOT here. See CLAUDE.md
 # "Email (ProtonMail)". A single-stack deployer could set it here, but
