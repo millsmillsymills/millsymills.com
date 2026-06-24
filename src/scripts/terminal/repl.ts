@@ -97,7 +97,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 		// mobile keyboards sometimes insert NBSP after autocorrect, and
 		// JavaScript regex \s coverage of NBSP is engine-dependent.
 		const parts = trimmed.split(/[\s\u00a0]+/);
-		const name = parts[0];
+		const name = parts[0] ?? '';
 		const args = parts.slice(1);
 		const cmd = lookup(name);
 		if (!cmd) {
@@ -135,7 +135,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 		if (!value || value.includes(' ')) return; // only complete the command word for now
 		const matches = listCommands().filter((c) => c.name.startsWith(value));
 		if (matches.length === 1) {
-			input!.value = matches[0].name + ' ';
+			input!.value = (matches[0]?.name ?? '') + ' ';
 		} else if (matches.length > 1) {
 			writeLine(matches.map((m) => m.name).join('  '), 't-dim');
 		}
@@ -192,7 +192,7 @@ export function bootTerminal({ root, onExit }: Options): void {
 			e.preventDefault();
 			if (histIdx < history.length - 1) {
 				histIdx += 1;
-				input!.value = history[histIdx];
+				input!.value = history[histIdx] ?? '';
 			} else {
 				histIdx = history.length;
 				input!.value = '';

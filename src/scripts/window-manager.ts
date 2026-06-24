@@ -68,14 +68,14 @@ function isFiniteNumber(v: unknown): v is number {
 function isValidRect(v: unknown): v is Rect {
 	if (!v || typeof v !== 'object') return false;
 	const r = v as Record<string, unknown>;
-	return isFiniteNumber(r.x) && isFiniteNumber(r.y) && isFiniteNumber(r.w) && isFiniteNumber(r.h);
+	return isFiniteNumber(r['x']) && isFiniteNumber(r['y']) && isFiniteNumber(r['w']) && isFiniteNumber(r['h']);
 }
 
 function isValidWindowState(v: unknown): v is WindowState {
 	if (!v || typeof v !== 'object') return false;
 	const s = v as Record<string, unknown>;
-	if (s.kind === 'restored') return isValidRect(s.rect);
-	if (s.kind === 'maximized') return isValidRect(s.prior);
+	if (s['kind'] === 'restored') return isValidRect(s['rect']);
+	if (s['kind'] === 'maximized') return isValidRect(s['prior']);
 	return false;
 }
 
@@ -102,14 +102,14 @@ function migrateLegacyWindowState(v: unknown): WindowState | null {
 	if (!v || typeof v !== 'object') return null;
 	const s = v as Record<string, unknown>;
 	if (
-		isFiniteNumber(s.x) &&
-		isFiniteNumber(s.y) &&
-		isFiniteNumber(s.w) &&
-		isFiniteNumber(s.h) &&
-		typeof s.maximized === 'boolean'
+		isFiniteNumber(s['x']) &&
+		isFiniteNumber(s['y']) &&
+		isFiniteNumber(s['w']) &&
+		isFiniteNumber(s['h']) &&
+		typeof s['maximized'] === 'boolean'
 	) {
-		const rect: Rect = { x: s.x, y: s.y, w: s.w, h: s.h };
-		return s.maximized ? { kind: 'maximized', prior: rect } : { kind: 'restored', rect };
+		const rect: Rect = { x: s['x'], y: s['y'], w: s['w'], h: s['h'] };
+		return s['maximized'] ? { kind: 'maximized', prior: rect } : { kind: 'restored', rect };
 	}
 	return null;
 }
@@ -191,7 +191,7 @@ class WindowManager {
 
 	private collectWindows() {
 		document.querySelectorAll<HTMLElement>('.window').forEach((el) => {
-			const id = el.dataset.windowId;
+			const id = el.dataset['windowId'];
 			if (!id) return;
 			this.windows.set(id, el);
 		});
@@ -201,7 +201,7 @@ class WindowManager {
 		document.querySelectorAll<HTMLElement>('[data-open-window]').forEach((el) => {
 			el.addEventListener('click', (e) => {
 				e.preventDefault();
-				const id = el.dataset.openWindow;
+				const id = el.dataset['openWindow'];
 				if (id) this.open(id);
 			});
 		});
@@ -323,7 +323,7 @@ class WindowManager {
 			console.warn('[mills.desktop] failed to read ?open= query param', err);
 		}
 
-		const bodyInitial = document.body?.dataset.initialOpen;
+		const bodyInitial = document.body?.dataset['initialOpen'];
 		if (bodyInitial) {
 			this.open(bodyInitial, { silent: true });
 			deepLinked = true;
@@ -463,7 +463,7 @@ class WindowManager {
 		this.state.open.forEach((id) => {
 			const el = this.windows.get(id);
 			if (!el) return;
-			const title = el.dataset.windowTitle ?? id;
+			const title = el.dataset['windowTitle'] ?? id;
 			const btn = document.createElement('button');
 			btn.type = 'button';
 			btn.className = 'taskbar-item';

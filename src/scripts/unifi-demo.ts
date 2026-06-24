@@ -7,7 +7,7 @@ function init(): void {
 	const maybeLoad = (): void => {
 		if (loaded || win.hidden) return;
 		loaded = true;
-		const src = frame.dataset.unifiSrc;
+		const src = frame.dataset['unifiSrc'];
 		if (src) frame.src = src;
 	};
 

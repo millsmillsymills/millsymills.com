@@ -72,7 +72,7 @@ describe('repl execute() catch block', () => {
 		expect(input.type).toBe('text');
 		const errLines = root.querySelectorAll('.term__line.t-err');
 		expect(errLines.length).toBeGreaterThan(0);
-		expect(errLines[0].textContent).toContain('boom');
+		expect(errLines[0]!.textContent).toContain('boom');
 	});
 
 	it('renders error message even when handler throws a non-Error value', async () => {

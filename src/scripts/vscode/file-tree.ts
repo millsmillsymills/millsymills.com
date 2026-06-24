@@ -71,7 +71,7 @@ function addDirsFor(path: string, nodes: Map<string, VfsNode>): void {
 			nodes.set(dirPath, {
 				type: 'dir',
 				path: dirPath,
-				name: parts[i - 1],
+				name: parts[i - 1] ?? '',
 				children: [],
 			});
 		}
@@ -87,9 +87,9 @@ export function buildTree(): Map<string, VfsNode> {
 		if (entry.type === 'file' && entry.priv) continue;
 		const parts = path.split('/').filter(Boolean);
 		if (parts.length === 0) continue;           // skip root
-		const name = parts[parts.length - 1];
+		const name = parts[parts.length - 1] ?? '';
 		if (entry.type === 'file') {
-			nodes.set(path, { type: 'file', path, name, content: entry.content, language: entry.language });
+			nodes.set(path, { type: 'file', path, name, content: entry.content, ...(entry.language !== undefined ? { language: entry.language } : {}) });
 		} else {
 			nodes.set(path, { type: 'dir', path, name, children: [] });
 		}
@@ -152,7 +152,7 @@ export function attachTree(
 	container.addEventListener('click', (ev) => {
 		const el = (ev.target as HTMLElement).closest<HTMLElement>('[data-path]');
 		if (!el) return;
-		const path = el.dataset.path!;
+		const path = el.dataset['path']!;
 		const node = nodes.get(path);
 		if (!node) return;
 		if (node.type === 'dir') {
@@ -175,7 +175,7 @@ function renderChildren(parent: VfsDirNode, nodes: Map<string, VfsNode>, expande
 		li.className = `vscode-tree-item ${node.type}`;
 		const row = document.createElement('div');
 		row.className = 'vscode-tree-row';
-		row.dataset.path = node.path;
+		row.dataset['path'] = node.path;
 		const indicator = node.type === 'dir' ? (expanded.has(node.path) ? '▾' : '▸') : ' ';
 		row.textContent = `${indicator} ${node.name}${node.type === 'dir' ? '/' : ''}`;
 		li.appendChild(row);

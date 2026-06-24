@@ -37,7 +37,7 @@ register(
 				if (digest === SUDO_PASS_DIGEST) {
 					out('');
 					// re-run the wrapped command with priv elevation: temporarily clear `priv`
-					const sub = args[0];
+					const sub = args[0] ?? '';
 					const cmd = lookup(sub);
 					if (!cmd) {
 						out(`sudo: ${sub}: command not found`, 't-err');
@@ -87,7 +87,7 @@ register(
 				'every line of yaml is a bug waiting to happen.',
 				'turn it off and on again actually works most of the time.',
 			];
-			out(fortunes[Math.floor(Math.random() * fortunes.length)]);
+			out(fortunes[Math.floor(Math.random() * fortunes.length)] ?? '');
 		},
 	},
 	{

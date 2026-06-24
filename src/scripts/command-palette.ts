@@ -93,7 +93,7 @@ class CommandPalette {
 		this.list.addEventListener('click', (e) => {
 			const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cmdp-idx]');
 			if (!target) return;
-			const idx = Number(target.dataset.cmdpIdx);
+			const idx = Number(target.dataset['cmdpIdx']);
 			if (Number.isNaN(idx)) return;
 			this.activeIdx = idx;
 			this.activate();
@@ -162,7 +162,7 @@ class CommandPalette {
 		entries.forEach((e, i) => {
 			const li = document.createElement('li');
 			li.className = 'cmdp__item' + (i === this.activeIdx ? ' cmdp__item--active' : '');
-			li.dataset.cmdpIdx = String(i);
+			li.dataset['cmdpIdx'] = String(i);
 			const glyph = document.createElement('span');
 			glyph.className = 'cmdp__glyph';
 			glyph.setAttribute('aria-hidden', 'true');

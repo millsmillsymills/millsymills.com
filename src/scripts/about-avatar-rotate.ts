@@ -12,7 +12,7 @@
  */
 
 function pickFrame(img: HTMLImageElement): void {
-	const raw = img.dataset.frames;
+	const raw = img.dataset['frames'];
 	if (!raw) return;
 	let frames: unknown;
 	try {

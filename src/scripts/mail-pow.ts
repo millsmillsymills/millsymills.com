@@ -39,7 +39,7 @@ function decryptEmail(manifest: Manifest, nonce: number): string {
 	const key = sha256(enc.encode(`${manifest.salt}:${nonce}:key`));
 	const cipher = base64ToBytes(manifest.encryptedB64);
 	const out = new Uint8Array(cipher.length);
-	for (let i = 0; i < cipher.length; i++) out[i] = cipher[i] ^ key[i % key.length];
+	for (let i = 0; i < cipher.length; i++) out[i] = (cipher[i] ?? 0) ^ (key[i % key.length] ?? 0);
 	return new TextDecoder().decode(out);
 }
 
@@ -55,11 +55,11 @@ function solveSync(salt: string, bits: number): number | null {
 
 /** Reveal one link with the decrypted email. Idempotent per link. */
 function revealLink(link: HTMLAnchorElement, email: string): void {
-	if (link.dataset.powState === 'done') return;
-	const subject = link.dataset.mailSubject ?? '';
+	if (link.dataset['powState'] === 'done') return;
+	const subject = link.dataset['mailSubject'] ?? '';
 	link.href = subject ? `mailto:${email}?subject=${encodeURIComponent(subject)}` : `mailto:${email}`;
 	link.textContent = email;
-	link.dataset.powState = 'done';
+	link.dataset['powState'] = 'done';
 	const fallback = link.parentElement?.querySelector<HTMLButtonElement>('[data-mail-pow-reveal]');
 	if (fallback) fallback.hidden = true;
 }
