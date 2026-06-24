@@ -110,7 +110,7 @@ register(
 				if (!path.startsWith(prefix) || path === target) continue;
 				const rest = path.slice(prefix.length);
 				if (rest.includes('/')) continue;
-				children.push(rest + (fs[path].type === 'dir' ? '/' : ''));
+				children.push(rest + (fs[path]?.type === 'dir' ? '/' : ''));
 			}
 			if (!children.length && !fs[target]) return out(`ls: no such path: ${args[0]}`, 't-err');
 			children.sort().forEach((c) => out(c, c.endsWith('/') ? 't-dir' : ''));

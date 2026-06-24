@@ -22,13 +22,13 @@ describe('cloudfront viewer-request function', () => {
 		it('302-redirects the bare /apps/unifi-demo path to /unifi/', () => {
 			const res = run('/apps/unifi-demo');
 			expect(res.statusCode).toBe(302);
-			expect(res.headers?.location.value).toBe('/unifi/');
+			expect(res.headers?.['location']?.value).toBe('/unifi/');
 		});
 
 		it('302-redirects the trailing-slash form to /unifi/', () => {
 			const res = run('/apps/unifi-demo/');
 			expect(res.statusCode).toBe(302);
-			expect(res.headers?.location.value).toBe('/unifi/');
+			expect(res.headers?.['location']?.value).toBe('/unifi/');
 		});
 
 		it('does NOT redirect the iframe-source index.html (loop gotcha)', () => {

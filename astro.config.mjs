@@ -8,12 +8,12 @@ import { prerenderHighlights } from './src/scripts/vscode/highlight-build.mjs';
 const URL_SCRUB_PATHS = PROJECT_SNIPPETS.filter((s) => s.scrubUrl).map((s) => s.rawImportPath);
 
 function readGitSha() {
-	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+	if (process.env['GITHUB_SHA']) return process.env['GITHUB_SHA'];
 	try {
 		return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
-		if (process.env.CI === 'true') {
+		if (process.env['CI'] === 'true') {
 			throw new Error(
 				`astro.config: could not resolve git SHA in CI (GITHUB_SHA unset, git fallback failed: ${msg}). Refusing to ship an unverifiable build — the /privacy/ attestation footer depends on this.`,
 			);
@@ -49,7 +49,7 @@ function readGitLog(n) {
 		if (!raw) return [];
 		return raw.split('\n').map((line) => {
 			const [hash, subject, dateIso] = line.split('\t');
-			return { hash, subject, dateIso };
+			return { hash: hash ?? '', subject: subject ?? '', dateIso: dateIso ?? '' };
 		});
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
@@ -91,7 +91,7 @@ function buildMailPowManifest(email, salt, bits) {
 	const key = createHash('sha256').update(`${salt}:${nonce}:key`).digest();
 	const data = Buffer.from(email, 'utf8');
 	const cipher = Buffer.alloc(data.length);
-	for (let i = 0; i < data.length; i++) cipher[i] = data[i] ^ key[i % key.length];
+	for (let i = 0; i < data.length; i++) cipher[i] = (data[i] ?? 0) ^ (key[i % key.length] ?? 0);
 	return { salt, difficultyBits: bits, encryptedB64: cipher.toString('base64') };
 }
 

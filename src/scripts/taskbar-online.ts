@@ -9,7 +9,7 @@ function init(): void {
 	if (!el) return;
 	const update = (): void => {
 		const online = navigator.onLine;
-		el.dataset.online = online ? 'true' : 'false';
+		el.dataset['online'] = online ? 'true' : 'false';
 		el.setAttribute(
 			'aria-label',
 			online ? 'connection: online' : 'connection: offline',

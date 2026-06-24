@@ -22,7 +22,7 @@ function init(): void {
 		root,
 		onExit: () => {
 			const win = root.closest<HTMLElement>('.window');
-			const id = win?.dataset.windowId;
+			const id = win?.dataset['windowId'];
 			if (!id) {
 				console.warn('[mills.terminal] no enclosing .window[data-window-id]; exit no-op');
 				return;

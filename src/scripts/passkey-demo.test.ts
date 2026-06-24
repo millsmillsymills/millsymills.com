@@ -113,7 +113,7 @@ describe('parseOptionsResponse', () => {
 	it('returns the envelope when sessionId is a string and options is an object', () => {
 		const parsed = parseOptionsResponse<Record<string, unknown>>({ sessionId: 'abc', options: { challenge: 'c' } });
 		expect(parsed.sessionId).toBe('abc');
-		expect(parsed.options.challenge).toBe('c');
+		expect(parsed.options['challenge']).toBe('c');
 	});
 
 	it('throws when sessionId is missing', () => {
@@ -208,7 +208,7 @@ describe('handleRegister', () => {
 
 		await handleRegister('alice', status);
 
-		expect(status.dataset.state).toBe('ok');
+		expect(status.dataset['state']).toBe('ok');
 		expect(status.textContent).toContain('registered');
 		expect(loadStored()?.id).toBe('credential-abc123456789');
 	});
@@ -229,7 +229,7 @@ describe('handleRegister', () => {
 			spy.mockRestore();
 		}
 
-		expect(status.dataset.state).toBe('ok');
+		expect(status.dataset['state']).toBe('ok');
 		expect(status.textContent).toContain('local view unavailable');
 	});
 
@@ -243,7 +243,7 @@ describe('handleRegister', () => {
 
 		await handleRegister('alice', status);
 
-		expect(status.dataset.state).toBe('err');
+		expect(status.dataset['state']).toBe('err');
 		expect(status.textContent).toContain('server rejected the registration');
 	});
 
@@ -253,7 +253,7 @@ describe('handleRegister', () => {
 
 		await handleRegister('alice', status);
 
-		expect(status.dataset.state).toBe('err');
+		expect(status.dataset['state']).toBe('err');
 		expect(status.textContent).toContain('register failed');
 	});
 
@@ -263,7 +263,7 @@ describe('handleRegister', () => {
 
 		await handleRegister('alice', status);
 
-		expect(status.dataset.state).toBe('err');
+		expect(status.dataset['state']).toBe('err');
 		expect(status.textContent).toContain('not supported');
 	});
 });
@@ -282,7 +282,7 @@ describe('handleAuthenticate', () => {
 
 		await handleAuthenticate(status);
 
-		expect(status.dataset.state).toBe('ok');
+		expect(status.dataset['state']).toBe('ok');
 		expect(status.textContent).toContain('alice');
 	});
 
@@ -296,7 +296,7 @@ describe('handleAuthenticate', () => {
 
 		await handleAuthenticate(status);
 
-		expect(status.dataset.state).toBe('ok');
+		expect(status.dataset['state']).toBe('ok');
 		expect(status.textContent).toBe('verified.');
 	});
 
@@ -310,7 +310,7 @@ describe('handleAuthenticate', () => {
 
 		await handleAuthenticate(status);
 
-		expect(status.dataset.state).toBe('err');
+		expect(status.dataset['state']).toBe('err');
 		expect(status.textContent).toContain('server rejected the assertion');
 	});
 });

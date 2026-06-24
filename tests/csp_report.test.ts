@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // SDK before the module loads -- both happen via `vi.hoisted` which runs
 // before any import.
 const { TEST_ORIGIN_SECRET } = vi.hoisted(() => {
-	process.env.REPORT_BUCKET = 'test-bucket';
+	process.env['REPORT_BUCKET'] = 'test-bucket';
 	const TEST_ORIGIN_SECRET = 'test-origin-secret';
-	process.env.ORIGIN_SECRET = TEST_ORIGIN_SECRET;
+	process.env['ORIGIN_SECRET'] = TEST_ORIGIN_SECRET;
 	return { TEST_ORIGIN_SECRET };
 });
 
@@ -81,7 +81,7 @@ describe('csp_report handler — method gate', () => {
 			requestContext: { http: { method: 'GET' } },
 		});
 		expect(res.statusCode).toBe(405);
-		expect(res.headers?.allow).toBe('POST');
+		expect(res.headers?.['allow']).toBe('POST');
 		expect(sendMock).not.toHaveBeenCalled();
 	});
 
@@ -250,7 +250,14 @@ describe('csp_report handler — body parsing', () => {
 	});
 
 	it('returns 400 on missing body', async () => {
-		const res = await invoke(postReport({ body: undefined }));
+		const res = await invoke({
+			isBase64Encoded: false,
+			headers: {
+				'content-type': 'application/csp-report',
+				'x-origin-secret': TEST_ORIGIN_SECRET,
+			},
+			requestContext: { requestId: 'req-1', http: { method: 'POST' } },
+		});
 		expect(res.statusCode).toBe(400);
 		expect(sendMock).not.toHaveBeenCalled();
 	});
@@ -501,26 +508,26 @@ describe('csp_report handler — rejection observability', () => {
 		const res = await invoke(postReport({ headers: { 'content-type': 'text/plain' } }));
 		expect(res.statusCode).toBe(415);
 		const log = lastWarn();
-		expect(log.msg).toBe('csp-report rejected');
-		expect(log.reason).toBe('unsupported-content-type');
-		expect(log.contentType).toBe('text/plain');
+		expect(log['msg']).toBe('csp-report rejected');
+		expect(log['reason']).toBe('unsupported-content-type');
+		expect(log['contentType']).toBe('text/plain');
 	});
 
 	it('logs reason=invalid-json on a JSON parse 400', async () => {
 		const res = await invoke(postReport({ body: '{not json' }));
 		expect(res.statusCode).toBe(400);
 		const log = lastWarn();
-		expect(log.msg).toBe('csp-report rejected');
-		expect(log.reason).toBe('invalid-json');
-		expect(log.contentType).toBe('application/csp-report');
+		expect(log['msg']).toBe('csp-report rejected');
+		expect(log['reason']).toBe('invalid-json');
+		expect(log['contentType']).toBe('application/csp-report');
 	});
 
 	it('logs reason=malformed-report on a schema 400 (format-drift signal)', async () => {
 		const res = await invoke(postReport({ body: JSON.stringify({ 'not-csp': {} }) }));
 		expect(res.statusCode).toBe(400);
 		const log = lastWarn();
-		expect(log.msg).toBe('csp-report rejected');
-		expect(log.reason).toBe('malformed-report');
+		expect(log['msg']).toBe('csp-report rejected');
+		expect(log['reason']).toBe('malformed-report');
 	});
 
 	it('never includes the raw request body in a rejection log line', async () => {

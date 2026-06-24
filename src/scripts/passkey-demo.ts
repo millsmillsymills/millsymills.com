@@ -45,15 +45,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseOptionsResponse<TOptions>(data: unknown): OptionsResponse<TOptions> {
-	if (isRecord(data) && typeof data.sessionId === 'string' && isRecord(data.options)) {
-		return { sessionId: data.sessionId, options: data.options as TOptions };
+	if (isRecord(data) && typeof data['sessionId'] === 'string' && isRecord(data['options'])) {
+		return { sessionId: data['sessionId'], options: data['options'] as TOptions };
 	}
 	throw new Error('server returned a malformed options response.');
 }
 
 function parseVerifyResult(data: unknown): VerifyResult {
-	if (isRecord(data) && typeof data.verified === 'boolean') {
-		return { verified: data.verified };
+	if (isRecord(data) && typeof data['verified'] === 'boolean') {
+		return { verified: data['verified'] };
 	}
 	throw new Error('server returned a malformed verification response.');
 }
@@ -134,18 +134,18 @@ function clearStored(): boolean {
 }
 
 function writeStatus(el: HTMLElement, kind: 'idle' | 'ok' | 'err' | 'busy', msg: string): void {
-	el.dataset.state = kind;
+	el.dataset['state'] = kind;
 	el.textContent = msg;
 }
 
 function refreshStoredView(view: HTMLElement, clearBtn: HTMLButtonElement): void {
 	const stored = loadStored();
 	if (stored) {
-		view.dataset.state = 'present';
+		view.dataset['state'] = 'present';
 		view.textContent = `credential ${stored.id.slice(0, 12)}… for "${stored.displayName}" (created ${stored.createdAt})`;
 		clearBtn.disabled = false;
 	} else {
-		view.dataset.state = 'empty';
+		view.dataset['state'] = 'empty';
 		view.textContent = 'no credential registered yet.';
 		clearBtn.disabled = true;
 	}

@@ -13,7 +13,7 @@ export function getStaticPaths() {
 // previews. Render the same SVG composition to PNG at build time so
 // every prerendered route lands a working preview wherever it's shared.
 export const GET: APIRoute = ({ params }) => {
-	const id = params.app;
+	const id = params['app'];
 	const app = apps.find((a) => a.id === id);
 	if (!app) return new Response('not found', { status: 404 });
 
@@ -37,7 +37,7 @@ export const GET: APIRoute = ({ params }) => {
 	}
 	if (line) lines.push(line);
 	const clipped = lines.slice(0, 3);
-	if (lines.length > 3) clipped[2] = clipped[2].replace(/[.,;]?\s*$/, '…');
+	if (lines.length > 3) clipped[2] = (clipped[2] ?? '').replace(/[.,;]?\s*$/, '…');
 
 	const title = esc(app.title);
 	const label = esc(app.label);

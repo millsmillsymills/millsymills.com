@@ -38,7 +38,7 @@ class MobileShell {
 		this.chromeTitle = root.querySelector<HTMLElement>('.mshell__chrome-title')!;
 
 		root.querySelectorAll<HTMLElement>('[data-mobile-app]').forEach((el) => {
-			const id = el.dataset.mobileApp;
+			const id = el.dataset['mobileApp'];
 			if (id) this.apps.set(id, el);
 		});
 
@@ -55,7 +55,7 @@ class MobileShell {
 		this.mql.addEventListener('change', () => this.applyBreakpoint());
 
 		let initial: string | null = null;
-		const bodyInitial = document.body?.dataset.initialOpen;
+		const bodyInitial = document.body?.dataset['initialOpen'];
 		if (bodyInitial) {
 			initial = bodyInitial;
 		} else {
@@ -93,7 +93,7 @@ class MobileShell {
 	private bindLaunchers(): void {
 		this.home.querySelectorAll<HTMLButtonElement>('[data-open-app]').forEach((btn) => {
 			btn.addEventListener('click', () => {
-				const id = btn.dataset.openApp;
+				const id = btn.dataset['openApp'];
 				if (id) this.show(id);
 			});
 		});
@@ -175,7 +175,7 @@ class MobileShell {
 		document.body.classList.add('mshell-app-open');
 
 		const launcher = this.home.querySelector<HTMLElement>(`[data-open-app="${appId}"]`);
-		const title = launcher?.dataset.title ?? appId;
+		const title = launcher?.dataset['title'] ?? appId;
 		this.chromeTitle.textContent = title;
 		this.appView.scrollTop = 0;
 

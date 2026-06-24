@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // DynamoDBClient. Set the env var and mock the SDK before the module
 // loads -- both happen via `vi.hoisted`, which runs before any import.
 vi.hoisted(() => {
-	process.env.HITS_TABLE = 'test-hits-table';
+	process.env['HITS_TABLE'] = 'test-hits-table';
 });
 
 const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn() }));
@@ -72,14 +72,14 @@ describe('hits handler', () => {
 		await invoke(getEvent());
 
 		const cmd = sendMock.mock.calls[0]?.[0] as { input: Record<string, unknown> };
-		expect(cmd.input.TableName).toBe('test-hits-table');
-		expect(cmd.input.UpdateExpression).toBe('ADD #c :one');
-		expect(cmd.input.ReturnValues).toBe('UPDATED_NEW');
-		expect(cmd.input.Key).toEqual({ pk: { S: 'hits' } });
+		expect(cmd.input['TableName']).toBe('test-hits-table');
+		expect(cmd.input['UpdateExpression']).toBe('ADD #c :one');
+		expect(cmd.input['ReturnValues']).toBe('UPDATED_NEW');
+		expect(cmd.input['Key']).toEqual({ pk: { S: 'hits' } });
 		// Without these the ADD expression's #c/:one placeholders are unbound and
 		// the real UpdateItem call is rejected by DynamoDB.
-		expect(cmd.input.ExpressionAttributeNames).toEqual({ '#c': 'count' });
-		expect(cmd.input.ExpressionAttributeValues).toEqual({ ':one': { N: '1' } });
+		expect(cmd.input['ExpressionAttributeNames']).toEqual({ '#c': 'count' });
+		expect(cmd.input['ExpressionAttributeValues']).toEqual({ ':one': { N: '1' } });
 	});
 
 	it('sets no-store cache headers so counts never serve stale', async () => {

@@ -96,7 +96,7 @@ export function attachQuickOpen(opts: QuickOpenOptions): void {
 		visible.forEach((node, i) => {
 			const li = document.createElement('li');
 			li.className = 'vscode-qopen__item' + (i === activeIdx ? ' vscode-qopen__item--active' : '');
-			li.dataset.idx = String(i);
+			li.dataset['idx'] = String(i);
 			const name = document.createElement('span');
 			name.className = 'vscode-qopen__name';
 			name.textContent = node.name;
@@ -167,7 +167,7 @@ export function attachQuickOpen(opts: QuickOpenOptions): void {
 		}
 		const item = (e.target as HTMLElement).closest<HTMLElement>('[data-idx]');
 		if (!item) return;
-		const idx = Number(item.dataset.idx);
+		const idx = Number(item.dataset['idx']);
 		if (Number.isNaN(idx)) return;
 		activeIdx = idx;
 		activate();
