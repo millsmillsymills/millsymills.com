@@ -52,7 +52,12 @@ function init(): void {
 	overlay.classList.add('boot-overlay--on');
 	markPlayed();
 
+	let done = false;
 	const finish = () => {
+		// Latch: click-to-skip and the 1400ms timer both call finish; without
+		// this guard a near-1.4s click runs it twice, double-firing boot-done.
+		if (done) return;
+		done = true;
 		overlay.classList.add('boot-overlay--done');
 		// Notify subscribers (e.g. Clippy) that the boot animation is finished
 		// and the desktop is interactive.
