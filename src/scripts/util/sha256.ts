@@ -43,17 +43,18 @@ export function sha256(input: Uint8Array): Uint8Array {
 	for (let i = 0; i < padLen; i += 64) {
 		for (let t = 0; t < 16; t++) W[t] = dv.getUint32(i + t * 4, false);
 		for (let t = 16; t < 64; t++) {
-			const x15 = W[t - 15];
-			const x2 = W[t - 2];
+			const x15 = W[t - 15] ?? 0;
+			const x2 = W[t - 2] ?? 0;
 			const s0 = rotr(x15, 7) ^ rotr(x15, 18) ^ (x15 >>> 3);
 			const s1 = rotr(x2, 17) ^ rotr(x2, 19) ^ (x2 >>> 10);
-			W[t] = (W[t - 16] + s0 + W[t - 7] + s1) | 0;
+			W[t] = ((W[t - 16] ?? 0) + s0 + (W[t - 7] ?? 0) + s1) | 0;
 		}
-		let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+		let a = H[0] ?? 0, b = H[1] ?? 0, c = H[2] ?? 0, d = H[3] ?? 0;
+		let e = H[4] ?? 0, f = H[5] ?? 0, g = H[6] ?? 0, h = H[7] ?? 0;
 		for (let t = 0; t < 64; t++) {
 			const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
 			const ch = (e & f) ^ (~e & g);
-			const temp1 = (h + S1 + ch + K[t] + W[t]) | 0;
+			const temp1 = (h + S1 + ch + (K[t] ?? 0) + (W[t] ?? 0)) | 0;
 			const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
 			const maj = (a & b) ^ (a & c) ^ (b & c);
 			const temp2 = (S0 + maj) | 0;
@@ -66,19 +67,19 @@ export function sha256(input: Uint8Array): Uint8Array {
 			b = a;
 			a = (temp1 + temp2) | 0;
 		}
-		H[0] = (H[0] + a) | 0;
-		H[1] = (H[1] + b) | 0;
-		H[2] = (H[2] + c) | 0;
-		H[3] = (H[3] + d) | 0;
-		H[4] = (H[4] + e) | 0;
-		H[5] = (H[5] + f) | 0;
-		H[6] = (H[6] + g) | 0;
-		H[7] = (H[7] + h) | 0;
+		H[0] = ((H[0] ?? 0) + a) | 0;
+		H[1] = ((H[1] ?? 0) + b) | 0;
+		H[2] = ((H[2] ?? 0) + c) | 0;
+		H[3] = ((H[3] ?? 0) + d) | 0;
+		H[4] = ((H[4] ?? 0) + e) | 0;
+		H[5] = ((H[5] ?? 0) + f) | 0;
+		H[6] = ((H[6] ?? 0) + g) | 0;
+		H[7] = ((H[7] ?? 0) + h) | 0;
 	}
 
 	const out = new Uint8Array(32);
 	const odv = new DataView(out.buffer);
-	for (let t = 0; t < 8; t++) odv.setUint32(t * 4, H[t], false);
+	for (let t = 0; t < 8; t++) odv.setUint32(t * 4, H[t] ?? 0, false);
 	return out;
 }
 

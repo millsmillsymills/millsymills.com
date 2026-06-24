@@ -86,7 +86,7 @@ register(
 			if (!url) return out('usage: curl <url>', 't-err');
 			const m = url.match(/^https?:\/\/([^/:]+)(?::(\d+))?(\/.*)?$/);
 			if (!m) return out(`curl: (3) URL rejected: ${url}`, 't-err');
-			const hostStr = m[1];
+			const hostStr = m[1] ?? '';
 			const port = m[2] ? Number(m[2]) : 80;
 			const host = findHost(hostStr);
 			if (!host) return out(`curl: (6) Could not resolve host: ${hostStr}`, 't-err');
@@ -108,8 +108,8 @@ register(
 			const target = args[0];
 			if (!target) return out('usage: ssh <user>@<host>', 't-err');
 			const m = target.match(/^([^@]+)@(.+)$/);
-			const user = m ? m[1] : 'mills';
-			const hostStr = m ? m[2] : target;
+			const user = m ? (m[1] ?? 'mills') : 'mills';
+			const hostStr = m ? (m[2] ?? target) : target;
 			const host = findHost(hostStr);
 			if (!host) return out(`ssh: Could not resolve hostname ${hostStr}: ...`, 't-err');
 			const sshPort = host.ports.find((p) => p.service === 'ssh');

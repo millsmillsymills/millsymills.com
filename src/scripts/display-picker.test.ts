@@ -36,40 +36,40 @@ function fireStorage(key: string, newValue: string | null): void {
 
 describe('display-picker storage listener — theme branch', () => {
 	beforeEach(() => {
-		delete document.documentElement.dataset.theme;
+		delete document.documentElement.dataset['theme'];
 	});
 
 	afterEach(() => {
-		delete document.documentElement.dataset.theme;
+		delete document.documentElement.dataset['theme'];
 	});
 
 	it('mirrors a cross-tab theme switch onto data-theme', () => {
 		fireStorage(THEME_STORAGE_KEY, 'hacker');
-		expect(document.documentElement.dataset.theme).toBe('hacker');
+		expect(document.documentElement.dataset['theme']).toBe('hacker');
 	});
 
 	it('mirrors a cross-tab reset to the default theme by deleting data-theme', () => {
-		document.documentElement.dataset.theme = 'hacker';
+		document.documentElement.dataset['theme'] = 'hacker';
 		fireStorage(THEME_STORAGE_KEY, defaultTheme.id);
-		expect(document.documentElement.dataset.theme).toBeUndefined();
+		expect(document.documentElement.dataset['theme']).toBeUndefined();
 	});
 
 	it('falls back to the default theme on an unknown id (resolveTheme path)', () => {
-		document.documentElement.dataset.theme = 'hacker';
+		document.documentElement.dataset['theme'] = 'hacker';
 		fireStorage(THEME_STORAGE_KEY, 'definitely-not-a-theme');
-		expect(document.documentElement.dataset.theme).toBeUndefined();
+		expect(document.documentElement.dataset['theme']).toBeUndefined();
 	});
 
 	it('falls back to the default theme when newValue is null (storage cleared elsewhere)', () => {
-		document.documentElement.dataset.theme = 'hacker';
+		document.documentElement.dataset['theme'] = 'hacker';
 		fireStorage(THEME_STORAGE_KEY, null);
-		expect(document.documentElement.dataset.theme).toBeUndefined();
+		expect(document.documentElement.dataset['theme']).toBeUndefined();
 	});
 
 	it('ignores storage events for unrelated keys', () => {
-		document.documentElement.dataset.theme = 'hacker';
+		document.documentElement.dataset['theme'] = 'hacker';
 		fireStorage('some.unrelated.key', 'arizona');
-		expect(document.documentElement.dataset.theme).toBe('hacker');
+		expect(document.documentElement.dataset['theme']).toBe('hacker');
 	});
 });
 
@@ -114,7 +114,7 @@ describe('display-picker init idempotence', () => {
 		const root = document.createElement('div');
 		root.className = 'display';
 		const tile = document.createElement('button');
-		tile.dataset.themeChoice = 'hacker';
+		tile.dataset['themeChoice'] = 'hacker';
 		root.appendChild(tile);
 		document.body.appendChild(root);
 		const setItem = vi.spyOn(localStorage, 'setItem');

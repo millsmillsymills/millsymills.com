@@ -25,9 +25,9 @@ describe('inspector_tls handler', () => {
 		expect(res.headers['content-type']).toBe('application/json; charset=utf-8');
 		expect(res.headers['cache-control']).toBe('no-store');
 		const body = bodyOf(res);
-		expect(body.protocol).toBe('TLSv1.3');
-		expect(body.cipher).toBe('TLS_AES_256_GCM_SHA384');
-		expect(body.sni).toBe('millsymills.com');
+		expect(body['protocol']).toBe('TLSv1.3');
+		expect(body['cipher']).toBe('TLS_AES_256_GCM_SHA384');
+		expect(body['sni']).toBe('millsymills.com');
 	});
 
 	it('returns 403 when the cloudfront-viewer-tls header is missing', async () => {
@@ -55,11 +55,11 @@ describe('inspector_tls handler', () => {
 		});
 		expect(res.statusCode).toBe(200);
 		const body = bodyOf(res);
-		expect(body.protocol).toBe('TLSv1.3');
+		expect(body['protocol']).toBe('TLSv1.3');
 		// Both attacker-controlled components fail the [A-Za-z0-9._-]{0,128}
 		// shape and are blanked out, not reflected.
-		expect(body.cipher).toBe('');
-		expect(body.sni).toBe('');
+		expect(body['cipher']).toBe('');
+		expect(body['sni']).toBe('');
 	});
 
 	it('caps the raw header at 256 bytes before parsing', async () => {
@@ -74,9 +74,9 @@ describe('inspector_tls handler', () => {
 		// surviving component is rejected by the {0,128} length cap in
 		// the regex. The 'A'.repeat(300) protocol component fails both —
 		// it exceeds 128 chars even after the 256-byte slice.
-		expect(body.protocol).toBe('');
-		expect(body.cipher).toBe('');
-		expect(body.sni).toBe('');
+		expect(body['protocol']).toBe('');
+		expect(body['cipher']).toBe('');
+		expect(body['sni']).toBe('');
 	});
 
 	it('blanks all components when header coerces to a comma-joined array', async () => {
@@ -88,18 +88,18 @@ describe('inspector_tls handler', () => {
 		});
 		expect(res.statusCode).toBe(200);
 		const body = bodyOf(res);
-		expect(body.protocol).toBe('');
-		expect(body.cipher).toBe('');
-		expect(body.sni).toBe('');
+		expect(body['protocol']).toBe('');
+		expect(body['cipher']).toBe('');
+		expect(body['sni']).toBe('');
 	});
 
 	it('treats a two-component header as missing sni', async () => {
 		const res = await invoke({ 'cloudfront-viewer-tls': 'TLSv1.3:TLS_AES_256_GCM_SHA384' });
 		expect(res.statusCode).toBe(200);
 		const body = bodyOf(res);
-		expect(body.protocol).toBe('TLSv1.3');
-		expect(body.cipher).toBe('TLS_AES_256_GCM_SHA384');
-		expect(body.sni).toBe('');
+		expect(body['protocol']).toBe('TLSv1.3');
+		expect(body['cipher']).toBe('TLS_AES_256_GCM_SHA384');
+		expect(body['sni']).toBe('');
 	});
 
 	it('ignores extra colon-delimited segments past the third', async () => {
@@ -108,9 +108,9 @@ describe('inspector_tls handler', () => {
 		});
 		expect(res.statusCode).toBe(200);
 		const body = bodyOf(res);
-		expect(body.protocol).toBe('TLSv1.3');
-		expect(body.cipher).toBe('TLS_AES_256_GCM_SHA384');
-		expect(body.sni).toBe('millsymills.com');
+		expect(body['protocol']).toBe('TLSv1.3');
+		expect(body['cipher']).toBe('TLS_AES_256_GCM_SHA384');
+		expect(body['sni']).toBe('millsymills.com');
 	});
 
 	it('rejects components longer than 128 chars', async () => {
@@ -119,7 +119,7 @@ describe('inspector_tls handler', () => {
 			'cloudfront-viewer-tls': `proto:${c}:sni`,
 		});
 		const body = bodyOf(res);
-		expect(body.cipher).toBe('');
+		expect(body['cipher']).toBe('');
 	});
 
 	it('only reflects allow-listed Origin in CORS', async () => {

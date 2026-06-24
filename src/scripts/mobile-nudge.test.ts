@@ -5,7 +5,7 @@ import { init, STORAGE_KEY } from './mobile-nudge';
 function renderBanner(): HTMLElement {
 	const banner = document.createElement('aside');
 	banner.className = 'mshell__nudge';
-	banner.dataset.mobileNudge = '';
+	banner.dataset['mobileNudge'] = '';
 	banner.setAttribute('role', 'status');
 	banner.hidden = true;
 
@@ -16,7 +16,7 @@ function renderBanner(): HTMLElement {
 
 	const close = document.createElement('button');
 	close.type = 'button';
-	close.dataset.mobileNudgeDismiss = '';
+	close.dataset['mobileNudgeDismiss'] = '';
 	close.setAttribute('aria-label', 'dismiss');
 	close.textContent = '×';
 	banner.appendChild(close);
