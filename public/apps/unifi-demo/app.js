@@ -78,7 +78,8 @@ const nodeEls = {};
    reaches here, so the guard is invisible — but the moment a future edit
    interpolates viewer-typed or fetched input into a string passed to ttHTML
    (the latent DOM-XSS this guard exists to stop), the offending markup
-   (`<img onerror=…>`, `<script>`, a `javascript:` URI, …) throws here instead
+   (`<img onerror=…>`, `<svg/onload=…>`, `<script>`, a `javascript:` URI, …)
+   throws here instead
    of slipping through a policy that gave zero protection. */
 const TT_ALLOWED_TAGS = new Set([
   'b', 'br', 'button', 'circle', 'div', 'i', 'path', 'rect', 'span', 'svg',
@@ -90,7 +91,7 @@ function assertSafeMarkup(s) {
       throw new TypeError(`unifi-demo trusted-types: disallowed tag <${tag}>`);
     }
   }
-  if (/\son[a-z]+\s*=/i.test(s)) {
+  if (/[\s/]on[a-z]+\s*=/i.test(s)) {
     throw new TypeError('unifi-demo trusted-types: event-handler attribute');
   }
   if (/javascript:/i.test(s)) {
