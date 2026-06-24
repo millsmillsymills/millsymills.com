@@ -262,6 +262,7 @@ class WindowManager {
 		start.addEventListener('click', (e) => {
 			e.stopPropagation();
 			menu.hidden = !menu.hidden;
+			start.setAttribute('aria-expanded', String(!menu.hidden));
 		});
 		document.addEventListener('click', (e) => {
 			if (menu.hidden) return;
@@ -269,10 +270,12 @@ class WindowManager {
 				return;
 			}
 			menu.hidden = true;
+			start.setAttribute('aria-expanded', 'false');
 		});
 		menu.querySelectorAll<HTMLElement>('[data-open-window]').forEach((el) => {
 			el.addEventListener('click', () => {
 				menu.hidden = true;
+				start.setAttribute('aria-expanded', 'false');
 			});
 		});
 	}

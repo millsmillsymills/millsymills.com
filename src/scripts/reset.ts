@@ -28,6 +28,39 @@ export interface ResetOptions {
 	href?: string;
 }
 
+const FOCUSABLE_SELECTOR =
+	'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Visible, in-flow focusables only. `getClientRects().length` filters out
+// `display:none`/`hidden` controls (which can't take focus) so the trap's
+// first/last endpoints never resolve to an unfocusable element.
+function focusableWithin(root: HTMLElement): HTMLElement[] {
+	return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+		(el) => el.getClientRects().length > 0,
+	);
+}
+
+// Tab/Shift+Tab wrap so focus can't leave an aria-modal dialog. Returns early
+// when there's nothing (or only one thing) to cycle so the single control
+// keeps focus instead of the browser tabbing out to the page behind.
+function trapTab(e: KeyboardEvent, dialog: HTMLElement): void {
+	const focusables = focusableWithin(dialog);
+	const first = focusables[0];
+	const last = focusables[focusables.length - 1];
+	if (!first || !last) {
+		e.preventDefault();
+		return;
+	}
+	const active = document.activeElement;
+	if (e.shiftKey && active === first) {
+		e.preventDefault();
+		last.focus();
+	} else if (!e.shiftKey && active === last) {
+		e.preventDefault();
+		first.focus();
+	}
+}
+
 function prefersReducedMotion(): boolean {
 	return (
 		typeof window !== 'undefined'
@@ -137,6 +170,10 @@ function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElemen
 	no?.addEventListener('click', onNoClick);
 
 	onKeyHandler = (e: KeyboardEvent) => {
+		if (e.key === 'Tab' && activeOverlay) {
+			trapTab(e, activeOverlay);
+			return;
+		}
 		if (e.key === 'Escape') {
 			e.preventDefault();
 			closeModal();

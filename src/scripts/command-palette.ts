@@ -24,6 +24,7 @@ class CommandPalette {
 	private entries: Entry[] = [];
 	private visibleEntries: Entry[] = [];
 	private activeIdx = 0;
+	private prevFocus: HTMLElement | null = null;
 
 	constructor(root: HTMLElement) {
 		this.overlay = root;
@@ -79,6 +80,11 @@ class CommandPalette {
 			} else if (e.key === 'Enter') {
 				e.preventDefault();
 				this.activate();
+			} else if (e.key === 'Tab') {
+				// The input is the dialog's only focusable control; trap Tab so
+				// focus can't escape the aria-modal palette to the page behind.
+				e.preventDefault();
+				this.input.focus();
 			}
 		});
 	}
@@ -100,6 +106,7 @@ class CommandPalette {
 	}
 
 	private open(): void {
+		this.prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		this.overlay.hidden = false;
 		this.input.value = '';
 		this.activeIdx = 0;
@@ -109,6 +116,9 @@ class CommandPalette {
 
 	private close(): void {
 		this.overlay.hidden = true;
+		const restore = this.prevFocus;
+		this.prevFocus = null;
+		if (restore && document.contains(restore)) restore.focus();
 	}
 
 	private move(delta: number): void {
