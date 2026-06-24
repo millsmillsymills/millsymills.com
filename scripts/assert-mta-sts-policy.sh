@@ -16,6 +16,12 @@
 #      mismatched build is caught rather than passing on a hardcoded value.
 #   4. At least one `mx:` line is present.
 #   5. `max_age:` is present and >= 604800 (the RFC 8461 §3.2 SHOULD floor).
+#   6. The source mode is pinned to `enforce` (#759). Check #3 only proves
+#      source and dist agree — a deliberate flip of the source route back to
+#      `mode: testing` leaves them agreeing, so #3 passes green on a posture
+#      regression. millsymills.com is the sole stack and shipped enforce
+#      (#734/#755); pinning the expected posture turns that silent off-enforce
+#      flip into a CI failure.
 #
 # Wired into scripts/ci-local.sh after the build, next to the other
 # post-build asserts. Bash 3.2 (macOS default) compatible.
@@ -38,7 +44,17 @@ if [ -z "$SRC_MODE" ]; then
 	lint::refuse_blind "no mode: line extracted from $SRC_FILE"
 fi
 
+# Pinned posture for the sole stack (#759). Check #3 below couples dist to
+# this same SRC_MODE, so pinning the source mode transitively pins the built
+# mode to enforce too.
+EXPECTED_MODE='enforce'
+
 missing=0
+
+if [ "$SRC_MODE" != "$EXPECTED_MODE" ]; then
+	lint::fail "$SRC_FILE mode is '$SRC_MODE', expected '$EXPECTED_MODE' (posture regression off enforce — see #759)"
+	missing=1
+fi
 
 if ! grep -qE '^version: STSv1$' "$DIST_FILE"; then
 	lint::fail "$DIST_FILE missing 'version: STSv1'"
@@ -68,4 +84,4 @@ if [ "$missing" -ne 0 ]; then
 	lint::fatal "dist/.well-known/mta-sts.txt missing or malformed"
 fi
 
-lint::ok "mta-sts.txt present + well-formed (mode: $SRC_MODE, max_age >= 604800)"
+lint::ok "mta-sts.txt present + well-formed (mode: $SRC_MODE pinned to $EXPECTED_MODE, max_age >= 604800)"
