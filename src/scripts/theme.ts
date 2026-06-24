@@ -33,8 +33,8 @@ export function resolveTheme(id: string | null): Theme {
 export function applyToDocument(theme: Theme): void {
 	const root = document.documentElement;
 	if (theme.id === defaultTheme.id) {
-		delete root.dataset.theme;
+		delete root.dataset['theme'];
 		return;
 	}
-	root.dataset.theme = theme.id;
+	root.dataset['theme'] = theme.id;
 }

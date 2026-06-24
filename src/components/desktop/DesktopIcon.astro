@@ -5,8 +5,8 @@ interface Props {
 	target: string;
 	label: string;
 	glyph: string;
-	iconUrl?: string;
-	iconSprite?: IconSpriteRef;
+	iconUrl?: string | undefined;
+	iconSprite?: IconSpriteRef | undefined;
 }
 
 const { target, label, glyph, iconUrl, iconSprite } = Astro.props;

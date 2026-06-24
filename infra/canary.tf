@@ -87,6 +87,19 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "canary_trail" {
   }
 }
 
+# Versioning protects the CloudTrail log objects from deletion or overwrite by
+# a compromised IAM principal — the realistic forensic-tampering risk for an
+# intrusion-detection bucket. Mirrors the access-logs bucket (s3.tf), the same
+# low-risk-first posture from #282.
+resource "aws_s3_bucket_versioning" "canary_trail" {
+  count = var.enable_canary ? 1 : 0
+
+  bucket = aws_s3_bucket.canary_trail[0].id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # CloudTrail writes the log files; this is the AWS-documented minimum policy
 # (GetBucketAcl on the bucket + PutObject under the account prefix with the
 # bucket-owner-full-control ACL condition).
@@ -101,6 +114,11 @@ data "aws_iam_policy_document" "canary_trail" {
     principals {
       type        = "Service"
       identifiers = ["cloudtrail.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values   = ["arn:aws:cloudtrail:${var.aws_region}:${data.aws_caller_identity.current.account_id}:trail/${local.canary_name}"]
     }
   }
 
@@ -117,6 +135,11 @@ data "aws_iam_policy_document" "canary_trail" {
       test     = "StringEquals"
       variable = "s3:x-amz-acl"
       values   = ["bucket-owner-full-control"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceArn"
+      values   = ["arn:aws:cloudtrail:${var.aws_region}:${data.aws_caller_identity.current.account_id}:trail/${local.canary_name}"]
     }
   }
 }

@@ -49,10 +49,10 @@ function makeTrackRow(
 	artist: string,
 ): HTMLElement {
 	const li = document.createElement('li');
-	li.dataset.musicTrack = id;
-	li.dataset.musicSrc = src;
-	li.dataset.musicTrackTitle = title;
-	li.dataset.musicTrackArtist = artist;
+	li.dataset['musicTrack'] = id;
+	li.dataset['musicSrc'] = src;
+	li.dataset['musicTrackTitle'] = title;
+	li.dataset['musicTrackArtist'] = artist;
 	return li;
 }
 
@@ -61,40 +61,40 @@ function mountPlayer(): { root: HTMLElement; player: MusicPlayer } {
 	root.className = 'winamp';
 
 	const cassette = document.createElement('div');
-	cassette.dataset.musicState = 'paused';
+	cassette.dataset['musicState'] = 'paused';
 
 	const title = document.createElement('span');
-	title.dataset.musicTitle = '';
+	title.dataset['musicTitle'] = '';
 	const artist = document.createElement('span');
-	artist.dataset.musicArtist = '';
+	artist.dataset['musicArtist'] = '';
 	const current = document.createElement('span');
-	current.dataset.musicCurrent = '';
+	current.dataset['musicCurrent'] = '';
 	const duration = document.createElement('span');
-	duration.dataset.musicDuration = '';
+	duration.dataset['musicDuration'] = '';
 	const status = document.createElement('span');
-	status.dataset.musicStatus = '';
+	status.dataset['musicStatus'] = '';
 
 	const playBtn = document.createElement('button');
-	playBtn.dataset.musicPlay = '';
+	playBtn.dataset['musicPlay'] = '';
 	const playImg = document.createElement('img');
 	playBtn.appendChild(playImg);
 
 	const muteBtn = document.createElement('button');
-	muteBtn.dataset.musicMute = '';
+	muteBtn.dataset['musicMute'] = '';
 	const muteImg = document.createElement('img');
 	muteBtn.appendChild(muteImg);
 
 	const prevBtn = document.createElement('button');
-	prevBtn.dataset.musicPrev = '';
+	prevBtn.dataset['musicPrev'] = '';
 	const nextBtn = document.createElement('button');
-	nextBtn.dataset.musicNext = '';
+	nextBtn.dataset['musicNext'] = '';
 
 	const seek = document.createElement('input');
 	seek.type = 'range';
-	seek.dataset.musicSeek = '';
+	seek.dataset['musicSeek'] = '';
 
 	const audio = document.createElement('audio');
-	audio.dataset.musicAudio = '';
+	audio.dataset['musicAudio'] = '';
 
 	const list = document.createElement('ol');
 	list.appendChild(makeTrackRow('t1', '/audio/a.mp3', 'Track A', 'Artist'));

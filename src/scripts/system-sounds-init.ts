@@ -19,7 +19,7 @@ function syncToggle(button: HTMLButtonElement): void {
 		'aria-label',
 		enabled ? 'system sounds: on — click to mute' : 'system sounds: off — click to unmute',
 	);
-	button.dataset.soundEnabled = enabled ? 'true' : 'false';
+	button.dataset['soundEnabled'] = enabled ? 'true' : 'false';
 }
 
 function bindToggle(): void {

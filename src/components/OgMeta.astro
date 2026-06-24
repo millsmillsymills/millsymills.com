@@ -1,11 +1,11 @@
 ---
 interface Props {
 	title: string;
-	description?: string;
-	ogUrl?: string;
-	ogImage?: string;
-	ogType?: string;
-	ogSiteName?: string;
+	description?: string | undefined;
+	ogUrl?: string | undefined;
+	ogImage?: string | undefined;
+	ogType?: string | undefined;
+	ogSiteName?: string | undefined;
 }
 
 const {
@@ -34,7 +34,9 @@ function imageMimeType(url: string): string {
 {ogImage && <meta property="og:image:type" content={imageMimeType(ogImage)} />}
 {ogImage && <meta property="og:image:width" content="1200" />}
 {ogImage && <meta property="og:image:height" content="630" />}
+{ogImage && <meta property="og:image:alt" content={title} />}
 <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
 <meta name="twitter:title" content={title} />
 {description && <meta name="twitter:description" content={description} />}
 {ogImage && <meta name="twitter:image" content={ogImage} />}
+{ogImage && <meta name="twitter:image:alt" content={title} />}

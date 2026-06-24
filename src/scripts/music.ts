@@ -86,10 +86,10 @@ export class MusicPlayer {
 
 		root.querySelectorAll<HTMLElement>('[data-music-track]').forEach((el, i) => {
 			this.tracks.push({
-				id: el.dataset.musicTrack ?? `t${i}`,
-				src: el.dataset.musicSrc ?? '',
-				title: el.dataset.musicTrackTitle ?? '',
-				artist: el.dataset.musicTrackArtist ?? '',
+				id: el.dataset['musicTrack'] ?? `t${i}`,
+				src: el.dataset['musicSrc'] ?? '',
+				title: el.dataset['musicTrackTitle'] ?? '',
+				artist: el.dataset['musicTrackArtist'] ?? '',
 			});
 			el.addEventListener('click', () => this.load(i, true));
 		});
@@ -208,6 +208,7 @@ export class MusicPlayer {
 		if (i < 0 || i >= this.tracks.length) return;
 		this.current = i;
 		const track = this.tracks[i];
+		if (!track) return;
 		this.audio.src = track.src;
 		if (this.titleEl) {
 			this.titleEl.textContent = track.title;

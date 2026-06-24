@@ -7,13 +7,13 @@ import { serializeJsonForScript } from '../scripts/util/html';
 
 interface Props {
 	title: string;
-	description?: string;
-	canonical?: string;
-	ogUrl?: string;
-	ogImage?: string;
-	noindex?: boolean;
+	description?: string | undefined;
+	canonical?: string | undefined;
+	ogUrl?: string | undefined;
+	ogImage?: string | undefined;
+	noindex?: boolean | undefined;
 	/** App id to auto-open on load (overrides localStorage + ?open=). */
-	initialOpen?: string;
+	initialOpen?: string | undefined;
 }
 
 const { title, description, canonical, ogUrl, ogImage, noindex, initialOpen } = Astro.props;

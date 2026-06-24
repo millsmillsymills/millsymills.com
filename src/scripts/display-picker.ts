@@ -33,7 +33,7 @@ const BIND_FLAG = 'displayPickerBound';
 
 function syncActiveWallpaperTile(root: HTMLElement, id: string): void {
 	root.querySelectorAll<HTMLButtonElement>('[data-wallpaper]').forEach((btn) => {
-		const isActive = btn.dataset.wallpaper === id;
+		const isActive = btn.dataset['wallpaper'] === id;
 		btn.classList.toggle('display__tile--active', isActive);
 		btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 	});
@@ -41,7 +41,7 @@ function syncActiveWallpaperTile(root: HTMLElement, id: string): void {
 
 function syncActiveThemeTile(root: HTMLElement, id: string): void {
 	root.querySelectorAll<HTMLButtonElement>('[data-theme-choice]').forEach((btn) => {
-		const isActive = btn.dataset.themeChoice === id;
+		const isActive = btn.dataset['themeChoice'] === id;
 		btn.classList.toggle('display__tile--active', isActive);
 		btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 	});
@@ -72,7 +72,7 @@ function bind(root: HTMLElement): void {
 
 		const wallpaperBtn = target.closest<HTMLElement>('[data-wallpaper]');
 		if (wallpaperBtn) {
-			const id = wallpaperBtn.dataset.wallpaper;
+			const id = wallpaperBtn.dataset['wallpaper'];
 			if (!id) return;
 			const wallpaper = resolveWallpaper(id);
 			applyWallpaperToDocument(wallpaper);
@@ -84,7 +84,7 @@ function bind(root: HTMLElement): void {
 
 		const themeBtn = target.closest<HTMLElement>('[data-theme-choice]');
 		if (themeBtn) {
-			const id = themeBtn.dataset.themeChoice;
+			const id = themeBtn.dataset['themeChoice'];
 			if (!id) return;
 			const theme = resolveTheme(id);
 			applyThemeToDocument(theme);

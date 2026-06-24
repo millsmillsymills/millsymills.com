@@ -24,7 +24,7 @@ function isVscodeFocused(): boolean {
 	const visible = Array.from(
 		document.querySelectorAll<HTMLElement>('.window:not([hidden])'),
 	).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0));
-	return visible[0]?.dataset.windowId === 'vscode';
+	return visible[0]?.dataset['windowId'] === 'vscode';
 }
 
 export function initVscode(root: HTMLElement): void {
@@ -105,13 +105,13 @@ function wireActivityBar(root: HTMLElement): void {
 	activityBar.addEventListener('click', (ev) => {
 		const btn = (ev.target as HTMLElement).closest<HTMLElement>('[data-panel-btn]');
 		if (!btn) return;
-		const target = btn.dataset.panelBtn;
+		const target = btn.dataset['panelBtn'];
 		if (!target) return;
 		root.querySelectorAll<HTMLElement>('[data-panel-btn]').forEach((b) => {
-			b.classList.toggle('active', b.dataset.panelBtn === target);
+			b.classList.toggle('active', b.dataset['panelBtn'] === target);
 		});
 		root.querySelectorAll<HTMLElement>('.vscode-sidebar-panel').forEach((p) => {
-			p.hidden = p.dataset.panel !== target;
+			p.hidden = p.dataset['panel'] !== target;
 		});
 	});
 }

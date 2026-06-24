@@ -54,14 +54,14 @@ function getCurrentAppId(): AppId | undefined {
 	const visible = Array.from(
 		document.querySelectorAll<HTMLElement>('.window:not([hidden])'),
 	).sort((a, b) => Number(b.style.zIndex || 0) - Number(a.style.zIndex || 0));
-	const id = visible[0]?.dataset.windowId;
+	const id = visible[0]?.dataset['windowId'];
 	return isAppId(id) ? id : undefined;
 }
 
 function setPose(next: Pose): void {
 	if (!sprite) return;
 	currentPose = next;
-	sprite.dataset.clippyPose = next;
+	sprite.dataset['clippyPose'] = next;
 	clearTimer(returnToIdleTimer);
 	// Non-loop poses auto-return to idle after their duration. idle and sleep
 	// loop / hold and stay until something else fires.

@@ -15,7 +15,7 @@ export function renderTabs(
 		if (!node) continue;
 		const tab = document.createElement('div');
 		tab.className = `vscode-tab${path === state.activeTab ? ' active' : ''}`;
-		tab.dataset.path = path;
+		tab.dataset['path'] = path;
 
 		const label = document.createElement('span');
 		label.className = 'vscode-tab-label';
@@ -27,7 +27,7 @@ export function renderTabs(
 		close.className = 'vscode-tab-close';
 		close.textContent = '×';
 		close.setAttribute('aria-label', `close ${node.name}`);
-		close.dataset.close = path;
+		close.dataset['close'] = path;
 		tab.appendChild(close);
 
 		frag.appendChild(tab);
@@ -43,14 +43,14 @@ export function attachTabBar(container: HTMLElement): void {
 		if (closeBtn) {
 			ev.stopPropagation();
 			container.dispatchEvent(
-				new CustomEvent('vscode:close-tab', { detail: { path: closeBtn.dataset.close }, bubbles: true }),
+				new CustomEvent('vscode:close-tab', { detail: { path: closeBtn.dataset['close'] }, bubbles: true }),
 			);
 			return;
 		}
 		const tab = target.closest<HTMLElement>('.vscode-tab');
 		if (tab) {
 			container.dispatchEvent(
-				new CustomEvent('vscode:switch-tab', { detail: { path: tab.dataset.path }, bubbles: true }),
+				new CustomEvent('vscode:switch-tab', { detail: { path: tab.dataset['path'] }, bubbles: true }),
 			);
 		}
 	});

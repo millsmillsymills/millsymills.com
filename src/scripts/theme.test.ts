@@ -63,28 +63,28 @@ describe('theme.ts applyToDocument', () => {
 		// happy-dom resets between files but not always between tests;
 		// be explicit about the starting state so each assertion is
 		// hermetic.
-		delete document.documentElement.dataset.theme;
+		delete document.documentElement.dataset['theme'];
 	});
 
 	it('deletes data-theme when the default theme is applied', () => {
-		document.documentElement.dataset.theme = 'hacker';
+		document.documentElement.dataset['theme'] = 'hacker';
 		applyToDocument(defaultTheme);
-		expect(document.documentElement.dataset.theme).toBeUndefined();
+		expect(document.documentElement.dataset['theme']).toBeUndefined();
 	});
 
 	it('sets data-theme to the theme id for non-default themes', () => {
 		const hacker = findTheme('hacker');
 		expect(hacker).toBeDefined();
 		applyToDocument(hacker!);
-		expect(document.documentElement.dataset.theme).toBe('hacker');
+		expect(document.documentElement.dataset['theme']).toBe('hacker');
 	});
 
 	it('round-trips: setting then defaulting clears the attribute', () => {
 		const hacker = findTheme('hacker')!;
 		applyToDocument(hacker);
-		expect(document.documentElement.dataset.theme).toBe('hacker');
+		expect(document.documentElement.dataset['theme']).toBe('hacker');
 		applyToDocument(defaultTheme);
-		expect(document.documentElement.dataset.theme).toBeUndefined();
+		expect(document.documentElement.dataset['theme']).toBeUndefined();
 	});
 });
 
