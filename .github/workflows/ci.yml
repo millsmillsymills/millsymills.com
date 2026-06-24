@@ -63,6 +63,9 @@ jobs:
       - name: Assert security-controls.ts code paths resolve
         run: ./scripts/assert-security-controls-paths.sh
 
+      - name: Assert privacy-copy.ts citation paths resolve
+        run: ./scripts/assert-privacy-copy-paths.sh
+
       - name: Assert COOP / COEP / CORP headers wired
         run: ./scripts/assert-coop-coep-corp.sh
 
