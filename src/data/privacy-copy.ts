@@ -90,7 +90,7 @@ export const copy = {
 		heading: 'bots / AI',
 		body: 'the site publishes `/robots.txt`, including the cloudflare `Content-Signal:` extension. the current signal is `search=yes, ai-input=yes, ai-train=yes` — indexing, summarising, and training on this site\'s content are all explicitly welcome. `/llms.txt` and `/llms-full.txt` are published as a fast path for agents.',
 		citations: [
-			{ label: 'src/pages/robots.txt.ts', path: 'src/pages/robots.txt.ts' },
+			{ label: 'public/robots.txt', path: 'public/robots.txt' },
 			{ label: 'src/pages/llms.txt.ts', path: 'src/pages/llms.txt.ts' },
 			{ label: 'src/pages/llms-full.txt.ts', path: 'src/pages/llms-full.txt.ts' },
 		] as Citation[],
