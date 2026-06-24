@@ -43,6 +43,10 @@ section "node: assert security-controls.ts code paths resolve"
 ./scripts/assert-security-controls-paths.sh
 ok "every cited code path on /security/ exists in the repo"
 
+section "node: assert privacy-copy.ts citation paths resolve"
+./scripts/assert-privacy-copy-paths.sh
+ok "every cited path on /privacy/ exists in the repo"
+
 section "node: assert COOP / COEP / CORP headers wired"
 ./scripts/assert-coop-coep-corp.sh
 ok "cross-origin isolation headers shipping with promised values"
