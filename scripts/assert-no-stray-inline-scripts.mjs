@@ -9,9 +9,10 @@
 // This proves no executable inline script ships. Runs after `npm run build`.
 
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
+const DIST = 'dist';
 const CF_TF = 'infra/cloudfront.tf';
 const EXECUTABLE_TYPES = new Set(['', 'text/javascript', 'application/javascript', 'module']);
 
@@ -27,7 +28,7 @@ function allowedHashes() {
 }
 
 function distHtmlFiles() {
-	return execFileSync('find', ['dist', '-name', '*.html'], { encoding: 'utf8' })
+	return execFileSync('find', [DIST, '-name', '*.html'], { encoding: 'utf8' })
 		.trim()
 		.split('\n')
 		.filter(Boolean);
@@ -42,6 +43,18 @@ function inlineScriptType(attrs) {
 // expected to be empty — that is the correct state, not an error. Any
 // executable inline script in dist/ is therefore a violation.
 const allowed = allowedHashes();
+
+let distStat;
+try {
+	distStat = statSync(DIST);
+} catch {
+	console.error('✗ dist/ not found — run `npm run build` first');
+	process.exit(1);
+}
+if (!distStat.isDirectory()) {
+	console.error('✗ dist/ is not a directory');
+	process.exit(1);
+}
 
 const htmlFiles = distHtmlFiles();
 if (htmlFiles.length === 0) {
