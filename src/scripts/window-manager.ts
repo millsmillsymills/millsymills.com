@@ -259,24 +259,31 @@ class WindowManager {
 		const menu = document.querySelector<HTMLElement>('.start-menu');
 		if (!start || !menu) return;
 
+		// Single source of truth for menu visibility + the matching
+		// `aria-expanded` on the start button. Routing every open/close through
+		// here keeps the two from drifting instead of re-syncing the attribute
+		// at each call site.
+		const setMenuOpen = (open: boolean) => {
+			menu.hidden = !open;
+			start.setAttribute('aria-expanded', String(open));
+		};
+
 		start.addEventListener('click', (e) => {
 			e.stopPropagation();
-			menu.hidden = !menu.hidden;
-			start.setAttribute('aria-expanded', String(!menu.hidden));
+			setMenuOpen(Boolean(menu.hidden));
 		});
 		document.addEventListener('click', (e) => {
 			if (menu.hidden) return;
 			if (e.target instanceof Node && (menu.contains(e.target) || start.contains(e.target))) {
 				return;
 			}
-			menu.hidden = true;
-			start.setAttribute('aria-expanded', 'false');
+			setMenuOpen(false);
 		});
-		menu.querySelectorAll<HTMLElement>('[data-open-window]').forEach((el) => {
-			el.addEventListener('click', () => {
-				menu.hidden = true;
-				start.setAttribute('aria-expanded', 'false');
-			});
+		// Every menu item dismisses the menu, not just window openers — the
+		// `data-reset-trigger` item (handled in reset.ts) is a menuitem too, and
+		// before this it left the menu open with `aria-expanded="true"` (#789).
+		menu.querySelectorAll<HTMLElement>('.start-menu__item').forEach((el) => {
+			el.addEventListener('click', () => setMenuOpen(false));
 		});
 	}
 
