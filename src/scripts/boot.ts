@@ -7,7 +7,13 @@
 
 import { dispatchBootDone } from './util/events';
 
-const SESSION_KEY = 'mills.boot.played';
+export const SESSION_KEY = 'mills.boot.played';
+
+const FINISH_DELAY_MS = 1400;
+const REMOVE_DELAY_MS = 600;
+
+let activeOverlay: HTMLElement | null = null;
+let done = false;
 
 function shouldPlay(): boolean {
 	try {
@@ -36,7 +42,21 @@ function markPlayed(): void {
 	}
 }
 
-function init(): void {
+export function finish(): void {
+	// Latch: click-to-skip and the FINISH_DELAY_MS timer both call finish;
+	// without this guard a near-1.4s click runs it twice, double-firing
+	// boot-done.
+	if (done) return;
+	done = true;
+	activeOverlay?.classList.add('boot-overlay--done');
+	const overlay = activeOverlay;
+	// Notify subscribers (e.g. Clippy) that the boot animation is finished
+	// and the desktop is interactive.
+	dispatchBootDone();
+	if (overlay) setTimeout(() => overlay.remove(), REMOVE_DELAY_MS);
+}
+
+export function init(): void {
 	const overlay = document.querySelector<HTMLElement>('.boot-overlay');
 	if (!overlay) return;
 
@@ -52,23 +72,24 @@ function init(): void {
 	overlay.classList.add('boot-overlay--on');
 	markPlayed();
 
-	let done = false;
-	const finish = () => {
-		// Latch: click-to-skip and the 1400ms timer both call finish; without
-		// this guard a near-1.4s click runs it twice, double-firing boot-done.
-		if (done) return;
-		done = true;
-		overlay.classList.add('boot-overlay--done');
-		// Notify subscribers (e.g. Clippy) that the boot animation is finished
-		// and the desktop is interactive.
-		dispatchBootDone();
-		setTimeout(() => overlay.remove(), 600);
-	};
+	activeOverlay = overlay;
+	done = false;
 
 	// allow click-to-skip
 	overlay.addEventListener('click', finish, { once: true });
 
-	setTimeout(finish, 1400);
+	setTimeout(finish, FINISH_DELAY_MS);
+}
+
+/**
+ * Test-only: clear module-scope state so each spec starts from a
+ * known fresh-tab baseline. Underscored to make the not-for-prod
+ * intent loud. Mirrors the `__resetForTests` pattern used in
+ * `system-sounds.ts`.
+ */
+export function __resetForTests(): void {
+	activeOverlay = null;
+	done = false;
 }
 
 if (typeof window !== 'undefined') {
@@ -78,5 +99,3 @@ if (typeof window !== 'undefined') {
 		init();
 	}
 }
-
-export {};
