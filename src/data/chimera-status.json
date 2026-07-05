@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-07-04T08:29:54Z",
-  "uptime_seconds": 2109203,
+  "generated_at": "2026-07-05T08:46:13Z",
+  "uptime_seconds": 2196582,
   "containers": {
     "running": 19,
     "stopped": 13
   },
   "array": {
-    "used_tb": 81.5,
+    "used_tb": 81.6,
     "total_tb": 82.9,
     "parity_state": "DISK_OK"
   },
   "smart_warnings": 13,
-  "last_updated": "2026-07-04T08:29:54Z"
+  "last_updated": "2026-07-05T08:46:13Z"
 }
