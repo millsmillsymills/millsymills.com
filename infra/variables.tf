@@ -106,19 +106,19 @@ variable "canary_slack_config_name" {
 }
 
 variable "canary_slack_team_id" {
-  description = "Slack workspace (team) id that AWS Chatbot delivers canarytoken alerts to, e.g. `T0123ABCDEF`. Read from the live config (`aws chatbot describe-slack-channel-configurations`) or the Chatbot console. Not a secret (a workspace identifier, not a token), so it lives in the committed stack tfvars. Required when `enable_canary_slack = true`."
+  description = "Slack workspace (team) id that AWS Chatbot delivers canarytoken alerts to, e.g. `T0123ABCDEF`. Read from the live config (`aws chatbot describe-slack-channel-configurations`) or the Chatbot console. Not a credential, but it names the alerting workspace, so it lives in the gitignored per-stack secrets tfvars (`infra/stacks/<stack>.secrets.tfvars`) rather than the committed stack file. Required when `enable_canary_slack = true`."
   type        = string
   default     = ""
 }
 
 variable "canary_slack_channel_id" {
-  description = "Slack channel id that AWS Chatbot posts canarytoken alerts into, e.g. `C0123ABCDEF` (Slack → channel → View channel details → bottom). Not a secret, so it lives in the committed stack tfvars. Required when `enable_canary_slack = true`."
+  description = "Slack channel id that AWS Chatbot posts canarytoken alerts into, e.g. `C0123ABCDEF` (Slack → channel → View channel details → bottom). Not a credential, but it names the channel an intruder would want to avoid tripping, so it lives in the gitignored per-stack secrets tfvars. Required when `enable_canary_slack = true`."
   type        = string
   default     = ""
 }
 
 variable "canary_slack_iam_role_arn" {
-  description = "ARN of the IAM role the AWS Chatbot Slack config assumes (a `ReadOnlyAccess`-guardrailed channel role). Reference the service role the Chatbot console created with the config so `terraform import` adopts the existing setup without swapping its role. Not a secret. Required when `enable_canary_slack = true`."
+  description = "ARN of the IAM role the AWS Chatbot Slack config assumes (a `ReadOnlyAccess`-guardrailed channel role). Reference the service role the Chatbot console created with the config so `terraform import` adopts the existing setup without swapping its role. Not a credential, but the ARN embeds the AWS account id, so it lives in the gitignored per-stack secrets tfvars. Required when `enable_canary_slack = true`."
   type        = string
   default     = ""
 }

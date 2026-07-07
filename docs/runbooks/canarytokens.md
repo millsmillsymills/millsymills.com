@@ -101,30 +101,37 @@ the already-existing config, so the import step is not optional.
    @aws`), an existing or new channel role, and the `ReadOnlyAccess` guardrail.
    Wire at least one of the canary SNS topics so the console lets you save; the
    test-message button confirms delivery.
-2. **Read the live values** (none are secrets — workspace identifiers + a role
-   ARN, safe in committed tfvars). The config is homed in the primary region:
+2. **Read the live values.** None are credentials, but the role ARN embeds the
+   AWS account id and the Slack ids name the alerting workspace/channel, so
+   they stay out of committed files in this public repo. The config is homed
+   in the primary region:
    ```bash
    aws chatbot describe-slack-channel-configurations --region us-west-2 \
      --query 'SlackChannelConfigurations[].{name:ConfigurationName,arn:ChatConfigurationArn,team:SlackTeamId,channel:SlackChannelId,role:IamRoleArn,topics:SnsTopicArns}'
    ```
-3. **Set them in the stack tfvars** (already filled for millsymills.com in
-   `infra/stacks/millsymills.tfvars`):
+3. **Set them across the two tfvars files.** The toggle and config name go in
+   the committed `infra/stacks/<stack>.tfvars`:
    ```hcl
-   enable_canary_slack       = true
-   canary_slack_config_name  = "slack-qdev-chatbot"
-   canary_slack_team_id      = "T016XEDEFBM"
-   canary_slack_channel_id   = "C05LVBZHM17"
-   canary_slack_iam_role_arn = "arn:aws:iam::025507317036:role/service-role/Slack-qdev-chatbot-role"
+   enable_canary_slack      = true
+   canary_slack_config_name = "<config-name>"
+   ```
+   The identity values go in the gitignored `infra/stacks/<stack>.secrets.tfvars`
+   (auto-loaded by `scripts/tf.sh` for plan/apply/destroy/refresh):
+   ```hcl
+   canary_slack_team_id      = "T..."
+   canary_slack_channel_id   = "C..."
+   canary_slack_iam_role_arn = "arn:aws:iam::<account-id>:role/service-role/<role-name>"
    ```
 4. **Import the config, then apply.** Import adopts the live config into state;
    apply then reconciles the one managed difference — adding the key-used topic
    alongside the robots topic:
    ```bash
-   # tf.sh does NOT auto-load the stack tfvars for `import` (it does for
-   # plan/apply), so pass it explicitly here -- otherwise enable_canary_slack
+   # tf.sh does NOT auto-load either tfvars file for `import` (it does for
+   # plan/apply), so pass both explicitly here -- otherwise enable_canary_slack
    # defaults false, the resource counts to zero, and import fails with
    # "resource address does not exist in configuration".
    ./scripts/tf.sh <stack> import -var-file=stacks/<stack>.tfvars \
+     -var-file=stacks/<stack>.secrets.tfvars \
      'aws_chatbot_slack_channel_configuration.canary[0]' \
      'arn:aws:chatbot::<account-id>:chat-configuration/slack-channel/<config-name>'
    ./scripts/tf.sh <stack> plan    # expect: ~ sns_topic_arns += key-used topic, nothing else
