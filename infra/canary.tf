@@ -62,13 +62,16 @@ resource "aws_s3_bucket" "canary_trail" {
 
   # Same posture as the access-logs bucket (s3.tf): force_destroy=false
   # alone would fail the bucket destroy on a non-empty bucket, but the
-  # destroy plan still runs the sibling resources' destroys in parallel.
-  # prevent_destroy short-circuits the whole plan, so flipping
-  # enable_canary true -> false requires removing this block first — a
-  # deliberate two-step that keeps a one-line tfvars edit from purging
-  # trail evidence. With versioning on, force_destroy=true would have
-  # purged noncurrent versions too, exactly the wrong default for an
-  # evidence bucket.
+  # destroy plan still destroys the sibling resources (trail, policy,
+  # versioning, PAB) before the bucket delete fails, leaving a dead
+  # trail. prevent_destroy short-circuits the whole plan, so flipping
+  # enable_canary true -> false requires removing this block AND
+  # emptying the bucket (version-aware — versioning is on) before the
+  # toggle flip takes; see the enable_canary description in
+  # infra/variables.tf for the full recovery path. The point: a
+  # one-line tfvars edit must not purge trail evidence. With versioning
+  # on, force_destroy=true would have purged noncurrent versions too,
+  # exactly the wrong default for an evidence bucket.
   lifecycle {
     prevent_destroy = true
   }
@@ -103,12 +106,14 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "canary_trail" {
 # Versioning protects the CloudTrail log objects from deletion or overwrite by
 # a compromised IAM principal — the realistic forensic-tampering risk for an
 # intrusion-detection bucket. Same low-risk-first posture as the access-logs
-# bucket (s3.tf, #282), with one deliberate difference: no lifecycle rule.
-# CloudTrail writes each log file under a unique key and never overwrites, so
-# noncurrent versions only ever appear if something deletes or clobbers an
-# object — they ARE the tamper evidence versioning exists to keep, and
-# expiring them would defeat the point. Volume is near zero (management-events
-# trail, no data events), so unbounded retention costs nothing.
+# bucket (s3.tf, #282), with one deliberate difference: no S3 lifecycle
+# configuration (aws_s3_bucket_lifecycle_configuration). CloudTrail writes
+# each log file under a unique key and never overwrites, so noncurrent
+# versions only ever appear if something deletes or clobbers an object — they
+# ARE the tamper evidence versioning exists to keep, and expiring them would
+# defeat the point. Byte volume is tiny (management-events trail, no data
+# events — event count is nontrivial but the gzipped files are not), so
+# unbounded retention costs nothing.
 resource "aws_s3_bucket_versioning" "canary_trail" {
   count = var.enable_canary ? 1 : 0
 
@@ -389,7 +394,7 @@ resource "aws_chatbot_slack_channel_configuration" "canary" {
   lifecycle {
     precondition {
       condition     = var.canary_slack_config_name != "" && var.canary_slack_team_id != "" && var.canary_slack_channel_id != "" && var.canary_slack_iam_role_arn != ""
-      error_message = "enable_canary_slack requires canary_slack_config_name, canary_slack_team_id, canary_slack_channel_id, and canary_slack_iam_role_arn. Create the config in the AWS Chatbot console, read those values from it, then `terraform import` per docs/runbooks/canarytokens.md."
+      error_message = "enable_canary_slack requires canary_slack_config_name (committed stack tfvars) plus canary_slack_team_id, canary_slack_channel_id, and canary_slack_iam_role_arn (gitignored infra/stacks/<stack>.secrets.tfvars — a missing secrets file is the usual cause of this error). Create the config in the AWS Chatbot console, read those values from it, then `terraform import` per docs/runbooks/canarytokens.md."
     }
   }
 }
