@@ -143,6 +143,9 @@ function scrubVscodeSnippets() {
 	};
 }
 
+/** @type {Map<string, string>} */
+const chunkSlugToId = new Map();
+
 export default defineConfig({
 	output: 'static',
 	site: 'https://millsymills.com',
@@ -168,10 +171,29 @@ export default defineConfig({
 			// production CSP `script-src 'self'` blocks them — see #129/#231.
 			rollupOptions: {
 				output: {
+					// Chunk names must not be path-shaped: rolldown rejects
+					// absolute/relative paths in the `[name]` substitution, so
+					// the module id is slugified instead of returned verbatim.
+					// Two modules merging into one chunk would re-inline the
+					// survivor past the CSP guard, so slug collisions are a
+					// build failure, not a warning.
 					manualChunks(id) {
-						if (id.includes('astro_type_script')) return id;
-						if (/src\/scripts\/[^/]+\.ts$/.test(id)) return id;
-						return undefined;
+						if (!id.includes('astro_type_script') && !/src\/scripts\/[^/]+\.ts$/.test(id)) {
+							return undefined;
+						}
+						const srcIdx = id.lastIndexOf('/src/');
+						// Off-src ids fall back to the last path segment so an
+						// absolute host path can never reach a public dist/ filename.
+						const scoped = srcIdx === -1 ? (id.split('/').pop() ?? id) : id.slice(srcIdx + 1);
+						const slug = scoped.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+						const prior = chunkSlugToId.get(slug);
+						if (prior !== undefined && prior !== id) {
+							throw new Error(
+								`manualChunks slug collision: "${slug}" maps to both "${prior}" and "${id}" — rename one module`,
+							);
+						}
+						chunkSlugToId.set(slug, id);
+						return slug;
 					},
 				},
 			},
