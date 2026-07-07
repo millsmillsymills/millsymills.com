@@ -32,16 +32,19 @@ canary_alert_address = "security@millsymills.com"
 # AWS Chatbot Slack config "slack-qdev-chatbot" was created in the console
 # (workspace OAuth + #infra-alerts channel) and is adopted into Terraform via
 # `terraform import` -- NOT a plain apply, which would fail on the existing
-# config. Run the import before the first apply with these set. Values are
-# workspace identifiers (not secrets) read from the live config. Terraform's
+# config. Run the import before the first apply with these set. Terraform's
 # only change on apply is adding the us-west-2 key-used topic alongside the
 # us-east-1 robots topic the console already wired. See
 # docs/runbooks/canarytokens.md.
-enable_canary_slack       = true
-canary_slack_config_name  = "slack-qdev-chatbot"
-canary_slack_team_id      = "T016XEDEFBM"
-canary_slack_channel_id   = "C05LVBZHM17"
-canary_slack_iam_role_arn = "arn:aws:iam::025507317036:role/service-role/Slack-qdev-chatbot-role"
+#
+# canary_slack_team_id / canary_slack_channel_id / canary_slack_iam_role_arn
+# live in the gitignored infra/stacks/millsymills.secrets.tfvars (auto-loaded
+# by scripts/tf.sh). Not credentials, but the role ARN embeds the AWS account
+# id and the Slack ids name the alerting workspace/channel -- infra metadata
+# this public repo shouldn't hand out. Without the secrets file, plan fails
+# fast on the aws_chatbot_slack_channel_configuration precondition.
+enable_canary_slack      = true
+canary_slack_config_name = "slack-qdev-chatbot"
 
 # ProtonMail activated 2026-05-14 per
 # docs/superpowers/specs/2026-05-14-millsymills-mail-activation-design.md.
