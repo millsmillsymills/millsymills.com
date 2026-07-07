@@ -74,4 +74,11 @@ describe('assert-no-stray-inline-scripts guard', () => {
 		expect(output).toContain('dist/ not found');
 		expect(output).toContain('npm run build');
 	});
+
+	it('exits 1 with a not-a-directory message when dist is a file', () => {
+		writeFileSync(join(fixture, 'dist'), '');
+		const { status, output } = runGuard(fixture);
+		expect(status).toBe(1);
+		expect(output).toContain('dist/ is not a directory');
+	});
 });
