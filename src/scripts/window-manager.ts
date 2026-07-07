@@ -92,8 +92,8 @@ function applyRect(el: HTMLElement, rect: Rect): void {
 }
 
 /**
- * Migrate the legacy `{x, y, w, h, maximized}` shape (mills.desktop.v1
- * before this PR) to the discriminated-union shape. Old persistence is
+ * Migrate the legacy `{x, y, w, h, maximized}` shape (what mills.desktop.v1
+ * persisted pre-ADT) to the discriminated-union shape. Old persistence is
  * upgraded in place on the next save; nothing is lost. Returns null for
  * shapes that are neither legacy nor current — those get dropped with a
  * warn at the call site.
