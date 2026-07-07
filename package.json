@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@simplewebauthn/browser": "13.3.0",
-    "astro": "6.4.6"
+    "astro": "7.0.4"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.9",
