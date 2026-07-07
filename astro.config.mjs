@@ -184,7 +184,7 @@ export default defineConfig({
 						const srcIdx = id.lastIndexOf('/src/');
 						// Off-src ids fall back to the last path segment so an
 						// absolute host path can never reach a public dist/ filename.
-						const scoped = srcIdx === -1 ? id.split('/').pop() : id.slice(srcIdx + 1);
+						const scoped = srcIdx === -1 ? (id.split('/').pop() ?? id) : id.slice(srcIdx + 1);
 						const slug = scoped.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 						const prior = chunkSlugToId.get(slug);
 						if (prior !== undefined && prior !== id) {
