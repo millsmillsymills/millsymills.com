@@ -145,4 +145,23 @@ test.describe('high-value app tracer bullets', () => {
 			reloadedDisplayWindow.getByRole('button', { name: 'set wallpaper: arizona iced tea' }),
 		).toHaveAttribute('aria-pressed', 'true');
 	});
+
+	test('reset-desktop menu item dismisses the start menu and resets aria-expanded', async ({
+		page,
+	}) => {
+		await page.goto('/');
+		await assertBootSuppressed(page);
+
+		const start = page.locator('.taskbar__start');
+		const menu = page.locator('.start-menu');
+		await start.click();
+		await expect(menu).toBeVisible();
+		await expect(start).toHaveAttribute('aria-expanded', 'true');
+
+		await menu.locator('[data-reset-trigger]').click();
+
+		await expect(page.locator('.reset-confirm')).toBeVisible();
+		await expect(menu).toBeHidden();
+		await expect(start).toHaveAttribute('aria-expanded', 'false');
+	});
 });
