@@ -39,22 +39,22 @@ function inlineScriptType(attrs) {
 	return m ? m[1].trim().toLowerCase() : '';
 }
 
-// `script-src` is 'self' with no pinned inline hashes today, so `allowed` is
-// expected to be empty — that is the correct state, not an error. Any
-// executable inline script in dist/ is therefore a violation.
-const allowed = allowedHashes();
-
 let distStat;
 try {
 	distStat = statSync(DIST);
 } catch {
-	console.error('✗ dist/ not found — run `npm run build` first');
+	console.error(`✗ dist/ not found at ${DIST} — run \`npm run build\` first`);
 	process.exit(1);
 }
 if (!distStat.isDirectory()) {
 	console.error('✗ dist/ is not a directory');
 	process.exit(1);
 }
+
+// `script-src` is 'self' with no pinned inline hashes today, so `allowed` is
+// expected to be empty — that is the correct state, not an error. Any
+// executable inline script in dist/ is therefore a violation.
+const allowed = allowedHashes();
 
 const htmlFiles = distHtmlFiles();
 if (htmlFiles.length === 0) {
