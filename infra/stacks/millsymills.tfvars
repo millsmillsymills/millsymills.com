@@ -39,7 +39,9 @@ canary_alert_address = "security@millsymills.com"
 #
 # canary_slack_team_id / canary_slack_channel_id / canary_slack_iam_role_arn
 # live in the gitignored infra/stacks/millsymills.secrets.tfvars (auto-loaded
-# by scripts/tf.sh). Not credentials, but the role ARN embeds the AWS account
+# by scripts/tf.sh for plan/apply/destroy/refresh -- NOT import; pass both
+# -var-files explicitly there, see the runbook). Not credentials, but the
+# role ARN embeds the AWS account
 # id and the Slack ids name the alerting workspace/channel -- infra metadata
 # this public repo shouldn't hand out. Without the secrets file, plan fails
 # fast on the aws_chatbot_slack_channel_configuration precondition.

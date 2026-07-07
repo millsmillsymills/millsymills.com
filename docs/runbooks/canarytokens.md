@@ -127,7 +127,7 @@ the already-existing config, so the import step is not optional.
    alongside the robots topic:
    ```bash
    # tf.sh does NOT auto-load either tfvars file for `import` (it does for
-   # plan/apply), so pass both explicitly here -- otherwise enable_canary_slack
+   # plan/apply/destroy/refresh), so pass both explicitly here -- otherwise enable_canary_slack
    # defaults false, the resource counts to zero, and import fails with
    # "resource address does not exist in configuration".
    ./scripts/tf.sh <stack> import -var-file=stacks/<stack>.tfvars \

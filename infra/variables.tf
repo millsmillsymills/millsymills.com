@@ -82,7 +82,11 @@ variable "ct_monitor_alert_address" {
 }
 
 variable "enable_canary" {
-  description = "Provision the AWS access-key canarytoken (#141): a Deny-all IAM user + access key, a dedicated CloudTrail, and a CloudWatch alarm that emails on any use of the key. Off by default — opt in per stack once `canary_alert_address` is set and the planting step (docs/runbooks/canarytokens.md) is understood. Never commit the key's secret."
+  description = <<-DESC
+    Provision the AWS access-key canarytoken (#141): a Deny-all IAM user + access key, a dedicated CloudTrail, and a CloudWatch alarm that emails on any use of the key. Off by default — opt in per stack once `canary_alert_address` is set and the planting step (docs/runbooks/canarytokens.md) is understood. Never commit the key's secret.
+
+    Flipping true -> false: the trail bucket carries `force_destroy = false` + `prevent_destroy = true` (it holds the tamper evidence the canary exists to produce), so the flip is three steps — remove the `lifecycle` block from `aws_s3_bucket.canary_trail` in infra/canary.tf, empty the bucket with a version-aware sweep (versioning is on, so `aws s3 rm --recursive` alone leaves noncurrent versions and delete markers behind), then re-apply with the toggle off.
+  DESC
   type        = bool
   default     = false
 }
@@ -209,7 +213,7 @@ variable "enable_access_logging" {
   description = <<-DESC
     Provision the <domain>-logs S3 bucket + S3 server access logging + CloudFront access-log v2 delivery as a coherent unit. Drop on stacks that don't need access logs.
 
-    Flipping true -> false on a non-empty bucket: the bucket is created with `force_destroy = false` (forensic logs must not vanish on a mistaken apply), so Terraform's destroy of `aws_s3_bucket.logs[0]` will fail when the bucket still holds objects. Recovery requires emptying the bucket (`aws s3 rm s3://<domain>-logs --recursive --include "*"`, plus a version-aware sweep — see `infra/s3.tf` versioning + lifecycle settings) BEFORE re-applying with the toggle off. The other gated resources (PAB, ownership, SSE, versioning, lifecycle, bucket policy) destroy in parallel; if the bucket destroy fails partway through, the bucket can briefly exist without its `DenyInsecureTransport` policy + per-bucket `PublicAccessBlock` until apply is re-run. Not catastrophic (no public ACL grants are made anywhere) but defense-in-depth is degraded during the gap.
+    Flipping true -> false on a non-empty bucket: the bucket is created with `force_destroy = false` (forensic logs must not vanish on a mistaken apply), so Terraform's destroy of `aws_s3_bucket.logs[0]` will fail when the bucket still holds objects. Recovery requires emptying the bucket (`aws s3 rm s3://<domain>-logs --recursive --include "*"`, plus a version-aware sweep — see `infra/s3.tf` versioning + lifecycle settings) BEFORE re-applying with the toggle off. The other gated resources (PAB, ownership, SSE, versioning, lifecycle, bucket policy) destroy before the bucket delete is attempted; if the bucket destroy then fails, the bucket can briefly exist without its `DenyInsecureTransport` policy + per-bucket `PublicAccessBlock` until apply is re-run. Not catastrophic (no public ACL grants are made anywhere) but defense-in-depth is degraded during the gap.
   DESC
   type        = bool
   default     = true
