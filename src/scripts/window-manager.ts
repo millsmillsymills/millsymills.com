@@ -51,7 +51,7 @@ interface Rect {
 // maximized with the prior geometry tucked away so unmaximize knows where
 // to return to. The boolean+geometry pairing the previous shape used
 // allowed `{maximized: true, x:0, y:0, w:0, h:0}` to mean nothing in
-// particular; the ADT shape rejects that at the type level. (#57 sub-3)
+// particular; the ADT shape rejects that at the type level.
 type WindowState =
 	| { kind: 'restored'; rect: Rect }
 	| { kind: 'maximized'; prior: Rect };
@@ -139,8 +139,8 @@ function loadState(): DesktopState {
 	const open = Array.isArray(p.open) ? p.open.filter((id): id is string => typeof id === 'string') : [];
 
 	// Validate each WindowState. Drop entries with non-finite numerics or
-	// unrecognized shape; old `{x,y,w,h,maximized}` entries (pre-#57 sub-3)
-	// are migrated to the new discriminated-union shape on the fly.
+	// unrecognized shape; legacy pre-ADT `{x,y,w,h,maximized}` entries are
+	// migrated to the discriminated-union shape on the fly.
 	const windows: Record<string, WindowState> = {};
 	if (p.windows && typeof p.windows === 'object') {
 		for (const [id, val] of Object.entries(p.windows as Record<string, unknown>)) {
@@ -245,8 +245,8 @@ class WindowManager {
 
 	// External callers (e.g. terminal `exit` command) request a close via this
 	// event so they don't have to hold a reference to the WindowManager
-	// instance — and so the taskbar / state.open are kept in sync. Mutating
-	// .hidden directly leaves stale entries; #51. Event shape is declared in
+	// instance — and so the taskbar / state.open are kept in sync (mutating
+	// .hidden directly leaves stale entries). Event shape is declared in
 	// util/events.ts so the callback parameter is auto-typed.
 	private bindExternalCloseEvent() {
 		document.addEventListener('mills:close-window', (ev) => {
