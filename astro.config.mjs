@@ -178,7 +178,9 @@ export default defineConfig({
 							return undefined;
 						}
 						const srcIdx = id.lastIndexOf('/src/');
-						const scoped = srcIdx === -1 ? id : id.slice(srcIdx + 1);
+						// Off-src ids fall back to the basename so an absolute
+						// host path can never reach a public dist/ filename.
+						const scoped = srcIdx === -1 ? (id.split('/').pop() ?? id) : id.slice(srcIdx + 1);
 						return scoped.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 					},
 				},
