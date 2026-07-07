@@ -280,8 +280,8 @@ class WindowManager {
 			setMenuOpen(false);
 		});
 		// Every menu item dismisses the menu, not just window openers — the
-		// `data-reset-trigger` item (handled in reset.ts) is a menuitem too, and
-		// before this it left the menu open with `aria-expanded="true"` (#789).
+		// `data-reset-trigger` item (handled in reset.ts) is a menuitem too and
+		// must not leave the menu open with `aria-expanded="true"`.
 		menu.querySelectorAll<HTMLElement>('.start-menu__item').forEach((el) => {
 			el.addEventListener('click', () => setMenuOpen(false));
 		});
