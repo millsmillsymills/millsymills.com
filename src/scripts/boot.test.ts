@@ -9,12 +9,12 @@ function renderOverlay(): HTMLElement {
 	return overlay;
 }
 
-function countBootDone(): () => number {
+function countBootDone(signal: AbortSignal): () => number {
 	let count = 0;
 	const handler = () => {
 		count += 1;
 	};
-	window.addEventListener('mills:boot-done', handler);
+	window.addEventListener('mills:boot-done', handler, { signal });
 	return () => count;
 }
 
@@ -26,13 +26,17 @@ describe('boot SESSION_KEY', () => {
 });
 
 describe('boot once-only boot-done', () => {
+	let listeners: AbortController;
+
 	beforeEach(() => {
+		listeners = new AbortController();
 		vi.useFakeTimers();
 		sessionStorage.clear();
 		__resetForTests();
 	});
 
 	afterEach(() => {
+		listeners.abort();
 		vi.useRealTimers();
 		sessionStorage.clear();
 		__resetForTests();
@@ -42,7 +46,7 @@ describe('boot once-only boot-done', () => {
 
 	it('dispatches boot-done exactly once when both click-skip and the timer fire', () => {
 		const overlay = renderOverlay();
-		const fired = countBootDone();
+		const fired = countBootDone(listeners.signal);
 
 		init();
 
@@ -55,7 +59,7 @@ describe('boot once-only boot-done', () => {
 
 	it('dispatches boot-done exactly once when only the timer fires', () => {
 		renderOverlay();
-		const fired = countBootDone();
+		const fired = countBootDone(listeners.signal);
 
 		init();
 		vi.advanceTimersByTime(1400);
@@ -65,7 +69,7 @@ describe('boot once-only boot-done', () => {
 
 	it('does not re-dispatch on a redundant direct finish() call', () => {
 		renderOverlay();
-		const fired = countBootDone();
+		const fired = countBootDone(listeners.signal);
 
 		init();
 		finish();
