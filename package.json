@@ -12,6 +12,7 @@
     "check": "astro check",
     "sync:memes": "node scripts/sync-memes.mjs vendor/tech-memes/memes.json vendor/tech-memes/memes",
     "test": "vitest run",
+    "pretest:e2e": "npm run build",
     "test:e2e": "playwright test",
     "astro": "astro"
   },
