@@ -58,7 +58,20 @@ resource "aws_s3_bucket" "canary_trail" {
   count = var.enable_canary ? 1 : 0
 
   bucket        = "${local.canary_name}-trail"
-  force_destroy = true
+  force_destroy = false
+
+  # Same posture as the access-logs bucket (s3.tf): force_destroy=false
+  # alone would fail the bucket destroy on a non-empty bucket, but the
+  # destroy plan still runs the sibling resources' destroys in parallel.
+  # prevent_destroy short-circuits the whole plan, so flipping
+  # enable_canary true -> false requires removing this block first — a
+  # deliberate two-step that keeps a one-line tfvars edit from purging
+  # trail evidence. With versioning on, force_destroy=true would have
+  # purged noncurrent versions too, exactly the wrong default for an
+  # evidence bucket.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "canary_trail" {
@@ -89,8 +102,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "canary_trail" {
 
 # Versioning protects the CloudTrail log objects from deletion or overwrite by
 # a compromised IAM principal — the realistic forensic-tampering risk for an
-# intrusion-detection bucket. Mirrors the access-logs bucket (s3.tf), the same
-# low-risk-first posture from #282.
+# intrusion-detection bucket. Same low-risk-first posture as the access-logs
+# bucket (s3.tf, #282), with one deliberate difference: no lifecycle rule.
+# CloudTrail writes each log file under a unique key and never overwrites, so
+# noncurrent versions only ever appear if something deletes or clobbers an
+# object — they ARE the tamper evidence versioning exists to keep, and
+# expiring them would defeat the point. Volume is near zero (management-events
+# trail, no data events), so unbounded retention costs nothing.
 resource "aws_s3_bucket_versioning" "canary_trail" {
   count = var.enable_canary ? 1 : 0
 
