@@ -168,10 +168,18 @@ export default defineConfig({
 			// production CSP `script-src 'self'` blocks them — see #129/#231.
 			rollupOptions: {
 				output: {
+					// Chunk names must not be path-shaped: rolldown rejects
+					// absolute/relative paths in the `[name]` substitution, so
+					// the module id is slugified instead of returned verbatim.
+					// The mapping stays 1:1 (full src-relative path + script
+					// index), so no two modules merge into one chunk.
 					manualChunks(id) {
-						if (id.includes('astro_type_script')) return id;
-						if (/src\/scripts\/[^/]+\.ts$/.test(id)) return id;
-						return undefined;
+						if (!id.includes('astro_type_script') && !/src\/scripts\/[^/]+\.ts$/.test(id)) {
+							return undefined;
+						}
+						const srcIdx = id.lastIndexOf('/src/');
+						const scoped = srcIdx === -1 ? id : id.slice(srcIdx + 1);
+						return scoped.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 					},
 				},
 			},
