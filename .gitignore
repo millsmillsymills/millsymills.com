@@ -1,5 +1,7 @@
 # build output
 dist/
+# remotion scratch renders (canonical output is committed at public/videos/)
+video/out/
 # generated types
 .astro/
 

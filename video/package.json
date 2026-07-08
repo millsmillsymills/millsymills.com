@@ -1,0 +1,21 @@
+{
+	"name": "millsymills-video",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"studio": "remotion studio",
+		"render": "remotion render src/index.ts intro ../public/videos/intro.mp4 --crf 26",
+		"poster": "remotion still src/index.ts intro ../public/videos/intro-poster.jpg --frame 400",
+		"check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@remotion/cli": "4.0.486",
+		"react": "19.2.7",
+		"react-dom": "19.2.7",
+		"remotion": "4.0.486"
+	},
+	"devDependencies": {
+		"@types/react": "19.2.17",
+		"typescript": "6.0.3"
+	}
+}
