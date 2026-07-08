@@ -198,6 +198,45 @@ describe('first-visit intro video', () => {
 		expect(fired()).toBe(1);
 	});
 
+	it('focuses the skip button when the intro activates', () => {
+		const overlay = renderOverlay();
+		init();
+
+		const skip = overlay.querySelector<HTMLButtonElement>('[data-intro-skip]');
+		expect(skip).not.toBeNull();
+		expect(document.activeElement).toBe(skip);
+	});
+
+	it('Escape settles the intro and dispatches boot-done once', async () => {
+		renderOverlay();
+		const fired = countBootDone(listeners.signal);
+		init();
+
+		document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		await vi.runAllTimersAsync();
+
+		expect(fired()).toBe(1);
+		expect(document.querySelector('.boot-overlay')).toBeNull();
+	});
+
+	it('toggles mute state and button label on [data-intro-unmute] clicks', () => {
+		const overlay = renderOverlay();
+		init();
+
+		const video = overlay.querySelector<HTMLVideoElement>('.boot-overlay__video');
+		const unmute = overlay.querySelector<HTMLButtonElement>('[data-intro-unmute]');
+		expect(video?.muted).toBe(true);
+		expect(unmute?.textContent).toBe('unmute');
+
+		unmute?.click();
+		expect(video?.muted).toBe(false);
+		expect(unmute?.textContent).toBe('mute');
+
+		unmute?.click();
+		expect(video?.muted).toBe(true);
+		expect(unmute?.textContent).toBe('unmute');
+	});
+
 	it('degrades to CRT when localStorage is unavailable', () => {
 		// vitest.setup.ts backs localStorage with a plain-class MemoryStorage
 		// shim (not a Storage subclass, to dodge Node's built-in webstorage
@@ -260,6 +299,30 @@ describe('replay intro', () => {
 
 		video?.dispatchEvent(new Event('ended'));
 		await vi.runAllTimersAsync();
+		expect(document.querySelector('.boot-overlay--replay')).toBeNull();
+		expect(fired()).toBe(before);
+	});
+
+	it('focuses the skip button when replay starts', () => {
+		const btn = bootThenOpenMenu();
+		btn.click();
+
+		const skip = document.querySelector<HTMLButtonElement>(
+			'.boot-overlay--replay [data-intro-skip]',
+		);
+		expect(skip).not.toBeNull();
+		expect(document.activeElement).toBe(skip);
+	});
+
+	it('Escape settles the replay overlay without re-firing boot-done', async () => {
+		const fired = countBootDone(listeners.signal);
+		const btn = bootThenOpenMenu();
+		const before = fired();
+		btn.click();
+
+		document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		await vi.runAllTimersAsync();
+
 		expect(document.querySelector('.boot-overlay--replay')).toBeNull();
 		expect(fired()).toBe(before);
 	});

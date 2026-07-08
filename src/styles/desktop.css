@@ -1374,7 +1374,7 @@ body.mshell-app-open {
 /* Intro-video variant of the boot overlay. The <video> and controls are
    injected by boot.ts only when the intro actually plays, so repeat
    visitors never fetch the MP4. pointer-events must be re-enabled here:
-   the base .boot-overlay is pointer-events: none (line ~1333), which
+   the base .boot-overlay is pointer-events: none, which
    would make skip/unmute unclickable. */
 .boot-overlay--intro,
 .boot-overlay--replay {

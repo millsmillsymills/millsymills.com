@@ -19,9 +19,13 @@ test('second load in the same context skips the video', async ({ page }) => {
 	await page.locator('[data-intro-skip]').click();
 	await expect(page.locator('.boot-overlay')).toHaveCount(0);
 
+	// Clear the session flag so the reload exercises the localStorage
+	// (mills.intro.seen) suppression path, not the session one.
+	await page.addInitScript(() => sessionStorage.clear());
 	await page.reload();
-	await expect(page.locator('#desktop')).toBeVisible();
+	await expect(page.locator('.boot-overlay')).toBeVisible();
 	await expect(page.locator('.boot-overlay__video')).toHaveCount(0);
+	await expect(page.locator('#desktop')).toBeVisible();
 });
 
 test('start menu replays the intro without re-running boot', async ({ page }) => {

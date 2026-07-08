@@ -105,19 +105,33 @@ function buildIntroChrome(muted: boolean): IntroChrome {
 }
 
 function wireIntroLifecycle(chrome: IntroChrome, settle: () => void): void {
-	chrome.video.addEventListener('ended', settle, { once: true });
-	chrome.video.addEventListener('error', settle, { once: true });
+	// Escape must reach the same single-settle path as skip — wiring it here
+	// (rather than in playIntro/replayIntro) keeps first-visit and replay
+	// overlays behaviorally identical and guarantees the listener is torn
+	// down on every settle route (ended/error/skip/play-rejection/Escape).
+	function onKeydown(e: KeyboardEvent): void {
+		if (e.key !== 'Escape') return;
+		settleOnce();
+	}
+	function settleOnce(): void {
+		document.removeEventListener('keydown', onKeydown);
+		settle();
+	}
+	document.addEventListener('keydown', onKeydown);
+	chrome.video.addEventListener('ended', settleOnce, { once: true });
+	chrome.video.addEventListener('error', settleOnce, { once: true });
 	chrome.controls.querySelector('[data-intro-skip]')?.addEventListener(
 		'click',
 		(e) => {
 			e.stopPropagation();
-			settle();
+			settleOnce();
 		},
 		{ once: true },
 	);
+	chrome.controls.querySelector<HTMLButtonElement>('[data-intro-skip]')?.focus();
 	chrome.video.play().catch((err: unknown) => {
 		console.warn('[mills.intro] playback failed; settling', err);
-		settle();
+		settleOnce();
 	});
 }
 
@@ -174,7 +188,6 @@ function initReplay(): void {
 		if (!trigger) return;
 		e.preventDefault();
 		e.stopPropagation();
-		document.querySelector('.start-menu')?.setAttribute('hidden', '');
 		replayIntro();
 	});
 }
