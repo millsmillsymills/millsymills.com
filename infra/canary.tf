@@ -373,9 +373,11 @@ resource "aws_cloudwatch_metric_alarm" "canary_robots_tripwire" {
 # live config rather than being minted here. After import the only managed drift
 # is sns_topic_arns: the console wires the robots topic, Terraform adds the
 # key-used topic so the higher-severity alarm reaches Slack too. The channel
-# role and its ReadOnlyAccess guardrail stay outside Terraform; the role's
-# trust policy is hardened out-of-band with an aws:ChatbotSourceArn condition
-# (confused-deputy prevention -- see docs/runbooks/canarytokens.md).
+# role itself stays outside Terraform (adopted by ARN); the ReadOnlyAccess
+# guardrail on the channel configuration is pinned in guardrail_policy_arns
+# below. The role's trust policy is hardened out-of-band with an
+# aws:ChatbotSourceArn condition (confused-deputy prevention -- see
+# docs/runbooks/canarytokens.md).
 
 resource "aws_chatbot_slack_channel_configuration" "canary" {
   count = local.canary_slack_enabled ? 1 : 0
