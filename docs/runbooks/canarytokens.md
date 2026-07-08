@@ -101,6 +101,38 @@ the already-existing config, so the import step is not optional.
    @aws`), an existing or new channel role, and the `ReadOnlyAccess` guardrail.
    Wire at least one of the canary SNS topics so the console lets you save; the
    test-message button confirms delivery.
+
+   **Harden the channel role's trust policy.** The console-created trust
+   policy allows `chatbot.amazonaws.com` to assume the role with no condition,
+   so any account's Chatbot configuration could ride the service principal
+   (confused deputy). Scope it to this account's chat configurations with the
+   Chatbot-specific `aws:ChatbotSourceArn` key — the generic
+   `aws:SourceAccount`/`aws:SourceArn` keys are not documented for Chatbot's
+   AssumeRole and would break role assumption:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Principal": { "Service": "chatbot.amazonaws.com" },
+         "Action": "sts:AssumeRole",
+         "Condition": {
+           "ArnLike": {
+             "aws:ChatbotSourceArn": "arn:aws:chatbot::<ACCOUNT_ID>:chat-configuration/*"
+           }
+         }
+       }
+     ]
+   }
+   ```
+   Apply with `aws iam update-assume-role-policy --role-name <role> --policy-document file://trust.json`
+   and confirm the live configuration ARNs match the pattern via the
+   `describe-slack-channel-configurations` call in step 2. If Chatbot commands
+   in Slack stop working, first re-run that call and fix any mismatch between
+   the live `ChatConfigurationArn` and the `ArnLike` value (partition or scope
+   drift); re-applying the unconditioned document is the last resort, since it
+   removes the confused-deputy control.
 2. **Read the live values.** None are credentials, but the role ARN embeds the
    AWS account id and the Slack ids name the alerting workspace/channel, so
    they stay out of committed files in this public repo. The config is homed
