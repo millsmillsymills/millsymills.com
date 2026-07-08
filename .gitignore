@@ -2,8 +2,8 @@
 dist/
 # remotion scratch renders (canonical output is committed at public/videos/)
 video/out/
-# intro soundtrack is supplied locally (not redistributable); required at
-# video/assets/track.mp3 for renders
+# intro soundtrack is supplied locally; place it at video/assets/track.mp3
+# before running a render
 video/assets/track.mp3
 # generated types
 .astro/
