@@ -78,7 +78,7 @@ export const gear: readonly GearGroup[] = [
 			},
 			{
 				name: 'ProtonMail custom domain',
-				detail: 'SPF + 3-selector DKIM + DMARC p=reject (strict alignment)',
+				detail: 'SPF + 3-selector DKIM + DMARC p=reject (strict alignment) + MTA-STS enforce + TLS-RPT',
 				why: 'mail provider that earns the privacy-engineer cred. paranoid DMARC from day one.',
 			},
 			{

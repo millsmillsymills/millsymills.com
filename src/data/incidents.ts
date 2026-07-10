@@ -37,7 +37,10 @@ export const incidents: Incident[] = [
 		title: 'ELUSIVE COMET',
 		annotation:
 			'cross-org intel sharing on an active campaign using zoom remote-control as a social-engineering primitive. hardened the endpoint fleet against it and coauthored the public writeup. the win was collective — sharing indicators and screenshots across several targeted orgs before the vendor shipped their own hardening.',
-		link: { label: 'trail of bits blog', href: 'https://blog.trailofbits.com/' },
+		link: {
+			label: 'trail of bits blog',
+			href: 'https://blog.trailofbits.com/2025/04/17/mitigating-elusive-comet-zoom-remote-control-attacks/',
+		},
 	},
 	{
 		year: 2017,

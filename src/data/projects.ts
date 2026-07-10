@@ -7,7 +7,7 @@ export interface Project {
 	readonly tagline: string;
 	readonly description: string;
 	readonly repo: string;
-	readonly kind: 'mcp' | 'site' | 'tool';
+	readonly kind: 'mcp' | 'site' | 'tool' | 'research';
 	readonly tags: readonly string[];
 	/** command line to install (e.g. `claude mcp add ...`). Optional. */
 	readonly install?: string;
@@ -21,11 +21,51 @@ export interface Project {
 
 export const projects: readonly Project[] = [
 	{
+		id: 'a2a-security-research',
+		name: 'a2a-security-research',
+		tagline: 'A2A protocol threat model + two reproducible PoC exploits',
+		description:
+			'A threat model and control catalog for the A2A (Agent-to-Agent) protocol v1.0, mapped to OWASP Agentic Security Initiative IDs, with two reproducible local proof-of-concept exploits (routing hijack; webhook SSRF). Central finding: the spec provides the machinery for secure deployments but mandates almost none of it. Analysis is pinned to a verified spec baseline — versions were introspected before any code was written.',
+		repo: 'https://github.com/millsmillsymills/a2a-security-research',
+		kind: 'research',
+		tags: ['a2a', 'agents', 'threat-model', 'security-research', 'python'],
+	},
+	{
+		id: 'ellingson-a2a-signed-card',
+		name: 'ellingson-a2a-signed-card',
+		tagline: 'spec-native signed A2A Agent Card — keyless, transparency-logged',
+		description:
+			'Serves an A2A v1.0 Agent Card whose trust is bound to its delivery channel. RFC 7515 JWS over the RFC 8785 canonical card, signed keylessly in CI (GitHub OIDC → Fulcio → Rekor), verified fail-closed with identity pinning, and attested at the delivery channel with DNSSEC + Certificate Transparency monitoring. No long-lived signing keys exist in the repo or CI.',
+		repo: 'https://github.com/millsmillsymills/ellingson-a2a-signed-card',
+		kind: 'research',
+		tags: ['a2a', 'sigstore', 'supply-chain', 'dnssec', 'python'],
+	},
+	{
+		id: 'consistency-check',
+		name: 'consistency-check',
+		tagline: 'canonical standards + audit tool for the MCP suite',
+		description:
+			'Grades every server in the MCP suite against versioned rule IDs (Python, Go, MCP-protocol, CI, security, tests) and idempotently files GitHub issues for MUST violations. The reason six servers from one maintainer stay consistent as the fleet grows.',
+		repo: 'https://github.com/millsmillsymills/consistency-check',
+		kind: 'tool',
+		tags: ['mcp', 'audit', 'standards', 'python'],
+	},
+	{
+		id: 'millsymills-com',
+		name: 'millsymills.com',
+		tagline: 'this site — Astro on fully Terraform-managed AWS',
+		description:
+			'The site you are using right now: Astro static output on a private S3 bucket behind CloudFront, with Route53, ACM, DNSSEC, CAA, MTA-STS, and CT monitoring, all defined in Terraform. Deploys via GitHub Actions OIDC with no long-lived credentials. MIT-licensed as a community template — fork it, rename it, ship your own.',
+		repo: 'https://github.com/millsmillsymills/millsymills.com',
+		kind: 'site',
+		tags: ['astro', 'aws', 'terraform', 'oidc', 'iac'],
+	},
+	{
 		id: 'unraid-mcp',
 		name: 'unraid-mcp',
 		tagline: 'MCP server for Unraid — talk to your array from your LLM',
 		description:
-			'Exposes an Unraid server (array status, docker containers, VMs, shares, parity, SMART) as tools to any MCP client. Built for homelab operators who want to debug or automate their box from a chat interface. Runs as a container on the Unraid host.',
+			'Exposes the Unraid GraphQL API as MCP tools — array health, disks and SMART, docker lifecycle, VMs, shares, notifications, parity checks. Readonly by default; write tools are invisible until enabled. Built for homelab operators who want to debug or automate their box from a chat interface.',
 		repo: 'https://github.com/millsymills-com/unraid-mcp',
 		icon: '/images/projects/unraid-mcp.svg',
 		kind: 'mcp',
@@ -37,9 +77,9 @@ export const projects: readonly Project[] = [
 	{
 		id: 'unifi-mcp',
 		name: 'unifi-mcp',
-		tagline: 'MCP server for UniFi — network state and control',
+		tagline: 'MCP server for UniFi — Network, Protect, and Site Manager',
 		description:
-			'Wraps the UniFi Controller API as MCP tools: list clients, inspect sites, kick a misbehaving device, pull event logs, toggle guest networks. Useful for anyone running UniFi at home or at a small org who wants an LLM-native way to poke at the network.',
+			'Wraps all three UniFi APIs — Network, Protect, and Site Manager — as 160 MCP tools: clients, sites, events, device control, camera state, guest networks. Readonly by default with explicitly gated writes. The on-site demo drives a simulated network with an AI assistant calling the real tools.',
 		repo: 'https://github.com/millsymills-com/unifi-mcp',
 		icon: '/images/projects/unifi-mcp.svg',
 		demoUrl: '/unifi/',
@@ -47,7 +87,7 @@ export const projects: readonly Project[] = [
 		tags: ['mcp', 'unifi', 'networking', 'python'],
 		install: 'claude mcp add unifi --transport http http://<controller-host>:8766/',
 		describe:
-			'UniFi MCP server. Tools for clients, sites, events, device control, guest-network toggles.',
+			'UniFi MCP server. 160 tools across Network, Protect, Site Manager. Writes gated; live demo on this site.',
 	},
 	{
 		id: 'protonmail-mcp',

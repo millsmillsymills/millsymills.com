@@ -17,10 +17,13 @@ Certifications: A+, Network+, Security+, CEH.
 Short bio: Corporate Security Engineer with 10+ years of
 experience in IT and security, specializing in identity and
 access management, endpoint security, and security automation.
-Replaces costly vendor functionality with in-house automations,
-hardens fleets at scale, and tests every internal security tool
-personally before rollout — files bugs, gives feedback, breaks
-things on purpose.
+Increasingly focused on replacing costly vendor functionality
+with infrastructure-as-code, supply-chain hardening, and
+AI/agent tooling: managing cloud and a GitHub org with
+Terraform/OpenTofu, publishing an open-source MCP server suite
+and threat-model research on the A2A protocol, and
+administering enterprise Claude Code — config hardening,
+guardrail hooks, and authored skills.
 
 Contact: <mailto:mills@millsymills.com>. GitHub:
 <https://github.com/millsmillsymills>.
@@ -75,10 +78,39 @@ Full resume markdown: <https://millsymills.com/files/resume.md>.
 
 ---
 
+## projects
+
+Open source, across github.com/millsmillsymills and the
+millsymills-com GitHub org:
+
+- Six Model Context Protocol servers — unifi-mcp (160 tools across
+  UniFi Network, Protect, and Site Manager; live demo at
+  /unifi/), unraid-mcp (Unraid GraphQL API), gandi-mcp (71 tools;
+  purchases separately gated), shortcut-mcp (137 tools),
+  flipperzero-mcp (protobuf RPC over USB/WiFi), protonmail-mcp
+  (Go). All ship read/write tier separation: write tools are
+  hidden by default and enabled per-environment.
+- consistency-check — canonical standards + audit tool that grades
+  every server in the suite against versioned rule IDs and files
+  GitHub issues for MUST violations.
+- A2A protocol security research — a threat model and control
+  catalog for A2A v1.0 mapped to OWASP ASI IDs with two
+  reproducible PoC exploits (a2a-security-research), and a
+  spec-native signed Agent Card reference implementation with
+  keyless Sigstore signing and DNSSEC/CT delivery attestation
+  (ellingson-a2a-signed-card).
+- millsymills-com-org — GitHub org-as-code in OpenTofu; PR-driven,
+  OIDC-enforced, drift-detected.
+- claude-defaults — installable Claude Code baseline: sandboxing,
+  permissions, guardrail hooks, skills.
+- This site.
+
+---
+
 ## photos
 
-A small gallery of cat photos. Three cats; captions include
-names once the owner fills them in (currently placeholder).
+A small gallery of cat photos — five shots, each with
+descriptive alt text.
 
 ---
 
@@ -124,6 +156,8 @@ data file `src/data/security-controls.ts`. Categories:
   CAA records restricting public-CA issuance to ACM (no wildcards).
 - email auth: null MX (RFC 7505) when ProtonMail isn't active,
   SPF, DMARC `p=reject; adkim=s; aspf=s` from day one,
+  MTA-STS (RFC 8461) in enforce mode, DANE for inbound SMTP
+  (RFC 7672, via the DNSSEC-signed MX chain), BIMI,
   TLS-RPT (RFC 8460) advertising the daily-aggregate report endpoint.
 - supply chain: OIDC-only deploy (no long-lived AWS keys; trust
   policy pins repo + branch + workflow file), SPDX SBOM published
@@ -132,14 +166,15 @@ data file `src/data/security-controls.ts`. Categories:
   cert issuance.
 - identity + contact: RFC 9116 security.txt with PGP encryption +
   Policy field, WKD discovery for `mills@millsymills.com`,
-  client-side proof-of-work on the mail address reveal.
+  client-side proof-of-work on the mail address reveal,
+  signed commits required on main (server-side ruleset +
+  deploy-time drift check).
 - privacy: zero analytics + zero third-party fetches, build-time
   invariants asserting privacy claims and font/CSP honesty,
   90-day TTL on CloudFront access logs.
 
-Roadmap (tracked, not yet shipped): MTA-STS, DANE TLSA, BIMI,
-strict CSP with per-request nonces, signed commits required
-on main, HSTS preload-list submission.
+Roadmap (tracked, not yet shipped): strict CSP with
+per-request nonces.
 
 ## tech stack / infrastructure
 
