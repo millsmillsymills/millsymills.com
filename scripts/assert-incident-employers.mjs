@@ -24,7 +24,7 @@
 //
 // Run anytime — no build artifact required. Wired into ci-local.sh.
 //
-// Also asserts the resume.md `### Title — Company, Period · Location`
+// Also asserts the resume.md `### Title · Company · Period · Location`
 // role headers match profile.ts exactly. Both files are hand-maintained
 // in lock-step today; drift between them would silently misrepresent
 // employment history on the public resume.
@@ -115,14 +115,16 @@ function parsePeriod(period) {
 	return [start, end];
 }
 
-// Parse `### <title> — <company>, <period> · <location>` headings from
-// resume.md. The em-dash + comma + middle-dot delimiters are stable across
-// every entry today; if a future entry uses different punctuation the
-// regex fails the comparison loudly rather than silently mis-matching.
+// Parse `### <title> · <company> · <period> · <location>` headings from
+// resume.md. Role headings are the only `###` lines with four
+// middle-dot-separated segments (Selected Projects headings have two),
+// so the segment count disambiguates; if a future entry uses different
+// punctuation the regex fails the comparison loudly rather than
+// silently mis-matching.
 function parseResumeRoles(src) {
 	const out = [];
 	const lines = src.split('\n');
-	const re = /^###\s+(.+?)\s+—\s+(.+?),\s+(.+?)\s+·\s+(.+?)\s*$/;
+	const re = /^###\s+(.+?)\s+·\s+(.+?)\s+·\s+(.+?)\s+·\s+(.+?)\s*$/;
 	for (let i = 0; i < lines.length; i++) {
 		const m = lines[i].match(re);
 		if (m) {
