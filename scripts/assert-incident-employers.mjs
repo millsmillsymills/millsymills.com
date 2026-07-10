@@ -67,6 +67,15 @@ function parseExperience(src) {
 		out.push({ title: m[1], company: m[2], period: m[3], location: m[4] });
 	}
 	if (out.length === 0) throw new Error('profile.ts: no experience entries parsed');
+	// Cross-check against a field count so an entry whose shape drifts
+	// from entryRe (reordered fields, an inserted field) cannot silently
+	// drop out of validation while the others keep passing.
+	const declared = (body.match(/\bcompany:\s*'/g) ?? []).length;
+	if (out.length !== declared) {
+		throw new Error(
+			`profile.ts: parsed ${out.length} experience entries but found ${declared} company: fields — an entry's shape drifted from the parser`,
+		);
+	}
 	return out;
 }
 
@@ -75,7 +84,9 @@ function parseExperience(src) {
 function parseIncidents(src) {
 	const start = src.indexOf('export const incidents:');
 	if (start === -1) throw new Error('incidents.ts: incidents literal not found');
-	const body = src.slice(start);
+	const end = src.indexOf('];', start);
+	if (end === -1) throw new Error('incidents.ts: end of incidents literal not found');
+	const body = src.slice(start, end);
 
 	const out = [];
 	const re = /year:\s*(\d{4}),\s*severity:\s*'[^']+',\s*employer:\s*'([^']+)'/g;
@@ -84,6 +95,15 @@ function parseIncidents(src) {
 		out.push({ year: Number(m[1]), employer: m[2], line });
 	}
 	if (out.length === 0) throw new Error('incidents.ts: no incident entries parsed');
+	// Same cross-check as parseExperience: every incident carries exactly
+	// one employer: field, so a count mismatch means an entry's field
+	// order/shape drifted from `re` and was silently skipped.
+	const declared = (body.match(/\bemployer:\s*'/g) ?? []).length;
+	if (out.length !== declared) {
+		throw new Error(
+			`incidents.ts: parsed ${out.length} incidents but found ${declared} employer: fields — an entry's shape drifted from the parser`,
+		);
+	}
 	return out;
 }
 
@@ -117,10 +137,11 @@ function parsePeriod(period) {
 
 // Parse `### <title> · <company> · <period> · <location>` headings from
 // resume.md. Role headings are the only `###` lines with four
-// middle-dot-separated segments (Selected Projects headings have two),
-// so the segment count disambiguates; if a future entry uses different
-// punctuation the regex fails the comparison loudly rather than
-// silently mis-matching.
+// middle-dot-separated segments (Selected Projects headings never
+// reach four), so the segment count disambiguates; if a future entry
+// uses different punctuation it drops out of the parse and the
+// role-count check below fails loudly rather than silently
+// mis-matching.
 function parseResumeRoles(src) {
 	const out = [];
 	const lines = src.split('\n');
@@ -137,6 +158,9 @@ function parseResumeRoles(src) {
 			});
 		}
 	}
+	if (out.length === 0) {
+		throw new Error('resume.md: no role headings parsed — did the heading format change? (expected `### Title · Company · Period · Location`)');
+	}
 	return out;
 }
 
@@ -149,7 +173,15 @@ function main() {
 	const incidents = parseIncidents(incidentsSrc);
 	const resumeRoles = parseResumeRoles(resumeSrc);
 
-	const byCompany = new Map(experience.map((e) => [e.company, e]));
+	const byCompany = new Map();
+	for (const e of experience) {
+		if (byCompany.has(e.company)) {
+			throw new Error(
+				`profile.ts: duplicate company '${e.company}' — a Map lookup would silently validate incidents against only the later stint's tenure`,
+			);
+		}
+		byCompany.set(e.company, e);
+	}
 
 	const violations = [];
 
