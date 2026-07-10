@@ -1,12 +1,14 @@
-// Mirrors src/styles/desktop.css :root tokens — keep in sync by hand
-// (video/ has no build-time access to the site's CSS custom properties).
+// Storyboard palette (design-project assets/manifest.json), not the site
+// tokens — the intro deliberately grades hotter than the desktop chrome.
 export const PALETTE = {
-	void: '#0a0320',
-	deep: '#140832',
-	pink: '#ff4fa8',
-	cyan: '#00e5ff',
-	lilac: '#c8a8ff',
-	cream: '#f5edff',
+	void: '#030308',
+	cyan: '#00f0ff',
+	magenta: '#ff2bd6',
+	phosphor: '#39ff14',
+	amber: '#ffb000',
+	purple: '#b066ff',
+	red: '#ff3344',
+	fg: '#e8f6ff',
 } as const;
 
-export type Tint = 'pink' | 'cyan' | 'none';
+export type Accent = 'cyan' | 'magenta' | 'phosphor' | 'amber' | 'purple' | 'red';

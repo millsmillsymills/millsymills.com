@@ -7,38 +7,39 @@ import {
 	useVideoConfig,
 } from 'remotion';
 
-import { Grain } from './Grain';
-import { PlaceholderStill } from './PlaceholderStill';
-import { SHOTS } from './shots';
-import { StillCut } from './StillCut';
-import { beatToFrame, TRACK_OFFSET_SEC } from './timing';
+import './fonts';
+import { Boot } from './Boot';
+import { Lockup } from './Lockup';
+import { PALETTE } from './palette';
+import { BEATS, type Beat } from './sequence';
+import { StillCut, Strobe } from './StillCut';
 import { TitleCard } from './TitleCard';
+import { TRACK_OFFSET_SEC } from './timing';
 
-function shotElement(shot: (typeof SHOTS)[number]): React.ReactElement {
-	if (shot.kind === 'title') return <TitleCard text={shot.text} accent={shot.accent ?? 'none'} />;
-	if (shot.kind === 'placeholder') return <PlaceholderStill tint={shot.tint} />;
-	return <StillCut src={shot.src} tint={shot.tint ?? 'none'} zoom={shot.zoom ?? false} />;
+function beatElement(beat: Beat): React.ReactElement {
+	switch (beat.kind) {
+		case 'boot':
+			return <Boot text={beat.text} />;
+		case 'card':
+			return <TitleCard eyebrow={beat.eyebrow} text={beat.text} accent={beat.accent} />;
+		case 'still':
+			return <StillCut still={beat.still} zoom={beat.zoom} flash={beat.flash} />;
+		case 'strobe':
+			return <Strobe stills={beat.stills} framesPer={beat.framesPer} />;
+		case 'lockup':
+			return <Lockup />;
+	}
 }
 
 export const Intro: React.FC = () => {
 	const { durationInFrames, fps } = useVideoConfig();
-
-	let beat = 0;
-	const sequences = SHOTS.map((shot, i) => {
-		const from = beatToFrame(beat);
-		const durationFrames = beatToFrame(beat + shot.beats) - from;
-		beat += shot.beats;
-		return (
-			<Sequence key={i} from={from} durationInFrames={durationFrames}>
-				{shotElement(shot)}
-			</Sequence>
-		);
-	});
-
 	return (
-		<AbsoluteFill style={{ backgroundColor: '#000' }}>
-			{sequences}
-			<Grain />
+		<AbsoluteFill style={{ backgroundColor: PALETTE.void }}>
+			{BEATS.map((beat, i) => (
+				<Sequence key={i} from={beat.from} durationInFrames={beat.dur}>
+					{beatElement(beat)}
+				</Sequence>
+			))}
 			<Html5Audio
 				src={staticFile('track.mp3')}
 				trimBefore={Math.round(TRACK_OFFSET_SEC * fps)}

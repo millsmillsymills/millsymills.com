@@ -5,7 +5,7 @@
 	"scripts": {
 		"studio": "remotion studio",
 		"render": "remotion render src/index.ts intro ../public/videos/intro.mp4 --crf 26",
-		"poster": "remotion still src/index.ts intro ../public/videos/intro-poster.jpg --frame 530",
+		"poster": "remotion still src/index.ts intro ../public/videos/intro-poster.jpg --frame 780",
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {

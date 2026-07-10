@@ -1,29 +1,55 @@
-import { AbsoluteFill } from 'remotion';
+import { AbsoluteFill, useCurrentFrame } from 'remotion';
 
-import { PALETTE, type Tint } from './palette';
+import { flicker } from './crt';
+import { Grain, Scanlines } from './Overlays';
+import { PALETTE, type Accent } from './palette';
 
-export const TitleCard: React.FC<{ text: string; accent: Tint }> = ({ text, accent }) => (
-	<AbsoluteFill
-		style={{
-			backgroundColor: '#000',
-			alignItems: 'center',
-			justifyContent: 'center',
-		}}
-	>
-		<div
+export const TitleCard: React.FC<{ eyebrow: string; text: string; accent: Accent }> = ({
+	eyebrow,
+	text,
+	accent,
+}) => {
+	const frame = useCurrentFrame();
+	const a = PALETTE[accent];
+	// hard slam: 2 frames oversized, rgb split relaxes after
+	const scale = frame < 2 ? 1.06 : 1;
+	const split = frame < 4 ? 10 : 4;
+	return (
+		<AbsoluteFill
 			style={{
-				fontFamily: "Georgia, 'Times New Roman', serif",
-				fontWeight: 700,
-				fontSize: 140,
-				letterSpacing: '-0.02em',
-				textAlign: 'center',
-				lineHeight: 1.05,
-				color: accent === 'none' ? PALETTE.cream : PALETTE[accent],
-				whiteSpace: 'pre-wrap',
-				padding: '0 80px',
+				backgroundColor: PALETTE.void,
+				alignItems: 'center',
+				justifyContent: 'center',
+				opacity: flicker(frame, text.length),
 			}}
 		>
-			{text}
-		</div>
-	</AbsoluteFill>
-);
+			<div style={{ transform: `scale(${scale})`, textAlign: 'center', padding: '0 120px' }}>
+				<div
+					style={{
+						fontFamily: "'Press Start 2P', monospace",
+						fontSize: 24,
+						letterSpacing: '0.12em',
+						color: a,
+						textShadow: `0 0 10px ${a}`,
+						marginBottom: 48,
+					}}
+				>
+					{eyebrow}
+				</div>
+				<div
+					style={{
+						fontFamily: "'Press Start 2P', monospace",
+						fontSize: 64,
+						lineHeight: 1.5,
+						color: PALETTE.fg,
+						textShadow: `${split}px 0 ${PALETTE.magenta}, ${-split}px 0 ${PALETTE.cyan}, 0 0 18px ${a}`,
+					}}
+				>
+					{text}
+				</div>
+			</div>
+			<Scanlines />
+			<Grain />
+		</AbsoluteFill>
+	);
+};

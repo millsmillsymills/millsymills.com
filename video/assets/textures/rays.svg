@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<defs><radialGradient id="fade" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#fff"></stop><stop offset="100%" stop-color="#000"></stop></radialGradient>
+<mask id="m"><rect width="1920" height="1080" fill="url(#fade)"></rect></mask></defs>
+<g mask="url(#m)">
+<path d="M960 540 L2360.0 540.0 L2357.6 622.4 Z" fill="#ff2bd6" fill-opacity="0.2"></path>
+<path d="M960 540 L2348.0 722.7 L2334.9 804.1 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2312.3 902.3 L2288.6 981.3 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2253.4 1075.8 L2219.6 1151.0 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2172.4 1240.0 L2129.1 1310.2 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2070.7 1392.3 L2018.6 1456.2 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1949.9 1529.9 L1890.0 1586.5 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1812.3 1650.7 L1745.4 1698.9 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1660.0 1752.4 L1587.4 1791.5 Z" fill="#ff2bd6" fill-opacity="0.2"></path>
+<path d="M960 540 L1495.8 1833.4 L1418.7 1862.7 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1322.3 1892.3 L1242.1 1911.3 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1142.7 1928.0 L1060.7 1936.4 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L960.0 1940.0 L877.6 1937.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L777.3 1928.0 L695.9 1914.9 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L597.7 1892.3 L518.7 1868.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L424.2 1833.4 L349.0 1799.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L260.0 1752.4 L189.8 1709.1 Z" fill="#ff2bd6" fill-opacity="0.2"></path>
+<path d="M960 540 L107.7 1650.7 L43.8 1598.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-29.9 1529.9 L-86.5 1470.0 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-150.7 1392.3 L-198.9 1325.4 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-252.4 1240.0 L-291.5 1167.4 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-333.4 1075.8 L-362.7 998.7 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-392.3 902.3 L-411.3 822.1 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-428.0 722.7 L-436.4 640.7 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-440.0 540.0 L-437.6 457.6 Z" fill="#ff2bd6" fill-opacity="0.2"></path>
+<path d="M960 540 L-428.0 357.3 L-414.9 275.9 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-392.3 177.7 L-368.6 98.7 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-333.4 4.2 L-299.6 -71.0 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-252.4 -160.0 L-209.1 -230.2 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-150.7 -312.3 L-98.6 -376.2 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L-29.9 -449.9 L30.0 -506.5 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L107.7 -570.7 L174.6 -618.9 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L260.0 -672.4 L332.6 -711.5 Z" fill="#ff2bd6" fill-opacity="0.2"></path>
+<path d="M960 540 L424.2 -753.4 L501.3 -782.7 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L597.7 -812.3 L677.9 -831.3 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L777.3 -848.0 L859.3 -856.4 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L960.0 -860.0 L1042.4 -857.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1142.7 -848.0 L1224.1 -834.9 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1322.3 -812.3 L1401.3 -788.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1495.8 -753.4 L1571.0 -719.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1660.0 -672.4 L1730.2 -629.1 Z" fill="#ff2bd6" fill-opacity="0.2"></path>
+<path d="M960 540 L1812.3 -570.7 L1876.2 -518.6 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L1949.9 -449.9 L2006.5 -390.0 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2070.7 -312.3 L2118.9 -245.4 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2172.4 -160.0 L2211.5 -87.4 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2253.4 4.2 L2282.7 81.3 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2312.3 177.7 L2331.3 257.9 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+<path d="M960 540 L2348.0 357.3 L2356.4 439.3 Z" fill="#00f0ff" fill-opacity="0.14"></path>
+</g>
+</svg>
