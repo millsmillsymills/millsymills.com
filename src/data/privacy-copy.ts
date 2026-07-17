@@ -36,7 +36,6 @@ export const browserStorageKeys: BrowserStorageKey[] = [
 	{ key: 'mills.sounds.enabled', storage: 'local', purpose: 'XP system-sounds opt-in toggle (default off)' },
 	{ key: 'mills.mobile-nudge.dismissed', storage: 'session', purpose: 'desktop-nudge banner dismissed for this tab' },
 	{ key: 'mills.welcome.seen', storage: 'local', purpose: 'first-visit welcome window shown already ("don\'t auto-open again")' },
-	{ key: 'mills.intro.seen', storage: 'local', purpose: 'eva-style boot intro played on first visit ("don\'t auto-play again")' },
 ];
 
 export const copy = {

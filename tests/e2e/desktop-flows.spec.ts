@@ -18,11 +18,8 @@ function windowFor(page: Page, id: string) {
 //   * fail any test where the desktop shell silently throws -- without
 //     a `pageerror` listener, an uncaught exception during a tracer
 //     flow lets the test pass on green selectors despite a real bug.
-// The eva boot intro (first visit per context) would otherwise sit over the
-// desktop for the video's duration; these specs test post-boot behavior.
 test.beforeEach(async ({ page }) => {
 	await suppressBoot(page);
-	await page.addInitScript(() => localStorage.setItem('mills.intro.seen', '1'));
 	page.on('pageerror', (err) => {
 		throw new Error(`uncaught page error: ${err.stack ?? err.message}`);
 	});

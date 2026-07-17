@@ -9,5 +9,5 @@
     "isolatedModules": true
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "video"]
+  "exclude": ["dist"]
 }
