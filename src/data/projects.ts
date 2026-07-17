@@ -68,14 +68,14 @@ export const projects: readonly Project[] = [
 		name: 'gandi-mcp',
 		tagline: 'MCP server for Gandi — domains, DNS, email, certificates',
 		description:
-			'Wraps the Gandi v5 API as 71 MCP tools across domains, LiveDNS, email, billing, organizations, and certificates. Three-tier safety model: readonly by default, opt in to writes, and a separate flag to expose tools that spend money. Defense-in-depth checks at both tool-visibility and runtime.',
+			'Wraps the Gandi v5 API as 187 MCP tools across domains, LiveDNS, email, billing, organizations, and certificates. Three-tier safety model: readonly by default, opt in to writes, and a separate flag to expose tools that spend money. Defense-in-depth checks at both tool-visibility and runtime.',
 		repo: 'https://github.com/millsymills-com/gandi-mcp',
 		icon: '/images/projects/gandi-mcp.svg',
 		kind: 'mcp',
 		tags: ['mcp', 'gandi', 'dns', 'domains', 'python'],
 		install: 'claude mcp add gandi -- gandi-mcp',
 		describe:
-			'Gandi MCP server. 71 tools for domains, DNS, email, billing, certs. Writes and purchases are gated.',
+			'Gandi MCP server. 187 tools for domains, DNS, email, billing, certs. Writes and purchases are gated.',
 	},
 	{
 		id: 'shortcut-mcp',
