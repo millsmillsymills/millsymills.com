@@ -24,12 +24,12 @@
     "@astrojs/check": "0.9.9",
     "@playwright/test": "1.61.1",
     "@resvg/resvg-js": "2.6.2",
-    "@types/node": "22.20.0",
-    "fast-check": "4.8.0",
+    "@types/node": "22.20.1",
+    "fast-check": "4.9.0",
     "happy-dom": "20.10.6",
-    "shiki": "4.3.0",
-    "typescript": "6.0.3",
-    "vitest": "4.1.9"
+    "shiki": "4.3.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
   },
   "overrides": {
     "yaml": "2.8.4"
