@@ -14,9 +14,10 @@ workflows. Manages large device fleets with Jamf and CrowdStrike, and builds
 custom compliance programs for HIPAA, CMMC, SSPA, and others. Increasingly
 focused on replacing costly vendor functionality with infrastructure-as-code,
 supply-chain hardening, and AI/agent tooling: managing cloud and a GitHub
-org with Terraform/OpenTofu, publishing an open-source MCP server suite, and
-administering enterprise Claude Code, including config hardening, guardrail
-hooks, and authored skills.
+org with Terraform/OpenTofu, publishing an open-source MCP server suite and
+threat-model research on the A2A protocol, and administering enterprise
+Claude Code, including config hardening, guardrail hooks, and authored
+skills.
 
 ## Core Skills
 
@@ -39,6 +40,19 @@ hooks, and authored skills.
   authoring, agent guardrails/hooks, cross-repo consistency auditing
 
 ## Selected Projects & Open Source
+
+### A2A agent-protocol security research · threat model + signed Agent Card
+
+- Authored a threat model and control catalog for the A2A (Agent-to-Agent)
+  protocol v1.0, mapped to OWASP Agentic Security Initiative IDs, with two
+  reproducible local proof-of-concept exploits (routing hijack; webhook
+  SSRF). Central finding: the spec provides the machinery for secure
+  deployments but mandates almost none of it.
+- Built a reference implementation serving a spec-native signed Agent Card:
+  RFC 7515 JWS over the RFC 8785 canonical card, signed keylessly in CI
+  (GitHub OIDC, Fulcio, Rekor transparency log), verified fail-closed with
+  identity pinning, and attested at the delivery channel with DNSSEC and
+  Certificate Transparency monitoring.
 
 ### millsymills.com · personal site on fully Terraform-managed AWS
 

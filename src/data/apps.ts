@@ -102,7 +102,7 @@ const _APPS_DATA = [
 		glyph: '🪪',
 		iconUrl: '/images/icons/about.svg',
 		title: 'about.exe',
-		ogDescription: 'mills — corporate security engineer @ Trail of Bits, based in Seattle. ten years of breaking and building.',
+		ogDescription: 'mills — corporate security engineer @ Trail of Bits, based in Seattle. 13 years of breaking and building.',
 		x: 140,
 		y: 60,
 		width: 620,
@@ -151,7 +151,8 @@ const _APPS_DATA = [
 		glyph: '📦',
 		iconUrl: '/images/icons/web10/under-construction-1.png',
 		title: 'projects.exe',
-		ogDescription: 'MCP servers (unraid, unifi) + the source for this site. community releases, MIT.',
+		ogDescription:
+			'six MCP servers, A2A security research, org-as-code, agent config — and the source for this site. community releases, MIT.',
 		x: 240,
 		y: 90,
 		width: 620,
