@@ -60,6 +60,9 @@ jobs:
       - name: Assert browserStorage keys documented in privacy-copy
         run: node scripts/assert-privacy-storage-keys.mjs
 
+      - name: Assert incident employers match profile.ts experience tenures
+        run: node scripts/assert-incident-employers.mjs
+
       - name: Assert security-controls.ts code paths resolve
         run: ./scripts/assert-security-controls-paths.sh
 
