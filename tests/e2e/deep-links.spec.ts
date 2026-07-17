@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { apps } from '../../src/data/apps';
 
+// The eva boot intro (first visit per context) would otherwise sit over the
+// desktop for the video's duration; these specs test post-boot behavior.
+test.beforeEach(async ({ page }) => {
+	await page.addInitScript(() => localStorage.setItem('mills.intro.seen', '1'));
+});
+
 // Hidden apps still answer at `/<id>/` for direct hits, but /og/<id>.png
 // is intentionally not generated for them (see src/pages/og/[app].png.ts:
 // `apps.filter((a) => !a.hidden)`). Deep-link tests cover every app for

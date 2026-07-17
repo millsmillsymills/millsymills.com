@@ -1,5 +1,13 @@
 # build output
 dist/
+# remotion scratch renders (canonical output is committed at public/videos/)
+video/out/
+# intro soundtrack is supplied locally; place it at video/assets/track.mp3
+# before running a render
+video/assets/track.mp3
+# Tr2n v1.3 (Jeff Bell) is personal-use freeware — fine to render with, not
+# to redistribute from a public repo; supply locally like the soundtrack
+video/assets/fonts/Tr2n.ttf
 # generated types
 .astro/
 

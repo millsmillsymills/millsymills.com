@@ -10,8 +10,11 @@ async function suppressBoot(page: Page): Promise<void> {
 }
 
 test.describe('theme picker', () => {
+	// The eva boot intro (first visit per context) would otherwise sit over the
+	// desktop for the video's duration; these specs test post-boot behavior.
 	test.beforeEach(async ({ page }) => {
 		await suppressBoot(page);
+		await page.addInitScript(() => localStorage.setItem('mills.intro.seen', '1'));
 	});
 
 	test('applies selected theme and persists alongside wallpaper choice', async ({ page }) => {
