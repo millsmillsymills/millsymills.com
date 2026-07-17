@@ -494,9 +494,14 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_counter_regression" {
 # "notBreaching"` and only fire on positive samples, so a broken
 # Function URL / revoked IAM / accidental delete produces silence.
 # `treat_missing_data = "breaching"` here flips the polarity: the alarm
-# fires precisely when there's no data. 24h dry-spell tolerates the
-# demo's bursty/zero-traffic baseline while still surfacing genuine
-# outages within a day.
+# fires precisely when there's no data.
+#
+# Organic demo traffic alone can't sustain this alarm -- the demo
+# legitimately goes days with zero visitors, which made every quiet
+# spell page as an outage. The hourly EventBridge synthetic ping below
+# guarantees >= 1 invocation/hour through the full public path, so 24
+# consecutive empty hours now means the path is actually broken, not
+# that nobody visited.
 resource "aws_cloudwatch_metric_alarm" "webauthn_demo_invocations_zero" {
   count = var.enable_webauthn_demo ? 1 : 0
 
@@ -516,6 +521,104 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_invocations_zero" {
   dimensions = {
     FunctionName = aws_lambda_function.webauthn_demo[0].function_name
   }
+}
+
+# --------------------------------------------------------------------
+# Hourly synthetic ping: EventBridge rule -> API destination -> POST
+# https://<domain>/api/passkey/ping.
+#
+# Goes through CloudFront (not a direct lambda:Invoke) deliberately --
+# the invocations-zero alarm exists to catch a broken CloudFront
+# behavior / Function URL / revoked URL permission, and only a request
+# down the real public path exercises those. The handler has no /ping
+# route, so the ping gets the uniform 404 -- a handled response that
+# increments Invocations without touching the error/mismatch metrics
+# (CloudFront injects x-origin-secret, so the 403 gate passes; POST is
+# never cached, and the behavior pins CachingDisabled anyway).
+#
+# Failure polarity is the point: if EventBridge, the API destination,
+# CloudFront, or the Lambda breaks, pings stop counting and the alarm
+# fires. There is no way for the ping mechanism to fail quietly green.
+# --------------------------------------------------------------------
+
+# API destinations require a connection with an auth block. The endpoint
+# is public and needs no credentials, so the header below is an inert
+# marker, not a secret -- it only tags the synthetic requests in logs.
+resource "aws_cloudwatch_event_connection" "webauthn_demo_ping" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  name               = "${local.webauthn_demo_name}-ping"
+  description        = "No-auth connection for the webauthn_demo liveness ping (header is an inert marker)"
+  authorization_type = "API_KEY"
+
+  auth_parameters {
+    api_key {
+      key   = "x-synthetic-ping"
+      value = "webauthn-demo-liveness"
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_api_destination" "webauthn_demo_ping" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  name                             = "${local.webauthn_demo_name}-ping"
+  description                      = "Synthetic liveness ping for ${var.domain} /api/passkey/*"
+  invocation_endpoint              = "https://${var.domain}/api/passkey/ping"
+  http_method                      = "POST"
+  invocation_rate_limit_per_second = 1
+  connection_arn                   = aws_cloudwatch_event_connection.webauthn_demo_ping[0].arn
+}
+
+resource "aws_cloudwatch_event_rule" "webauthn_demo_ping" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  name                = "${local.webauthn_demo_name}-ping"
+  description         = "Hourly synthetic invocation keeping the ${local.webauthn_demo_name}-invocations-zero alarm meaningful"
+  schedule_expression = "rate(1 hour)"
+}
+
+resource "aws_iam_role" "webauthn_demo_ping" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  name = "${local.webauthn_demo_name}-ping"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "events.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "webauthn_demo_ping" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  name = "invoke-api-destination"
+  role = aws_iam_role.webauthn_demo_ping[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "events:InvokeApiDestination"
+      Resource = aws_cloudwatch_event_api_destination.webauthn_demo_ping[0].arn
+    }]
+  })
+}
+
+resource "aws_cloudwatch_event_target" "webauthn_demo_ping" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  rule     = aws_cloudwatch_event_rule.webauthn_demo_ping[0].name
+  arn      = aws_cloudwatch_event_api_destination.webauthn_demo_ping[0].arn
+  role_arn = aws_iam_role.webauthn_demo_ping[0].arn
+
+  # The handler 404s before body parsing; ship an empty object instead of
+  # the whole scheduled-event payload.
+  input = jsonencode({})
 }
 
 # moved blocks: preserve state addresses across the count = ... gating above.
