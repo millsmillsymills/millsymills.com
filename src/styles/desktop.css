@@ -1371,51 +1371,6 @@ body.mshell-app-open {
 	transition: opacity 350ms ease;
 }
 
-/* Intro-video variant of the boot overlay. The <video> and controls are
-   injected by boot.ts only when the intro actually plays, so repeat
-   visitors never fetch the MP4. pointer-events must be re-enabled here:
-   the base .boot-overlay is pointer-events: none, which
-   would make skip/unmute unclickable. */
-.boot-overlay--intro,
-.boot-overlay--replay {
-	pointer-events: auto;
-	opacity: 1;
-	background: #000;
-}
-
-.boot-overlay__video {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	background: #000;
-}
-
-.boot-overlay__controls {
-	position: absolute;
-	right: 24px;
-	bottom: 24px;
-	display: flex;
-	gap: 8px;
-}
-
-.boot-overlay__btn {
-	padding: 6px 14px;
-	font: inherit;
-	font-size: 13px;
-	color: var(--ink-primary);
-	background: color-mix(in srgb, var(--bg-void) 70%, transparent);
-	border: 1px solid var(--neon-cyan);
-	border-radius: 2px;
-	cursor: pointer;
-}
-
-.boot-overlay__btn:hover {
-	border-color: var(--neon-pink);
-	color: var(--neon-pink);
-}
-
 @keyframes boot-crt {
 	0% {
 		opacity: 1;
@@ -1454,7 +1409,7 @@ body.mshell-app-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.boot-overlay:not(.boot-overlay--replay) {
+	.boot-overlay {
 		display: none !important;
 	}
 	.desktop::before,
