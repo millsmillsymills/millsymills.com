@@ -12,7 +12,7 @@ export const profile = {
 	githubOrg: 'https://github.com/millsymills-com',
 	certifications: ['A+', 'Network+', 'Security+', 'CEH'],
 	summary:
-		'Corporate Security Engineer with 10+ years of experience in IT and security, specializing in identity and access management, endpoint security, and security automation. Increasingly focused on replacing costly vendor functionality with infrastructure-as-code, supply-chain hardening, and AI/agent tooling: managing cloud and a GitHub org with Terraform/OpenTofu, publishing an open-source MCP server suite, and administering enterprise Claude Code — config hardening, guardrail hooks, and authored skills.',
+		'Corporate Security Engineer with 10+ years of experience in IT and security, specializing in identity and access management, endpoint security, and security automation. Increasingly focused on replacing costly vendor functionality with infrastructure-as-code, supply-chain hardening, and AI/agent tooling: managing cloud and a GitHub org with Terraform/OpenTofu, publishing an open-source MCP server suite and threat-model research on the A2A protocol, and administering enterprise Claude Code — config hardening, guardrail hooks, and authored skills.',
 } as const;
 
 export const coreSkills = [

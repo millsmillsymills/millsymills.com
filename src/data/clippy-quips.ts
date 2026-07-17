@@ -191,7 +191,7 @@ export const quips: QuipBank = {
 		resume: {
 			idle: [
 				{ quip: 'my resume is just one continuous spinning hourglass.' },
-				{ quip: 'ten years. one cv. the math checks out.' },
+				{ quip: '13 years. one cv. the math checks out.' },
 				{ quip: "i can fix it. don't worry about it." },
 			],
 		},
@@ -213,7 +213,7 @@ export const quips: QuipBank = {
 		about: {
 			idle: [
 				{ quip: 'it looks like you are reading about mills.' },
-				{ quip: 'ten years of prying open systems. occupational hazard.' },
+				{ quip: '13 years of prying open systems. occupational hazard.' },
 			],
 		},
 
