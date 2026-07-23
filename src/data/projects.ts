@@ -63,7 +63,7 @@ export const projects: readonly Project[] = [
 		name: 'unraid-mcp',
 		tagline: 'MCP server for Unraid — talk to your array from your LLM',
 		description:
-			'Exposes the Unraid GraphQL API as MCP tools — array health, disks and SMART, docker lifecycle, VMs, shares, notifications, parity checks. Readonly by default; write tools are invisible until enabled. Built for homelab operators who want to debug or automate their box from a chat interface.',
+			'Exposes the Unraid GraphQL API as MCP tools — array health, disks and SMART, docker lifecycle, VMs, shares, notifications, parity checks. Readonly by default; write tools are invisible until enabled. A schema pre-flight introspects the live GraphQL API and reports drift before an Unraid upgrade breaks a tool call. Built for homelab operators who want to debug or automate their box from a chat interface.',
 		repo: 'https://github.com/millsymills-com/unraid-mcp',
 		icon: '/images/projects/unraid-mcp.svg',
 		kind: 'mcp',
@@ -75,7 +75,7 @@ export const projects: readonly Project[] = [
 		name: 'unifi-mcp',
 		tagline: 'MCP server for UniFi — Network, Protect, and Site Manager',
 		description:
-			'Wraps all three UniFi APIs — Network, Protect, and Site Manager — as 160 MCP tools: clients, sites, events, device control, camera state, guest networks. Readonly by default with explicitly gated writes. The on-site demo drives a simulated network with an AI assistant calling the real tools.',
+			'Wraps all three UniFi APIs — Network, Protect, and Site Manager — as 160 MCP tools: clients, sites, events, device control, camera state, guest networks. Readonly by default with explicitly gated writes, and fail-closed TLS — leaf-cert pinning for self-signed controllers, refusing to start rather than send an API key unverified to a non-private host. The on-site demo drives a simulated network with an AI assistant calling the real tools.',
 		repo: 'https://github.com/millsymills-com/unifi-mcp',
 		icon: '/images/projects/unifi-mcp.svg',
 		demoUrl: '/unifi/',
@@ -86,9 +86,9 @@ export const projects: readonly Project[] = [
 	{
 		id: 'protonmail-mcp',
 		name: 'protonmail-mcp',
-		tagline: 'MCP server for Proton Mail — addresses, domains, keys',
+		tagline: 'MCP server for Proton Mail — mail, addresses, domains, keys',
 		description:
-			'Lets an MCP client manage a Proton Mail account: list/create/delete addresses, add and verify custom domains, edit mail and account settings, inspect encryption keys. Reads are always on; writes opt in via env flag. Built in Go on top of go-proton-api.',
+			'Lets an MCP client run a Proton Mail account: search mail and read decrypted message bodies, create drafts, label and file messages, manage addresses and custom domains, read calendars, inspect encryption keys. Three safety tiers — reads always on, writes opt in via env flag, and irreversible operations (permanent deletes, domain removal) behind a separate dangerous flag. Built in Go on top of go-proton-api.',
 		repo: 'https://github.com/millsymills-com/protonmail-mcp',
 		icon: '/images/projects/protonmail-mcp.svg',
 		kind: 'mcp',
@@ -100,7 +100,7 @@ export const projects: readonly Project[] = [
 		name: 'gandi-mcp',
 		tagline: 'MCP server for Gandi — domains, DNS, email, certificates',
 		description:
-			'Wraps the Gandi v5 API as 187 MCP tools across domains, LiveDNS, email, billing, organizations, and certificates. Three-tier safety model: readonly by default, opt in to writes, and a separate flag to expose tools that spend money. Defense-in-depth checks at both tool-visibility and runtime.',
+			'Wraps the Gandi v5 API as 187 MCP tools across domains, LiveDNS, DNS templates, email, Simple Hosting, billing, organizations, and certificates. Three-tier safety model: readonly by default, opt in to writes, and a separate flag to expose tools that spend money. Defense-in-depth checks at both tool-visibility and runtime.',
 		repo: 'https://github.com/millsymills-com/gandi-mcp',
 		icon: '/images/projects/gandi-mcp.svg',
 		kind: 'mcp',
@@ -112,7 +112,7 @@ export const projects: readonly Project[] = [
 		name: 'shortcut-mcp',
 		tagline: 'MCP server for Shortcut — full read/write/destructive surface',
 		description:
-			'Wraps the Shortcut REST API as 137 MCP tools across 26 resource modules (65 read, 51 write, 21 destructive). Three-tier safety model: read-only by default, writes opt in via SHORTCUT_MODE=readwrite, and deletes/workspace-wide toggles require a separate SHORTCUT_ALLOW_DESTRUCTIVE flag. Built in Python on FastMCP.',
+			'Wraps the Shortcut REST API as 137 MCP tools across 26 resource modules (65 read, 51 write, 21 destructive). Three-tier safety model: read-only by default, writes opt in via SHORTCUT_MODE=readwrite, and deletes/workspace-wide toggles require a separate SHORTCUT_ALLOW_DESTRUCTIVE flag. Bundles an agent skill that lifts an existing repo into Shortcut as objectives, epics, and stories — idempotent, with dry-run approval before any write. Built in Python on FastMCP.',
 		repo: 'https://github.com/millsymills-com/shortcut-mcp',
 		icon: '/images/projects/shortcut-mcp.svg',
 		kind: 'mcp',
@@ -124,7 +124,7 @@ export const projects: readonly Project[] = [
 		name: 'flipperzero-mcp',
 		tagline: 'MCP server for Flipper Zero — USB + WiFi protobuf RPC',
 		description:
-			'Speaks protobuf RPC to a Flipper Zero over USB serial or over WiFi (via an ESP32 dev board running a TCP↔UART bridge), exposing connection and system tools to MCP clients. The `auto` transport tries USB first and falls back to WiFi when a host is set. Built in Python on FastMCP.',
+			'Speaks protobuf RPC to a Flipper Zero over USB serial or over WiFi (via an ESP32 dev board running a TCP↔UART bridge): system and connection diagnostics, storage with md5-verified push/pull, app launch, CLI exec, and firmware flashing. Ships workflow prompts like /flipper-install — clone a repo, build it with ufbt against the device firmware, push it verified, launch it. Device mutations, radio transmit, and flashing sit behind separate default-off gates. Built in Python on FastMCP.',
 		repo: 'https://github.com/millsymills-com/flipperzero-mcp',
 		icon: '/images/projects/flipperzero-mcp.svg',
 		kind: 'mcp',
@@ -146,7 +146,7 @@ export const projects: readonly Project[] = [
 		name: 'claude-defaults',
 		tagline: 'agent config + skills — installable Claude Code guardrails',
 		description:
-			'A shareable Claude Code baseline: sandboxing, permission policy, MCP defaults, and PreToolUse guardrail hooks that block destructive commands and pushes to main and warn on sensitive-path writes — plus the authored skills that ship with it. Distributed via an idempotent, reversible installer.',
+			'A shareable Claude Code baseline: sandboxing, permission policy, MCP defaults, and guardrail hooks — blocking destructive commands and pushes to main, warning on sensitive-path writes, logging every tool call to secret-redacted JSONL, and a Stop hook that catches the model rationalizing incomplete work. Ships with authored skills and slash commands for PR review, issue fixing, and Dependabot triage. Distributed via an idempotent, reversible installer.',
 		repo: 'https://github.com/millsmillsymills/claude-defaults',
 		kind: 'tool',
 		tags: ['claude-code', 'agents', 'hooks', 'skills', 'dotfiles'],
