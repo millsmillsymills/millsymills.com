@@ -84,6 +84,11 @@ jobs:
       - name: Assert SLSA generator pin fresh before Node 24 deadline
         run: ./scripts/assert-slsa-pin-fresh.sh
 
+      # Meta-assert (#839): every assert-* invocation in ci-local.sh must
+      # have a step in this file. Runs in both places so it guards itself.
+      - name: Assert ci.yml mirrors every assert script in ci-local.sh
+        run: ./scripts/assert-ci-mirrors-local.sh
+
       - name: Test (vitest)
         run: npm test
 
