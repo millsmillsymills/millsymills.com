@@ -349,5 +349,18 @@ else
 	printf '\033[2mskipped (set MMS_VERIFY_CANARY_SUBS=true to run)\033[0m\n'
 fi
 
+section "audit: served resume matches career-mgmt draft (opt-in)"
+# Off by default — requires the career-mgmt checkout, which CI runners
+# don't carry. Set MMS_VERIFY_RESUME_SYNC=true to run (checkout path
+# override: MMS_CAREER_MGMT_DIR). Asserts public/files/resume.md is
+# byte-identical to the canonical resume draft; the manual copy has
+# silently drifted before (#836/#837).
+if [[ "${MMS_VERIFY_RESUME_SYNC:-}" == "true" ]]; then
+	./scripts/verify-resume-sync.sh
+	ok "public/files/resume.md matches the career-mgmt draft"
+else
+	printf '\033[2mskipped (set MMS_VERIFY_RESUME_SYNC=true to run)\033[0m\n'
+fi
+
 section "done"
 ok "all CI checks passed locally"
