@@ -14,8 +14,10 @@
 #   3. The PGP fingerprint string from src/data/pgp.ts appears in dist/llms.txt.
 #
 # What it does NOT check:
-#   - dist/llms-full.txt completeness (still hand-maintained per #217's
-#     deferred follow-up).
+#   - dist/llms-full.txt completeness. Its data-backed sections are
+#     generated from the typed data files since #838, so the drift class
+#     this lint defends against no longer applies there; hand-written
+#     prose sections remain unchecked by design.
 #   - Whether the bullet copy matches ogDescription verbatim — the generator
 #     could legitimately escape characters or reformat without breaking the
 #     "every app surfaced" invariant this lint defends.

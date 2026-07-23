@@ -67,6 +67,10 @@ section "node: assert SLSA generator pin moves off Node 20 before deadline"
 ./scripts/assert-slsa-pin-fresh.sh
 ok "slsa-github-generator pin freshness checked (script owns the deadline date)"
 
+section "meta: assert ci.yml mirrors every assert script in this file"
+./scripts/assert-ci-mirrors-local.sh
+ok "ci.yml carries a step for every assert-* invocation here"
+
 section "node: vitest"
 npm run test
 ok "npm run test"

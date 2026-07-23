@@ -11,8 +11,6 @@ export interface Project {
 	readonly tags: readonly string[];
 	/** command line to install (e.g. `claude mcp add ...`). Optional. */
 	readonly install?: string;
-	/** short blurb shown by `mcp describe`. */
-	readonly describe?: string;
 	/** Path to a logo asset under `public/`, e.g. `/images/projects/foo.svg`. */
 	readonly icon?: `/${string}`;
 	/** On-site demo route (e.g. `/unifi/`) when the project has a live, playable demo app. */
@@ -71,8 +69,6 @@ export const projects: readonly Project[] = [
 		kind: 'mcp',
 		tags: ['mcp', 'unraid', 'homelab', 'python'],
 		install: 'claude mcp add unraid --transport http http://<unraid-host>:8765/',
-		describe:
-			'Unraid MCP server. Tools for array health, docker lifecycle, share/VM inventory, SMART, parity checks.',
 	},
 	{
 		id: 'unifi-mcp',
@@ -86,8 +82,6 @@ export const projects: readonly Project[] = [
 		kind: 'mcp',
 		tags: ['mcp', 'unifi', 'networking', 'python'],
 		install: 'claude mcp add unifi --transport http http://<controller-host>:8766/',
-		describe:
-			'UniFi MCP server. 160 tools across Network, Protect, Site Manager. Writes gated; live demo on this site.',
 	},
 	{
 		id: 'protonmail-mcp',
@@ -100,8 +94,6 @@ export const projects: readonly Project[] = [
 		kind: 'mcp',
 		tags: ['mcp', 'protonmail', 'email', 'go'],
 		install: 'claude mcp add protonmail -- protonmail-mcp',
-		describe:
-			'Proton Mail MCP server. Tools for addresses, custom domains, mail/account settings, encryption keys.',
 	},
 	{
 		id: 'gandi-mcp',
@@ -114,8 +106,6 @@ export const projects: readonly Project[] = [
 		kind: 'mcp',
 		tags: ['mcp', 'gandi', 'dns', 'domains', 'python'],
 		install: 'claude mcp add gandi -- gandi-mcp',
-		describe:
-			'Gandi MCP server. 187 tools for domains, DNS, email, billing, certs. Writes and purchases are gated.',
 	},
 	{
 		id: 'shortcut-mcp',
@@ -128,8 +118,6 @@ export const projects: readonly Project[] = [
 		kind: 'mcp',
 		tags: ['mcp', 'shortcut', 'project-management', 'python'],
 		install: 'uv tool install git+https://github.com/millsymills-com/shortcut-mcp',
-		describe:
-			'Shortcut MCP server. 137 tools across 26 modules for stories, epics, iterations, workflows. Writes and deletes are gated.',
 	},
 	{
 		id: 'flipperzero-mcp',
@@ -142,8 +130,6 @@ export const projects: readonly Project[] = [
 		kind: 'mcp',
 		tags: ['mcp', 'flipper-zero', 'hardware', 'python'],
 		install: 'uv tool install git+https://github.com/millsymills-com/flipperzero-mcp',
-		describe:
-			'Flipper Zero MCP server. Protobuf RPC over USB or WiFi; tools for connection health, reconnect, system info.',
 	},
 	{
 		id: 'millsymills-com-org',
