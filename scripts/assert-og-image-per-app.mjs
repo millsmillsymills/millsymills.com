@@ -74,6 +74,16 @@ function parseApps() {
 		apps.push({ id, hidden });
 	}
 	if (apps.length === 0) throw new Error('apps.ts: no app entries parsed');
+
+	// Cross-check against a field count so an entry whose `id:` quoting or
+	// shape drifts from the regexes cannot silently drop out of the checked
+	// set (same guard as assert-incident-employers.mjs, #836/#841).
+	const declared = (body.match(/\bid:\s*/g) ?? []).length;
+	if (apps.length !== declared) {
+		throw new Error(
+			`apps.ts: parsed ${apps.length} app entries but found ${declared} id: fields — an entry's shape drifted from the parser`,
+		);
+	}
 	return apps;
 }
 

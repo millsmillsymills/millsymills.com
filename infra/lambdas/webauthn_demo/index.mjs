@@ -690,6 +690,13 @@ export const handler = async (event) => {
 		return { statusCode: 405, headers: { allow: 'POST' }, body: '' };
 	}
 
+	// The hourly synthetic liveness ping (EventBridge -> API destination ->
+	// POST /api/passkey/ping, defined next to the invocations-zero alarm in
+	// infra/webauthn_demo.tf) deliberately lands in this 404 fallback: a
+	// handled response that increments Invocations without touching the
+	// error/mismatch metrics. Adding a real /ping route (or changing this
+	// fallback's response class / metric behavior) changes what that alarm
+	// measures — reconcile the Terraform side first.
 	const route = ROUTES.get(path);
 	if (!route) return errorResponse(404, 'not found');
 

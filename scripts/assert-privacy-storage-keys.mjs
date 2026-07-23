@@ -182,8 +182,11 @@ function main() {
 		);
 		process.exit(1);
 	}
+	// Always surface the size of the unchecked bucket — growth of the
+	// skipped set is otherwise invisible in CI (#841). VERBOSE adds the
+	// per-call-site detail.
+	console.log(`skipped dynamic-arg calls: ${unresolved.length}`);
 	if (unresolved.length && process.env.VERBOSE) {
-		console.log(`\n(skipped ${unresolved.length} dynamic-arg call(s))`);
 		for (const u of unresolved) console.log(`  ${u.file}:${u.line} arg=${u.arg}`);
 	}
 	console.log('\nok: privacy-copy.ts and src/scripts/ agree on browser storage');
