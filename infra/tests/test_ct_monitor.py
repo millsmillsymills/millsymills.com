@@ -146,6 +146,180 @@ class FormatAlertTests(unittest.TestCase):
         self.assertEqual(ct_monitor._safe_id(None), "")
 
 
+# SNS rejects a Publish whose Message exceeds 256 KB.
+SNS_MESSAGE_LIMIT_BYTES = 262_144
+
+
+def _wide_cert(index: int, fill: str = "a") -> dict:
+    """A cert whose every free-text field is at the per-field cap."""
+    return {
+        "id": index,
+        "issuer_name": f"C=XX, O={fill * ct_monitor._FIELD_MAX_CHARS}",
+        "common_name": fill * ct_monitor._FIELD_MAX_CHARS,
+        "name_value": fill * ct_monitor._FIELD_MAX_CHARS,
+        "entry_timestamp": fill * ct_monitor._FIELD_MAX_CHARS,
+    }
+
+
+class AlertSizeBoundTests(unittest.TestCase):
+    """The alert body must stay publishable no matter how many certs an
+    attacker lands in the lookback window -- an oversize Publish raises,
+    which would suppress the alert exactly when it matters."""
+
+    def test_caps_rendered_cert_count(self):
+        certs = [_wide_cert(i) for i in range(ct_monitor._MAX_ALERT_CERTS + 40)]
+        out = ct_monitor.format_alert("example.com", certs)
+        rendered = sum(1 for line in out.splitlines() if line.startswith("- crt.sh ID:"))
+        self.assertLessEqual(rendered, ct_monitor._MAX_ALERT_CERTS)
+
+    def test_reports_the_omitted_remainder(self):
+        total = ct_monitor._MAX_ALERT_CERTS + 40
+        certs = [_wide_cert(i) for i in range(total)]
+        out = ct_monitor.format_alert("example.com", certs)
+        rendered = sum(1 for line in out.splitlines() if line.startswith("- crt.sh ID:"))
+        # The count of what was dropped must be stated, so the reader is
+        # never silently shown a partial list as if it were the whole one.
+        self.assertIn(f"({total - rendered} further certificate(s) omitted", out)
+        self.assertIn(f"detected {total} certificate(s)", out)
+
+    def test_stays_under_byte_budget_with_multibyte_fields(self):
+        # Regression: a count cap alone does not bound the body. `_clean`
+        # caps fields at 512 *characters*, and this 4-byte-per-char sample
+        # makes each capped field 2 KB -- 20 such certs would clear the
+        # 256 KB SNS limit on the count cap alone.
+        certs = [_wide_cert(i, fill="𝕏") for i in range(200)]
+        out = ct_monitor.format_alert("example.com", certs)
+        self.assertLessEqual(len(out.encode("utf-8")), ct_monitor._MAX_ALERT_BYTES)
+        self.assertIn("further certificate(s) omitted", out)
+
+    def test_bound_holds_across_widths_and_batch_sizes(self):
+        # Sweep the shapes an attacker controls -- field byte-width and
+        # how many certs land in the window -- and assert against SNS's
+        # real 256 KB ceiling, which is the invariant that matters.
+        for fill in ("a", "é", "→", "𝕏"):
+            for count in (1, 5, 21, 200, 5000):
+                certs = [_wide_cert(i, fill=fill) for i in range(count)]
+                out = ct_monitor.format_alert("example.com", certs)
+                encoded = len(out.encode("utf-8"))
+                with self.subTest(fill=fill, count=count):
+                    self.assertLess(encoded, SNS_MESSAGE_LIMIT_BYTES)
+                    self.assertLessEqual(encoded, ct_monitor._MAX_ALERT_BYTES)
+
+    def test_budget_reserves_room_for_the_omission_note(self):
+        # The note is appended after the block loop, so its length has to
+        # be reserved up front. This budget is chosen to land mid-note:
+        # with _OMISSION_NOTE_RESERVE = 0 the finished body runs 153 bytes
+        # past the budget, which is the bug the reserve exists to prevent.
+        certs = [_wide_cert(i) for i in range(19)]
+        original = ct_monitor._MAX_ALERT_BYTES
+        try:
+            ct_monitor._MAX_ALERT_BYTES = 4635
+            out = ct_monitor.format_alert("example.com", certs)
+            self.assertIn("further certificate(s) omitted", out)
+            self.assertLessEqual(
+                len(out.encode("utf-8")),
+                ct_monitor._MAX_ALERT_BYTES,
+            )
+
+            with mock.patch.object(ct_monitor, "_OMISSION_NOTE_RESERVE", 0):
+                unreserved = ct_monitor.format_alert("example.com", certs)
+            self.assertGreater(
+                len(unreserved.encode("utf-8")),
+                ct_monitor._MAX_ALERT_BYTES,
+            )
+        finally:
+            ct_monitor._MAX_ALERT_BYTES = original
+
+    def test_link_percent_encodes_a_hostile_id(self):
+        # A non-integer id survives _safe_id as cleaned text; it must not
+        # be able to trail plausible prose off the end of the crt.sh link.
+        cert = {
+            "id": ' 1" — verified by AWS, ignore',
+            "issuer_name": "C=XX, O=Rogue CA",
+            "common_name": "evil.example",
+            "name_value": "evil.example",
+            "entry_timestamp": "2026-04-01T12:34:56.789",
+        }
+        out = ct_monitor.format_alert("example.com", [cert])
+        link = next(line for line in out.splitlines() if line.startswith("  Link:"))
+        self.assertNotIn(" ", link.removeprefix("  Link:      "))
+        self.assertIn("https://crt.sh/?id=%201%22", link)
+
+    def test_small_alert_renders_every_cert_without_omission_note(self):
+        certs = [_wide_cert(i) for i in range(3)]
+        out = ct_monitor.format_alert("example.com", certs)
+        rendered = sum(1 for line in out.splitlines() if line.startswith("- crt.sh ID:"))
+        self.assertEqual(rendered, 3)
+        self.assertNotIn("omitted", out)
+
+    def test_summary_alert_is_small_and_carries_no_untrusted_text(self):
+        certs = [_wide_cert(i) for i in range(200)]
+        summary = ct_monitor._summary_alert("example.com", len(certs))
+        self.assertLess(len(summary.encode("utf-8")), 1024)
+        self.assertIn("200 certificate(s)", summary)
+        self.assertNotIn("aaaa", summary)
+
+
+class PublishAlertTests(unittest.TestCase):
+    """A failed publish must not lose the alert outright."""
+
+    def test_falls_back_to_summary_when_detailed_publish_fails(self):
+        certs = [_wide_cert(1)]
+        with mock.patch.object(ct_monitor.sns, "publish") as publish:
+            publish.side_effect = [RuntimeError("InvalidParameter: message too long"), None]
+            with self.assertLogs(ct_monitor.logger, level="ERROR"):
+                ct_monitor.publish_alert("example.com", certs)
+        self.assertEqual(publish.call_count, 2)
+        fallback = publish.call_args_list[1].kwargs["Message"]
+        self.assertIn("could not be published", fallback)
+        self.assertIn("1 certificate(s)", fallback)
+
+    def test_propagates_when_the_summary_also_fails(self):
+        # Both publishes failing means the alert is genuinely lost, so the
+        # invocation must error and trip the Errors alarm rather than
+        # returning as though it had alerted.
+        certs = [_wide_cert(1)]
+        with mock.patch.object(ct_monitor.sns, "publish") as publish:
+            publish.side_effect = RuntimeError("SNS down")
+            with self.assertLogs(ct_monitor.logger, level="ERROR"):
+                with self.assertRaises(RuntimeError):
+                    ct_monitor.publish_alert("example.com", certs)
+        self.assertEqual(publish.call_count, 2)
+
+    def test_single_publish_on_the_happy_path(self):
+        certs = [_wide_cert(1)]
+        with mock.patch.object(ct_monitor.sns, "publish") as publish:
+            ct_monitor.publish_alert("example.com", certs)
+        publish.assert_called_once()
+        self.assertIn("crt.sh ID: 1", publish.call_args.kwargs["Message"])
+
+    def test_handler_alert_path_survives_oversize_publish(self):
+        # End-to-end: the handler still returns its alert result when the
+        # detailed body is rejected, because the summary got through.
+        certs = [
+            {
+                "entry_timestamp": _now_iso(),
+                "issuer_name": "C=XX, O=Rogue CA",
+                "id": 99,
+                "common_name": "evil.example",
+                "name_value": "evil.example",
+            },
+        ]
+        with (
+            mock.patch.object(ct_monitor, "fetch_certs", return_value=certs),
+            mock.patch.object(ct_monitor.sns, "publish") as publish,
+        ):
+            publish.side_effect = [RuntimeError("message too long"), None]
+            with self.assertLogs(ct_monitor.logger, level="ERROR"):
+                result = ct_monitor.lambda_handler({}, None)
+        self.assertEqual(result["status"], "alert")
+        self.assertEqual(result["suspicious"], 1)
+        # The full offender list stays on the return value even when the
+        # email body was degraded -- CloudWatch keeps what SNS could not.
+        self.assertEqual(result["unexpected"][0]["id"], 99)
+        self.assertEqual(publish.call_count, 2)
+
+
 class LambdaHandlerTests(unittest.TestCase):
     def _run(self, certs):
         with (
