@@ -328,7 +328,7 @@ const _APPS_DATA = [
 		label: 'status',
 		glyph: '📊',
 		title: 'chimera.status',
-		ogDescription: 'live snapshot of the chimera homelab box — uptime, container counts, array fill, parity, SMART. refreshed daily.',
+		ogDescription: 'point-in-time capture of the chimera homelab box — uptime, container counts, array fill, parity, SMART.',
 		x: 280,
 		y: 140,
 		width: 520,
