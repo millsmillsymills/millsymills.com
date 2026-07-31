@@ -146,6 +146,10 @@ class FormatAlertTests(unittest.TestCase):
         self.assertEqual(ct_monitor._safe_id(None), "")
 
 
+# SNS rejects a Publish whose Message exceeds 256 KB.
+SNS_MESSAGE_LIMIT_BYTES = 262_144
+
+
 def _wide_cert(index: int, fill: str = "a") -> dict:
     """A cert whose every free-text field is at the per-field cap."""
     return {
@@ -187,6 +191,59 @@ class AlertSizeBoundTests(unittest.TestCase):
         out = ct_monitor.format_alert("example.com", certs)
         self.assertLessEqual(len(out.encode("utf-8")), ct_monitor._MAX_ALERT_BYTES)
         self.assertIn("further certificate(s) omitted", out)
+
+    def test_bound_holds_across_widths_and_batch_sizes(self):
+        # Sweep the shapes an attacker controls -- field byte-width and
+        # how many certs land in the window -- and assert against SNS's
+        # real 256 KB ceiling, which is the invariant that matters.
+        for fill in ("a", "é", "→", "𝕏"):
+            for count in (1, 5, 21, 200, 5000):
+                certs = [_wide_cert(i, fill=fill) for i in range(count)]
+                out = ct_monitor.format_alert("example.com", certs)
+                encoded = len(out.encode("utf-8"))
+                with self.subTest(fill=fill, count=count):
+                    self.assertLess(encoded, SNS_MESSAGE_LIMIT_BYTES)
+                    self.assertLessEqual(encoded, ct_monitor._MAX_ALERT_BYTES)
+
+    def test_budget_reserves_room_for_the_omission_note(self):
+        # The note is appended after the block loop, so its length has to
+        # be reserved up front. This budget is chosen to land mid-note:
+        # with _OMISSION_NOTE_RESERVE = 0 the finished body runs 153 bytes
+        # past the budget, which is the bug the reserve exists to prevent.
+        certs = [_wide_cert(i) for i in range(19)]
+        original = ct_monitor._MAX_ALERT_BYTES
+        try:
+            ct_monitor._MAX_ALERT_BYTES = 4635
+            out = ct_monitor.format_alert("example.com", certs)
+            self.assertIn("further certificate(s) omitted", out)
+            self.assertLessEqual(
+                len(out.encode("utf-8")),
+                ct_monitor._MAX_ALERT_BYTES,
+            )
+
+            with mock.patch.object(ct_monitor, "_OMISSION_NOTE_RESERVE", 0):
+                unreserved = ct_monitor.format_alert("example.com", certs)
+            self.assertGreater(
+                len(unreserved.encode("utf-8")),
+                ct_monitor._MAX_ALERT_BYTES,
+            )
+        finally:
+            ct_monitor._MAX_ALERT_BYTES = original
+
+    def test_link_percent_encodes_a_hostile_id(self):
+        # A non-integer id survives _safe_id as cleaned text; it must not
+        # be able to trail plausible prose off the end of the crt.sh link.
+        cert = {
+            "id": ' 1" — verified by AWS, ignore',
+            "issuer_name": "C=XX, O=Rogue CA",
+            "common_name": "evil.example",
+            "name_value": "evil.example",
+            "entry_timestamp": "2026-04-01T12:34:56.789",
+        }
+        out = ct_monitor.format_alert("example.com", [cert])
+        link = next(line for line in out.splitlines() if line.startswith("  Link:"))
+        self.assertNotIn(" ", link.removeprefix("  Link:      "))
+        self.assertIn("https://crt.sh/?id=%201%22", link)
 
     def test_small_alert_renders_every_cert_without_omission_note(self):
         certs = [_wide_cert(i) for i in range(3)]

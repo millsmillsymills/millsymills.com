@@ -133,17 +133,25 @@ resource "aws_lambda_permission" "ct_monitor_eventbridge" {
   source_arn    = aws_cloudwatch_event_rule.ct_monitor[0].arn
 }
 
-# The monitor's whole job is to alert, so an invocation that errors is a
-# silent loss of the CAA safety net -- nothing else notices. The alarm
-# fires straight from CloudWatch to the same topic the operator already
-# subscribes to for cert alerts, so it does not depend on the Lambda code
-# path that just failed. `ct_monitor.py` degrades to a summary publish
-# before erroring, so reaching this alarm means both publishes failed.
+# The monitor's whole job is to alert, so an invocation that raises is an
+# otherwise-silent loss of the CAA safety net. `ct_monitor.py` degrades to
+# a summary publish before erroring, so reaching this alarm means both
+# publishes failed.
+#
+# Scope, deliberately narrow on two counts. It reports invocations that
+# ran and threw; `treat_missing_data = notBreaching` means the separate
+# failure of the schedule not firing at all produces no datapoints and so
+# never alarms (the Invocations-floor pattern at webauthn_demo.tf covers
+# that shape, and is not duplicated here yet). And it notifies through the
+# same topic the Lambda publishes to, so an SNS-side cause -- topic gone,
+# sns:Publish denied, subscription unconfirmed -- takes the alarm's own
+# notification with it. It covers Lambda-side failures; it shares fate
+# with the topic on topic-side ones.
 resource "aws_cloudwatch_metric_alarm" "ct_monitor_errors" {
   count = var.enable_ct_monitor ? 1 : 0
 
   alarm_name          = "${local.ct_name}-errors"
-  alarm_description   = "ct-monitor Lambda invocation failed -- CT mis-issuance monitoring is not running. Check the function's CloudWatch logs."
+  alarm_description   = "ct-monitor Lambda raised an uncaught exception -- the CT alert for that run may not have been delivered. Check the function's CloudWatch logs."
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
   statistic           = "Sum"

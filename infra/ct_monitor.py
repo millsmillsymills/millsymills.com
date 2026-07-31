@@ -64,6 +64,11 @@ _MAX_ALERT_CERTS = 20
 # envelope.
 _MAX_ALERT_BYTES = 200_000
 
+# The "N omitted" note is appended after the block loop, so its room is
+# reserved up front -- accounting for it only inside the loop would let
+# the finished body exceed _MAX_ALERT_BYTES by the note's own length.
+_OMISSION_NOTE_RESERVE = 512
+
 logger = logging.getLogger(__name__)
 
 sns = boto3.client("sns")
@@ -196,7 +201,10 @@ def _cert_block(cert: CrtshEntry) -> list[str]:
         f"  CN:        {_clean(cert.get('common_name'))}",
         f"  Names:     {names}",
         f"  Entry:     {_clean(cert.get('entry_timestamp'))}",
-        f"  Link:      https://crt.sh/?id={cert_id}",
+        # _safe_id falls back to _clean for a non-integer id, which still
+        # permits spaces and quotes -- percent-encode so a hostile crt.sh
+        # id cannot dress the link up as trailing prose.
+        f"  Link:      https://crt.sh/?id={urllib.parse.quote(cert_id, safe='')}",
         "",
     ]
 
@@ -215,12 +223,13 @@ def format_alert(domain: str, certs: list[CrtshEntry]) -> str:
         "  3. Audit CAA records and AWS account access.",
         "",
     ]
+    budget = _MAX_ALERT_BYTES - _OMISSION_NOTE_RESERVE
     used = _utf8_len("\n".join(lines))
     rendered = 0
     for cert in certs[:_MAX_ALERT_CERTS]:
         block = _cert_block(cert)
         size = _utf8_len("\n".join(block)) + 1
-        if used + size > _MAX_ALERT_BYTES:
+        if used + size > budget:
             break
         lines.extend(block)
         used += size
