@@ -19,11 +19,17 @@ log can place arbitrary bytes in `subject` / `name_value`. Control
 chars are stripped and lengths are capped before fields land in the
 SNS email body, otherwise an attacker could inject newlines + plausible
 "AWS confirmation" verbiage to mask the real findings.
+
+The assembled body is bounded too, in both cert count and encoded bytes:
+SNS rejects a Publish over 256 KB, so an unbounded body would let mass
+mis-issuance suppress the very alert that reports it. If a publish fails
+anyway, the alert degrades to a count-only summary rather than being lost.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import urllib.parse
@@ -44,6 +50,21 @@ CRTSH_URL = "https://crt.sh/?q={query}&output=json"
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
 _FIELD_MAX_CHARS = 512
 _DN_SPLIT = re.compile(r"[,;]")
+
+# How many cert blocks the alert body renders. Enough detail to triage
+# from the email; the full list is always in the handler's return value,
+# which Lambda logs to CloudWatch.
+_MAX_ALERT_CERTS = 20
+
+# SNS rejects a Publish over 256 KB. `_clean` caps each field at
+# _FIELD_MAX_CHARS *characters* and a UTF-8 character can be 4 bytes, so
+# _MAX_ALERT_CERTS alone does not bound the encoded size -- 20 blocks of
+# six maximally-wide fields would clear 256 KB on its own. Budget the
+# real encoded length instead, with headroom for the Subject and SNS
+# envelope.
+_MAX_ALERT_BYTES = 200_000
+
+logger = logging.getLogger(__name__)
 
 sns = boto3.client("sns")
 
@@ -144,11 +165,7 @@ def lambda_handler(event: dict[str, Any], context: object) -> CtResult:
         }
         return ok
 
-    sns.publish(
-        TopicArn=SNS_TOPIC_ARN,
-        Subject=f"[ct-monitor] Unexpected cert issuance for {DOMAIN}",
-        Message=format_alert(DOMAIN, suspicious),
-    )
+    publish_alert(DOMAIN, suspicious)
     alert: CtAlert = {
         "status": "alert",
         "checked": len(certs),
@@ -166,7 +183,28 @@ def _safe_id(value: object) -> str:
         return _clean(value)
 
 
+def _utf8_len(text: str) -> int:
+    return len(text.encode("utf-8"))
+
+
+def _cert_block(cert: CrtshEntry) -> list[str]:
+    cert_id = _safe_id(cert.get("id"))
+    names = _clean((cert.get("name_value") or "").replace("\n", ", "))
+    return [
+        f"- crt.sh ID: {cert_id}",
+        f"  Issuer:    {_clean(cert.get('issuer_name'))}",
+        f"  CN:        {_clean(cert.get('common_name'))}",
+        f"  Names:     {names}",
+        f"  Entry:     {_clean(cert.get('entry_timestamp'))}",
+        f"  Link:      https://crt.sh/?id={cert_id}",
+        "",
+    ]
+
+
 def format_alert(domain: str, certs: list[CrtshEntry]) -> str:
+    """Render the alert body, bounded by both _MAX_ALERT_CERTS and
+    _MAX_ALERT_BYTES so an attacker cannot push the message past the SNS
+    Publish limit and suppress the alert entirely."""
     lines = [
         f"CT log monitoring detected {len(certs)} certificate(s) for {domain}",
         f"issued by an issuer outside the allow-list ({', '.join(ALLOWED_ISSUER_SUBSTRINGS)}).",
@@ -177,16 +215,62 @@ def format_alert(domain: str, certs: list[CrtshEntry]) -> str:
         "  3. Audit CAA records and AWS account access.",
         "",
     ]
-    for c in certs:
-        cert_id = _safe_id(c.get("id"))
-        names = _clean((c.get("name_value") or "").replace("\n", ", "))
-        lines.extend([
-            f"- crt.sh ID: {cert_id}",
-            f"  Issuer:    {_clean(c.get('issuer_name'))}",
-            f"  CN:        {_clean(c.get('common_name'))}",
-            f"  Names:     {names}",
-            f"  Entry:     {_clean(c.get('entry_timestamp'))}",
-            f"  Link:      https://crt.sh/?id={cert_id}",
-            "",
-        ])
+    used = _utf8_len("\n".join(lines))
+    rendered = 0
+    for cert in certs[:_MAX_ALERT_CERTS]:
+        block = _cert_block(cert)
+        size = _utf8_len("\n".join(block)) + 1
+        if used + size > _MAX_ALERT_BYTES:
+            break
+        lines.extend(block)
+        used += size
+        rendered += 1
+
+    omitted = len(certs) - rendered
+    if omitted > 0:
+        lines.append(
+            f"({omitted} further certificate(s) omitted from this message. "
+            "The full list is in the ct-monitor Lambda's CloudWatch logs, and at "
+            f"https://crt.sh/?q={urllib.parse.quote(domain)})",
+        )
     return "\n".join(lines)
+
+
+def _summary_alert(domain: str, count: int) -> str:
+    """Minimal fallback body, built only from a count and the configured
+    domain -- no untrusted crt.sh field reaches it, so its size is fixed."""
+    return "\n".join([
+        f"CT log monitoring detected {count} certificate(s) for {domain}",
+        "issued by an issuer outside the allow-list.",
+        "",
+        "The detailed alert could not be published. Treat this as possible",
+        "mis-issuance and inspect the ct-monitor Lambda's CloudWatch logs,",
+        f"then review https://crt.sh/?q={urllib.parse.quote(domain)}",
+    ])
+
+
+def publish_alert(domain: str, certs: list[CrtshEntry]) -> None:
+    """Publish the alert, degrading to a count-only summary if the full
+    body cannot be published.
+
+    This monitor is the post-issuance safety net for CAA, so losing the
+    alert's detail is strictly better than losing the alert. If the
+    summary fails too, the exception propagates: the invocation errors
+    and the Errors alarm in `ct_monitor.tf` fires.
+    """
+    subject = f"[ct-monitor] Unexpected cert issuance for {domain}"
+    try:
+        sns.publish(
+            TopicArn=SNS_TOPIC_ARN,
+            Subject=subject,
+            Message=format_alert(domain, certs),
+        )
+        return
+    except Exception:
+        logger.exception("ct-monitor: detailed alert publish failed, falling back to summary")
+
+    sns.publish(
+        TopicArn=SNS_TOPIC_ARN,
+        Subject=subject,
+        Message=_summary_alert(domain, len(certs)),
+    )

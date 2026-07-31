@@ -133,6 +133,33 @@ resource "aws_lambda_permission" "ct_monitor_eventbridge" {
   source_arn    = aws_cloudwatch_event_rule.ct_monitor[0].arn
 }
 
+# The monitor's whole job is to alert, so an invocation that errors is a
+# silent loss of the CAA safety net -- nothing else notices. The alarm
+# fires straight from CloudWatch to the same topic the operator already
+# subscribes to for cert alerts, so it does not depend on the Lambda code
+# path that just failed. `ct_monitor.py` degrades to a summary publish
+# before erroring, so reaching this alarm means both publishes failed.
+resource "aws_cloudwatch_metric_alarm" "ct_monitor_errors" {
+  count = var.enable_ct_monitor ? 1 : 0
+
+  alarm_name          = "${local.ct_name}-errors"
+  alarm_description   = "ct-monitor Lambda invocation failed -- CT mis-issuance monitoring is not running. Check the function's CloudWatch logs."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  statistic           = "Sum"
+  period              = 3600
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.ct_monitor[0].arn]
+  ok_actions          = [aws_sns_topic.ct_monitor[0].arn]
+
+  dimensions = {
+    FunctionName = aws_lambda_function.ct_monitor[0].function_name
+  }
+}
+
 # moved blocks: preserve state addresses across the count = ... gating above.
 
 moved {
