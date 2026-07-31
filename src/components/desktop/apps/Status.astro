@@ -3,12 +3,10 @@ import statusData from '../../../data/chimera-status.json';
 
 /**
  * Chimera homelab status card (#60). Renders the hand-maintained capture
- * committed at `src/data/chimera-status.json`.
- *
- * There is deliberately no live feed. The daily sync ran on a self-hosted
- * runner attached to this public repo, which let any fork PR target the
- * runner's label and execute on the box; the runner and its push token were
- * retired rather than hardened. Refreshing this card means editing the JSON.
+ * committed at `src/data/chimera-status.json`. There is no live feed: the
+ * daily sync depended on a self-hosted runner attached to this repo, which
+ * is more operational surface than an occasionally-refreshed card justifies.
+ * Refreshing this card means editing the JSON.
  */
 
 interface ChimeraStatus {
@@ -71,9 +69,8 @@ const rows = [
 <article class="status">
 	<h1>chimera.status</h1>
 	<p class="status__intro">
-		point-in-time capture of the unraid homelab box (`chimera`) — not a live feed. the box no
-		longer talks to this repo; these numbers are committed by hand and are current only as of
-		the capture date below.
+		point-in-time capture of the unraid homelab box (`chimera`) — not a live feed. these numbers
+		are committed by hand and are current only as of the capture date below.
 	</p>
 
 	<ul class="status__rows">
