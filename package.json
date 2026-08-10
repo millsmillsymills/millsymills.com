@@ -21,13 +21,13 @@
     "astro": "7.0.7"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.9",
-    "@playwright/test": "1.61.1",
+    "@astrojs/check": "0.9.10",
+    "@playwright/test": "1.62.1",
     "@resvg/resvg-js": "2.6.2",
     "@types/node": "22.20.1",
     "fast-check": "4.9.0",
-    "happy-dom": "20.10.6",
-    "shiki": "4.3.1",
+    "happy-dom": "20.11.1",
+    "shiki": "4.4.1",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
   },
