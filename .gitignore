@@ -49,7 +49,11 @@ infra/stacks/*.secrets.tfvars
 # local-only state (brainstorming scratch, claude scheduled tasks + settings, misc)
 .superpowers/
 .local/
-.claude/
+# Keep repository lessons trackable; ignore all other Claude local state.
+.claude/*
+!.claude/debrief/
+.claude/debrief/*
+!.claude/debrief/LESSONS.md
 
 # git worktrees
 .worktrees/
