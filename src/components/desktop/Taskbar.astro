@@ -1,6 +1,4 @@
 ---
-import HitCounter from './HitCounter.astro';
-
 interface MenuItem {
 	target: string;
 	label: string;
@@ -55,7 +53,6 @@ const { menu } = Astro.props;
 	>
 		<span class="taskbar__sound-glyph" data-sound-glyph aria-hidden="true">🔇</span>
 	</button>
-	<HitCounter />
 	<span class="taskbar__clock motif-chrom" aria-label="current time">--:--</span>
 </nav>
 
