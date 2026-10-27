@@ -186,13 +186,12 @@ jobs:
   # this `uses:` stays tag-pinned. See the slsa-github-generator
   # README's "Referencing SLSA builders and generators" section.
   #
-  # v2.1.0 (latest as of 2026-05) embeds Node-20 internal action refs.
-  # Blocks on upstream slsa-framework/slsa-github-generator#4490; tracked
-  # locally as #389. GitHub flips the runner default to Node 24 on
-  # 2026-06-16 and removes Node 20 entirely on 2026-09-16. Bump this pin
-  # once upstream releases a Node-24-ready tag — see
-  # scripts/assert-slsa-pin-fresh.sh, which turns the deadline into a
-  # CI failure if the pin doesn't move.
+  # v2.1.0 still declares Node-20 internal actions, but GitHub forces
+  # them onto Node 24. Production run 36844042155 (2026-10-01) confirms
+  # successful provenance generation on that runtime. Keep the trusted
+  # upstream tag; track its native Node-24 migration in #661 / upstream
+  # slsa-framework/slsa-github-generator#4490. The compatibility guard
+  # scripts/assert-slsa-pin-fresh.sh rejects unreviewed version changes.
   provenance:
     needs: build
     permissions:
