@@ -71,6 +71,11 @@ describe('postJSON', () => {
 			parseOptionsResponse<Record<string, unknown>>(data),
 		);
 		expect(result.sessionId).toBe('s');
+		expect(fetch).toHaveBeenCalledWith('/api/passkey/registration/options', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: '{}',
+		});
 	});
 
 	it('rethrows a transport failure as an actionable message', async () => {
@@ -211,6 +216,11 @@ describe('handleRegister', () => {
 		expect(status.dataset['state']).toBe('ok');
 		expect(status.textContent).toContain('registered');
 		expect(loadStored()?.id).toBe('credential-abc123456789');
+		expect(fetch).toHaveBeenCalledWith('/api/passkey/registration/verify', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ sessionId: 's', response: { id: 'credential-abc123456789' } }),
+		});
 	});
 
 	it('still reports success when localStorage is blocked (credential is already server-side)', async () => {
@@ -284,6 +294,16 @@ describe('handleAuthenticate', () => {
 
 		expect(status.dataset['state']).toBe('ok');
 		expect(status.textContent).toContain('alice');
+		expect(fetch).toHaveBeenCalledWith('/api/passkey/authentication/options', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: '{}',
+		});
+		expect(fetch).toHaveBeenCalledWith('/api/passkey/authentication/verify', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ sessionId: 's', response: { id: 'i' } }),
+		});
 	});
 
 	it('verifies discoverable credentials with no local record (loadStored null)', async () => {
