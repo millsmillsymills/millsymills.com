@@ -28,6 +28,7 @@ test.describe('per-app deep links', () => {
 			// + Desktop scripts, so it's the assertion-stable surface here.
 			const window = page.locator(`.window[data-window-id="${link.id}"]`);
 			await expect(window).toBeVisible({ timeout: 10_000 });
+			await expect(window.locator('.window__body > *').first()).toBeAttached();
 		});
 	}
 });
