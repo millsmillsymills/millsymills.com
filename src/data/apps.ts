@@ -67,6 +67,8 @@ export interface AppDef {
 	readonly height: number;
 	/** If true, skip from the mobile shell (desktop-only apps). */
 	readonly desktopOnly?: boolean;
+	/** If true, omit the desktop shortcut while keeping other launchers and direct links. */
+	readonly hideDesktopIcon?: boolean;
 	/**
 	 * If true, hide from every public-facing index — desktop launcher,
 	 * mobile launcher, start menu, command palette, llms.txt, sitemap.
@@ -284,6 +286,7 @@ const _APPS_DATA = [
 	{
 		id: 'vscode',
 		label: 'vscode',
+		hidden: true,
 		glyph: '🆅',
 		iconUrl: '/images/icons/vscode.svg',
 		title: 'vscode.exe',
@@ -326,6 +329,7 @@ const _APPS_DATA = [
 	{
 		id: 'status',
 		label: 'status',
+		hideDesktopIcon: true,
 		glyph: '📊',
 		title: 'chimera.status',
 		ogDescription: 'live snapshot of the chimera homelab box — uptime, container counts, array fill, parity, SMART. refreshed daily.',
