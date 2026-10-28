@@ -22,54 +22,32 @@ import Incidents from './apps/Incidents.astro';
 import VSCode from './apps/VSCode.astro';
 import Display from './apps/Display.astro';
 import Status from './apps/Status.astro';
-import { apps } from '../../data/apps';
+import type { AstroComponentFactory } from 'astro/runtime/server/index.js';
+import { apps, isAppId, type AppId } from '../../data/apps';
 
-const contentFor = (id: string) => {
-	switch (id) {
-		case 'welcome':
-			return Welcome;
-		case 'about':
-			return About;
-		case 'resume':
-			return Resume;
-		case 'photos':
-			return Photos;
-		case 'mail':
-			return Mail;
-		case 'terminal':
-			return Terminal;
-		case 'music':
-			return Music;
-		case 'memes':
-			return Memes;
-		case 'minesweeper':
-			return Minesweeper;
-		case 'trash':
-			return Trash;
-		case 'projects':
-			return Projects;
-		case 'unifi':
-			return UniFi;
-		case 'uses':
-			return Uses;
-		case 'privacy':
-			return Privacy;
-		case 'security':
-			return Security;
-		case 'inspector':
-			return Inspector;
-		case 'incidents':
-			return Incidents;
-		case 'vscode':
-			return VSCode;
-		case 'display':
-			return Display;
-		case 'status':
-			return Status;
-		default:
-			return null;
-	}
-};
+const appComponents = {
+	welcome: Welcome,
+	about: About,
+	resume: Resume,
+	photos: Photos,
+	mail: Mail,
+	terminal: Terminal,
+	music: Music,
+	memes: Memes,
+	minesweeper: Minesweeper,
+	trash: Trash,
+	projects: Projects,
+	unifi: UniFi,
+	uses: Uses,
+	privacy: Privacy,
+	security: Security,
+	inspector: Inspector,
+	incidents: Incidents,
+	vscode: VSCode,
+	display: Display,
+	status: Status,
+} satisfies Record<AppId, AstroComponentFactory>;
+
 ---
 
 <main class="desktop" id="desktop">
@@ -85,10 +63,11 @@ const contentFor = (id: string) => {
 		   Only the *advertising* surfaces (icons + start menu) honor
 		   `hidden`. */
 		apps.map((a) => {
-			const Content = contentFor(a.id);
+			if (!isAppId(a.id)) throw new Error(`Unknown app: ${a.id}`);
+			const Content = appComponents[a.id];
 			return (
 				<Window id={a.id} title={a.title} x={a.x} y={a.y} width={a.width} height={a.height}>
-					{Content && <Content />}
+					<Content />
 				</Window>
 			);
 		})
