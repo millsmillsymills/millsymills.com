@@ -34,7 +34,7 @@ jobs:
     name: Astro build + typecheck + asserts
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # tech-memes (public) carries memes.json; the sync-memes
@@ -42,7 +42,7 @@ jobs:
           submodules: true
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -132,9 +132,14 @@ jobs:
     name: Terraform fmt + validate + stack consistency
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Setup Node for isolated wrapper checks
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -168,49 +173,18 @@ jobs:
         working-directory: infra/bootstrap-state
         run: terraform validate
 
-      # tf.sh refusal checks + per-stack workflow / environment
-      # consistency. These are inline rather than calling ci-local.sh
-      # so each gate fails as its own visible step rather than under
-      # one umbrella section. Mirror of the matching blocks in
-      # scripts/ci-local.sh.
+      # Shared, isolated refusal checks; retain a visible step per scenario.
       - name: tf.sh refuses invalid stack
-        run: |
-          if ./scripts/tf.sh definitely-not-a-stack plan >/dev/null 2>&1; then
-            echo "tf.sh accepted an invalid stack name" >&2
-            exit 1
-          fi
+        run: node scripts/assert-tf-wrapper-refusals.mjs invalid-stack
 
       - name: tf.sh refuses missing init
-        run: |
-          rm -rf infra/.terraform
-          if ./scripts/tf.sh millsymills plan >/dev/null 2>&1; then
-            echo "tf.sh did not catch missing init" >&2
-            exit 1
-          fi
+        run: node scripts/assert-tf-wrapper-refusals.mjs missing-init
 
       - name: tf.sh refuses wrong-stack marker
-        run: |
-          mkdir -p infra/.terraform
-          printf 'stale-stack\n' > infra/.terraform/.stack
-          if ./scripts/tf.sh millsymills plan >/dev/null 2>&1; then
-            echo "tf.sh did not catch wrong-stack marker" >&2
-            rm -rf infra/.terraform
-            exit 1
-          fi
-          rm -rf infra/.terraform
+        run: node scripts/assert-tf-wrapper-refusals.mjs wrong-stack
 
       - name: tf.sh refuses force-unlock against wrong stack
-        run: |
-          # Capture stderr separately so pipefail doesn't conflate
-          # tf.sh's expected nonzero exit (4) with a pipeline failure.
-          mkdir -p infra/.terraform
-          printf 'stale-stack\n' > infra/.terraform/.stack
-          unlock_stderr=$(./scripts/tf.sh millsymills force-unlock fake-id 2>&1 1>/dev/null || true)
-          rm -rf infra/.terraform
-          if ! grep -q 'refusing:' <<<"$unlock_stderr"; then
-            echo "tf.sh did not guard force-unlock against wrong stack" >&2
-            exit 1
-          fi
+        run: node scripts/assert-tf-wrapper-refusals.mjs wrong-stack-unlock
 
       - name: per-stack deploy_workflow files exist
         run: |
@@ -249,12 +223,12 @@ jobs:
     name: ct_monitor unit tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
 
@@ -267,12 +241,12 @@ jobs:
     name: webauthn_demo lambda unit tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -297,7 +271,7 @@ jobs:
     name: Workflow security audit (zizmor)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
