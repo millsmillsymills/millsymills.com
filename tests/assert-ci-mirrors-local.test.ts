@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,7 @@ describe('CI assert inventory', () => {
 		fixture = mkdtempSync(join(tmpdir(), 'ci-assert-parity-'));
 		mkdirSync(join(fixture, 'scripts/lib'), { recursive: true });
 		mkdirSync(join(fixture, '.github/workflows'), { recursive: true });
+		symlinkSync(join(root, 'node_modules'), join(fixture, 'node_modules'), 'dir');
 		for (const file of ['scripts/assert-ci-mirrors-local.sh', 'scripts/lib/check-ci-assert-parity.mjs']) {
 			copyFileSync(join(root, file), join(fixture, file));
 		}
@@ -21,7 +22,9 @@ describe('CI assert inventory', () => {
 
 	function run(local: string, workflow: string) {
 		writeFileSync(join(fixture, 'scripts/ci-local.sh'), local);
-		writeFileSync(join(fixture, '.github/workflows/ci.yml'), workflow);
+		const document = workflow.startsWith('jobs:') ? workflow
+			: `jobs:\n  check:\n    steps:\n${workflow.split('\n').map((line) => `      ${line}`).join('\n')}`;
+		writeFileSync(join(fixture, '.github/workflows/ci.yml'), document);
 		const result = spawnSync('bash', [join(fixture, 'scripts/assert-ci-mirrors-local.sh')], {
 			encoding: 'utf8',
 		});
@@ -88,5 +91,39 @@ describe('CI assert inventory', () => {
 		const result = run('# no checks\necho done', '- run: echo done');
 		expect(result.status).toBe(1);
 		expect(result.output).toContain('extracted zero assert invocations');
+	});
+
+	it.each([
+		'- run: >\n    echo checked\n    ./scripts/assert-a.sh',
+		'jobs:\n  check:\n    env:\n      run: ./scripts/assert-a.sh\n    steps:\n      - run: echo checked',
+		'- name: |\n    description\n    run: ./scripts/assert-a.sh\n  run: echo checked',
+	])('rejects metadata and folded non-execution: %s', (workflow) => {
+		const result = run('./scripts/assert-a.sh', workflow);
+		expect(result.status).toBe(1);
+		expect(result.output).toContain('no active run step');
+	});
+
+	it('accepts a folded command that actually invokes an assert', () => {
+		expect(run('node scripts/assert-a.mjs', '- run: >-\n    node\n    scripts/assert-a.mjs').status).toBe(0);
+	});
+
+	it('rejects malformed YAML instead of guessing at run lines', () => {
+		const result = run('./scripts/assert-a.sh', '- run: ./scripts/assert-a.sh\n  run: echo checked');
+		expect(result.status).toBe(1);
+		expect(result.output).toContain('invalid YAML');
+	});
+
+	it('preserves explicit local-only exemptions without exempting other scripts', () => {
+		const helper = join(fixture, 'scripts/lib/check-ci-assert-parity.mjs');
+		writeFileSync(helper, readFileSync(helper, 'utf8').replace(
+			'const ALLOWLIST = new Set();',
+			"const ALLOWLIST = new Set(['scripts/assert-local.sh']);",
+		));
+		const local = './scripts/assert-local.sh\n./scripts/assert-a.sh';
+		expect(run(local, '- run: ./scripts/assert-a.sh').status).toBe(0);
+		const missing = run(local, '- run: echo checked');
+		expect(missing.status).toBe(1);
+		expect(missing.output).toContain('scripts/assert-a.sh');
+		expect(missing.output).not.toContain('scripts/assert-local.sh runs');
 	});
 });

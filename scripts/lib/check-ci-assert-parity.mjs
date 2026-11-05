@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { parseDocument } from 'yaml';
 
 const LOCAL = 'scripts/ci-local.sh';
 const WORKFLOW = '.github/workflows/ci.yml';
@@ -20,38 +21,22 @@ function invocations(lines) {
 	}));
 }
 
-// Only active run scalars count, never step names, comments, or env values.
-// Accept the current workflow's plain/quoted inline commands and block scalars.
-// Block contents end when indentation returns to the run key's level.
+// Parse YAML before selecting commands: folded scalars are shell text after
+// folding, and run-shaped content in metadata is never an executable step.
 function runLines(source) {
-	const commands = [];
-	let blockIndent = null;
-	for (const line of source.split('\n')) {
-		if (!line.trim() || line.trimStart().startsWith('#')) continue;
-		const indent = line.length - line.trimStart().length;
-		if (blockIndent !== null) {
-			if (indent > blockIndent) {
-				commands.push(line);
-				continue;
-			}
-			blockIndent = null;
-		}
-		const match = /^(\s*)(-\s+)?run:\s*(.*)$/.exec(line);
-		if (!match) continue;
-		const value = match[3].trim();
-		if (/^[|>][+-]?(?:\s+#.*)?$/.test(value)) {
-			blockIndent = match[1].length + (match[2]?.length ?? 0);
-		} else if (value.startsWith('"') || value.startsWith("'")) {
-			const quote = value[0];
-			const end = value.lastIndexOf(quote);
-			if (end > 0 && /^(?:\s*#.*)?$/.test(value.slice(end + 1))) {
-				commands.push(value.slice(1, end));
-			}
-		} else {
-			commands.push(value);
-		}
+	const document = parseDocument(source);
+	if (document.errors.length) {
+		throw new Error(`${WORKFLOW}: invalid YAML: ${document.errors.map((error) => error.message).join('; ')}`);
 	}
-	return commands;
+	const workflow = document.toJS();
+	const jobs = workflow?.jobs;
+	if (!jobs || typeof jobs !== 'object' || Array.isArray(jobs)) {
+		throw new Error(`${WORKFLOW}: expected a jobs mapping`);
+	}
+	return Object.values(jobs).flatMap((job) => {
+		if (!Array.isArray(job?.steps)) return [];
+		return job.steps.flatMap((step) => typeof step?.run === 'string' ? step.run.split('\n') : []);
+	});
 }
 
 try {
