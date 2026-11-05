@@ -52,3 +52,11 @@ test('mobile deep link moves the same app body across the desktop breakpoint and
 	await expect(mobileApp.locator('[data-e2e-moved]')).toHaveCount(1);
 	await expect(desktopBody).toBeEmpty();
 });
+
+test('hidden apps remain reachable from their mobile deep links', async ({ page }) => {
+	await page.goto('/vscode/');
+	const mobileApp = page.locator('[data-mobile-app="vscode"]');
+	await expect(mobileApp).toBeVisible();
+	await expect(mobileApp).not.toBeEmpty();
+	await expect(page.locator('.mshell__home')).toBeHidden();
+});

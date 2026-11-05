@@ -105,7 +105,7 @@ const MSHELL_ICON_PX = 56;
 		</header>
 		<div class="mshell__app-body">
 			{
-				apps.filter((a) => !a.desktopOnly && !a.hidden).map((a) => (
+				apps.filter((a) => !a.desktopOnly).map((a) => (
 					<div data-mobile-app={a.id} hidden />
 				))
 			}
