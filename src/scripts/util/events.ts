@@ -24,7 +24,7 @@ export interface MillsEventMap {
 	'mills:close-window': CustomEvent<{ id: string }>;
 	'mills:clippy-trigger': CustomEvent<ClippyTriggerDetail>;
 	'mills:play-sound': CustomEvent<{ kind: SoundKind }>;
-	// Fired by window-manager AFTER a window transitions hidden -> visible
+	// Fired by app-activity AFTER an app transitions inactive -> active
 	// (a true open, not a focus-raise on an already-open window). The
 	// `userGesture` flag is true when the open came from a click/keyboard
 	// path with a real user interaction (taskbar start menu, desktop icon,
@@ -34,7 +34,7 @@ export interface MillsEventMap {
 	// gate on `userGesture` -- the autoplay policy will reject play()
 	// without one and surface NotAllowedError.
 	'mills:window-open': CustomEvent<{ id: string; userGesture: boolean }>;
-	// Fired by window-manager AFTER a window transitions visible -> hidden
+	// Fired by app-activity AFTER an app transitions active -> inactive
 	// (a true close, not a no-op on an already-closed window). Subscribers
 	// can release per-window resources (audio playback, observers, etc.).
 	'mills:window-closed': CustomEvent<{ id: string }>;
