@@ -9,6 +9,9 @@
 # Checkout location: MMS_CAREER_MGMT_DIR, defaulting to the sibling
 # checkout next to this repo. With the opt-in set, a missing checkout or
 # an ambiguous draft glob is a loud failure, not a silent pass.
+# A unique glob match proves only which file is compared, not that it is
+# the current canonical draft. Keep the career-mgmt checkout current and
+# confirm its draft selection before treating this check as a freshness audit.
 #
 # Deliberately NOT asserted: profile.ts `summary` vs the resume's
 # Professional Summary — the two are different registers by design (the
@@ -21,6 +24,11 @@ cd "$(dirname "$0")/.."
 
 SERVED=public/files/resume.md
 CHECKOUT="${MMS_CAREER_MGMT_DIR:-$(cd .. && pwd)/career-mgmt}"
+
+if [[ ! -f "$SERVED" ]]; then
+	echo "✗ served resume not found at $SERVED — restore the served file before checking draft sync" >&2
+	exit 1
+fi
 
 if [[ ! -d "$CHECKOUT" ]]; then
 	echo "✗ career-mgmt checkout not found at $CHECKOUT (set MMS_CAREER_MGMT_DIR)" >&2
