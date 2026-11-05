@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { incidents } from '../data/incidents';
 import { coreSkills, experience, photos, profile } from '../data/profile';
 import { projects } from '../data/projects';
 import {
@@ -9,14 +10,14 @@ import {
 
 // The data-backed sections are interpolated from the typed data files so
 // this surface can no longer drift from them (#838). Hand-written prose
-// remains inline for the sections with no typed source (terminal, war
-// stories, tech stack, legal).
+// remains inline for the sections with no typed source (terminal, tech
+// stack, legal).
 
 function aboutSection(): string {
 	return `## about
 
 ${profile.name} (\`${profile.handle}\`). Pronouns: ${profile.pronouns}.
-Based in ${profile.location.replace(' · ', ' and works ')}.
+Location: ${profile.location}.
 ${profile.title} at ${profile.currentEmployer}.
 
 Certifications: ${profile.certifications.join(', ')}.
@@ -40,6 +41,14 @@ function experienceSection(): string {
 	return `### experience\n\n${roles}`;
 }
 
+function incidentsSection(): string {
+	const stories = incidents.map((incident) => {
+		const link = incident.link ? ` [${incident.link.label}](${incident.link.href})` : '';
+		return `- ${incident.title} (${incident.year}, ${incident.employer}).\n  ${incident.annotation}${link}`;
+	}).join('\n');
+	return `### notable war stories\n\n${stories}`;
+}
+
 function projectsSection(): string {
 	const lines = projects
 		.map((p) => {
@@ -49,8 +58,8 @@ function projectsSection(): string {
 		.join('\n');
 	return `## projects
 
-Open source, across github.com/millsmillsymills and the
-millsymills-com GitHub org:
+Open source, across <${profile.github}> and
+<${profile.githubOrg}>:
 
 ${lines}`;
 }
@@ -114,25 +123,7 @@ ${skillsSection()}
 
 ${experienceSection()}
 
-### notable war stories
-
-- Patched a Zoom RCE 0-day with a custom mitigation 8 hours
-  before the vendor released their fix.
-- Solved an internal hardware theft case by correlating MAC
-  address movement across Meraki access points with RADIUS
-  logs, video feeds, and badge access logs.
-- Performed an emergency data exfiltration for a VIP whose
-  beachfront Florida office was about to be destroyed by
-  Hurricane Irma. Beat the storm.
-- Hot-swapped a Zoom environment from Okta's pre-built
-  integration to a custom SAML integration with zero downtime,
-  zero complaints, and no lost data.
-- Replaced a $50k/year SOC-as-a-service vendor with n8n
-  automations and enriched Slack alerts.
-- Managed intelligence sharing between organizations targeted
-  by ELUSIVE COMET; hardened endpoints against Zoom remote-
-  control social-engineering attacks and authored the
-  public blog post.
+${incidentsSection()}
 
 ---
 
