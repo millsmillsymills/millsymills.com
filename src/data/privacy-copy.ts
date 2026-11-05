@@ -43,7 +43,7 @@ export const copy = {
 		'this site does not track you. the rest of this page is a more specific statement of that fact, with citations into the repo so you can check the receipts.',
 	whatWeCollect: {
 		heading: 'what we collect',
-		body: 'no cookies, no fingerprinting, no tag managers, no third-party scripts, no per-visitor analytics. page loads no longer increment a hit counter. the site is static html + css + a little javascript, served from cloudfront, built from a public github repo, with interactive demos that call same-origin apis. server logs and browser-generated csp reports are described below. the cloudfront cache policy explicitly forwards zero cookies to the origin.',
+		body: 'no cookies, no fingerprinting, no tag managers, no third-party scripts, no per-visitor analytics. we monitor aggregate cloudfront request totals for traffic spikes; these are requests, not visitor counts. the site is static html + css + a little javascript, served from cloudfront, built from a public github repo, with interactive demos that call same-origin apis. server logs and browser-generated csp reports are described below. the cloudfront cache policy explicitly forwards zero cookies to the origin.',
 		citations: [
 			{ label: 'infra/cloudfront.tf (cookie_behavior = "none")', path: 'infra/cloudfront.tf' },
 			{ label: 'infra/cloudfront.tf (CSP: default-src \'self\')', path: 'infra/cloudfront.tf' },
@@ -77,7 +77,7 @@ export const copy = {
 	},
 	serverLogs: {
 		heading: 'server logs',
-		body: 'cloudfront keeps standard access logs (url, ip, user-agent, timestamp, status code) in a private s3 bucket we own. they auto-expire after 90 days as the current version, plus up to another 90 days as a noncurrent (recoverable) version, then they are gone. no further processing, no profile-building. the logs exist so outages are debuggable. the only other server-side data is browser-generated csp violation reports posted to `/api/csp-report` and kept for 30 days — those are debugging telemetry from the browser, not user content.',
+		body: 'cloudfront keeps standard access logs (url, ip, user-agent, timestamp, status code) in a private s3 bucket we own. they auto-expire after 90 days as the current version, plus up to another 90 days as a noncurrent (recoverable) version, then they are gone. these security logs remain separate from aggregate analytics and support security and debugging; we do not build visitor profiles. We use existing logs to estimate page popularity, before counting and retaining only hourly traffic and daily page totals, without individual request records or visitor identifiers. the only other server-side data is browser-generated csp violation reports posted to `/api/csp-report` and kept for 30 days — those are debugging telemetry from the browser, not user content.',
 		citations: [
 			{ label: 'infra/s3.tf (90-day current + 90-day noncurrent expiration)', path: 'infra/s3.tf' },
 			{ label: 'infra/cloudfront_logging.tf (standard logs v2 → S3)', path: 'infra/cloudfront_logging.tf' },

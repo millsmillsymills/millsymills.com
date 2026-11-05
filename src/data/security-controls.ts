@@ -438,10 +438,10 @@ export const securityControls: readonly SecurityControl[] = [
 	// ─── privacy ───────────────────────────────────────────────────────
 	{
 		id: 'no-tracking',
-		title: 'Zero analytics, zero third-party fetches',
+		title: 'No per-visitor analytics, zero third-party fetches',
 		category: 'privacy',
 		status: 'shipped',
-		what: 'No analytics, no cookies, no fingerprinting, no tag managers, no third-party scripts. Self-hosted fonts. Static HTML + CSS + a little JavaScript served from CloudFront.',
+		what: 'No per-visitor analytics, no cookies, no fingerprinting, no tag managers, no third-party scripts. Aggregate CloudFront request totals monitor traffic spikes. Self-hosted fonts. Static HTML + CSS + a little JavaScript served from CloudFront.',
 		why: 'The privacy page can only make a "we don\'t track you" claim if there\'s nothing to track you with. Removing the surface is the strongest possible posture.',
 		code: ['src/data/privacy-copy.ts', 'src/pages/'],
 	},
@@ -457,11 +457,11 @@ export const securityControls: readonly SecurityControl[] = [
 	},
 	{
 		id: 'cf-access-logs',
-		title: 'CloudFront access logs (90-day TTL, no processing)',
+		title: 'Private CloudFront access logs (versioned retention)',
 		category: 'privacy',
 		status: 'shipped',
-		what: 'Standard CloudFront access logs (URL, IP, user-agent, timestamp, status code) land in a private S3 bucket and auto-expire after 90 days. No further processing, no profile-building.',
-		why: 'Logs exist so outages are debuggable; nothing more. The lifecycle policy means there\'s no archive to subpoena, leak, or accidentally retain.',
+		what: 'Standard CloudFront access logs (URL, IP, user-agent, timestamp, status code) land in a private S3 bucket. Current versions expire after 90 days, with recoverable noncurrent versions retained for up to another 90 days. These security logs remain separate from aggregate analytics. We use existing logs to estimate page popularity, before counting and retaining only hourly traffic and daily page totals, without individual request records or visitor identifiers.',
+		why: 'Logs support security investigations and outage debugging. Lifecycle rules limit retention; versioning temporarily preserves recoverable copies.',
 		code: ['infra/cloudfront_logging.tf', 'infra/s3.tf'],
 	},
 	{
