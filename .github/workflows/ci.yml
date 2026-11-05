@@ -51,6 +51,23 @@ jobs:
         # Match the deploy build's lifecycle-disabled installation.
         run: npm ci --ignore-scripts
 
+      - name: Install pinned shell lint tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/shell-lint"
+          cd "$RUNNER_TEMP/shell-lint"
+          curl --fail --silent --show-error --location 'https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz' --output 'shellcheck-v0.11.0.linux.x86_64.tar.gz'
+          echo 'b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6  shellcheck-v0.11.0.linux.x86_64.tar.gz' | sha256sum --check --strict
+          curl --fail --silent --show-error --location 'https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64' --output 'shfmt_v3.14.1_linux_amd64'
+          echo '76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf  shfmt_v3.14.1_linux_amd64' | sha256sum --check --strict
+          tar -xzf shellcheck-v0.11.0.linux.x86_64.tar.gz
+          mv shellcheck-v0.11.0/shellcheck .
+          mv shfmt_v3.14.1_linux_amd64 shfmt
+          chmod +x shellcheck shfmt
+          echo "$RUNNER_TEMP/shell-lint" >> "$GITHUB_PATH"
+
+      - name: Lint shell assertions, verifiers, analytics and smoke scripts
+        run: bash scripts/lint-shell.sh
+
       # ---- pre-build asserts (no dist/ needed) ----
       - name: Assert icon assets referenced by apps.ts exist
         run: ./scripts/assert-icon-assets-exist.sh

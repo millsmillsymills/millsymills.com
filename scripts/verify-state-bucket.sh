@@ -138,7 +138,7 @@ else
 fi
 
 section "report"
-if (( ${#FAILS[@]} == 0 )); then
+if ((${#FAILS[@]} == 0)); then
 	green "✓ all state-bucket controls match infra/bootstrap-state/main.tf"
 	exit 0
 fi

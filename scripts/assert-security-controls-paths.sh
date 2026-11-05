@@ -57,10 +57,10 @@ done < <(
 			buf = ""
 			in_block = 0
 		}
-	' "$DATA_FILE" \
-		| grep -oE "['\"][^'\"]+['\"]" \
-		| sed -E "s/^['\"](.*)['\"]$/\\1/" \
-		| sort -u
+	' "$DATA_FILE" |
+		grep -oE "['\"][^'\"]+['\"]" |
+		sed -E "s/^['\"](.*)['\"]$/\\1/" |
+		sort -u
 )
 
 if [ "${#CITED_PATHS[@]}" -eq 0 ]; then
@@ -81,6 +81,7 @@ for p in "${CITED_PATHS[@]}"; do
 done
 
 if [ "$missing" -ne 0 ]; then
+	# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 	printf '\nFix: update %s so every `code:` entry points at a real file in the repo.\n' "$DATA_FILE" >&2
 	printf '     Either restore the missing file, or remove/rename the entry to match reality.\n' >&2
 	lint::fatal "security-controls.ts cites paths that do not exist"

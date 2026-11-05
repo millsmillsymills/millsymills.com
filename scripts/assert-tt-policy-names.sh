@@ -73,11 +73,11 @@ fail=0
 # directive — dead allowlist entry, and the live name is now unprotected.
 for name in $declared; do
 	case "$used_sp" in
-	*" $name "*) ;;
-	*)
-		lint::fail "TT policy name '$name' is allowlisted in $CF_TF but no createPolicy('$name') call site exists"
-		fail=1
-		;;
+		*" $name "*) ;;
+		*)
+			lint::fail "TT policy name '$name' is allowlisted in $CF_TF but no createPolicy('$name') call site exists"
+			fail=1
+			;;
 	esac
 done
 
@@ -85,11 +85,11 @@ done
 # CSP does not allow. Throws under enforce — the failure this lint exists for.
 for name in $used; do
 	case "$declared_sp" in
-	*" $name "*) ;;
-	*)
-		lint::fail "createPolicy('$name') has no matching name in the trusted-types directive of $CF_TF"
-		fail=1
-		;;
+		*" $name "*) ;;
+		*)
+			lint::fail "createPolicy('$name') has no matching name in the trusted-types directive of $CF_TF"
+			fail=1
+			;;
 	esac
 done
 
