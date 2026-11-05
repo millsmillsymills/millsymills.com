@@ -19,9 +19,9 @@ ok() {
 	printf '\033[1;32m✓ %s\033[0m\n' "$1"
 }
 
-section "node: npm ci"
-npm ci
-ok "npm ci"
+section "node: npm ci (dependency lifecycle hooks disabled)"
+npm ci --ignore-scripts
+ok "npm ci --ignore-scripts"
 
 section "node: assert icon assets referenced by apps.ts exist"
 ./scripts/assert-icon-assets-exist.sh

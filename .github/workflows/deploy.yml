@@ -21,11 +21,10 @@ name: Deploy
 #   - OIDC sub = `repo:<owner/name>:environment:production`
 #   - OIDC job_workflow_ref pinned to THIS file on `refs/heads/main`
 #     (so a different workflow on main, even one declaring the same
-#     environment, cannot mint the deploy role's token). Splitting
-#     this workflow into multiple jobs does NOT change job_workflow_ref
-#     — that claim is per-workflow, so adding `build` and `deploy`
-#     jobs alongside the SLSA provenance step keeps every locally-
-#     authored job under the existing IAM pin.
+#     environment, cannot mint the deploy role's token). The build job
+#     has neither id-token permission nor a production environment binding.
+#     Only deploy and the SLSA provenance builder carry OIDC; the deploy
+#     job's production environment and workflow identity satisfy the IAM pin.
 #   - IAM role scoped to s3:PutObject/DeleteObject/GetObject (plus
 #     the read/list scaffolding `aws s3 sync` requires —
 #     s3:ListBucket and s3:GetBucketLocation) on the prod S3 bucket,
@@ -87,11 +86,11 @@ jobs:
            github.event.workflow_run.head_branch == 'main') }}
 
     # No `environment:` and no `id-token: write` here — this job runs
-    # untrusted dependency + test code (`npm ci`/`npm test`), and binding
+    # untrusted dependency + test code (`npm test`/`npm run build`), and binding
     # it to the production environment would hand that code the exact
     # OIDC claims (`sub=environment:production`, this file's
     # job_workflow_ref) the deploy role's IAM trust policy checks. A
-    # compromised postinstall script could then mint a deploy-role token
+    # compromised build-time dependency could then mint a deploy-role token
     # and write to the prod bucket. Only `deploy` (and the SLSA builder)
     # carry OIDC (#876). The signed-commits drift check lives in `deploy`
     # for the same reason: `BRANCH_PROTECTION_READ_TOKEN` is a
@@ -123,7 +122,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Skip dependency lifecycle hooks. The explicit test/build steps below
+        # still execute dependency code, so the job remains unprivileged.
+        # CI and ci-local.sh use the same install mode to catch incompatibility.
+        run: npm ci --ignore-scripts
 
       # Inline test run because automatic CI is disabled (see ci.yml header).
       # Without this, a manual workflow_dispatch could ship code with failing
