@@ -13,12 +13,8 @@
  */
 
 import { isAppId } from '../data/apps';
-import {
-	dispatchClippyTrigger,
-	dispatchPlaySound,
-	dispatchWindowClosed,
-	dispatchWindowOpen,
-} from './util/events';
+import { MOBILE_QUERY, reconcileAppActivity } from './util/app-activity';
+import { dispatchClippyTrigger, dispatchPlaySound } from './util/events';
 
 const STORAGE_KEY = 'mills.desktop.v1';
 const Z_BASE = 100;
@@ -184,6 +180,16 @@ class WindowManager {
 		this.bindClock();
 		this.bindExternalCloseEvent();
 		this.restore();
+		window.matchMedia(MOBILE_QUERY).addEventListener('change', (event) => {
+			if (event.matches) return;
+			// Mobile mirrors its selection onto window visibility for handoff.
+			// Adopt that visible set so taskbar/persistence agree with the DOM.
+			this.state.open = [...this.windows].filter(([, el]) => !el.hidden).map(([id]) => id);
+			this.applyZ();
+			this.renderTaskbar();
+			this.persist();
+			this.publishActivity();
+		});
 	}
 
 	// ----------------------------------------------------------------
@@ -250,7 +256,7 @@ class WindowManager {
 	// util/events.ts so the callback parameter is auto-typed.
 	private bindExternalCloseEvent() {
 		document.addEventListener('mills:close-window', (ev) => {
-			this.close(ev.detail.id);
+			if (!window.matchMedia(MOBILE_QUERY).matches) this.close(ev.detail.id);
 		});
 	}
 
@@ -354,7 +360,7 @@ class WindowManager {
 	// mirroring clippy.ts. Opened non-silently so Clippy can narrate via
 	// the `open` trigger when it's awake and not dismissed.
 	private maybeFirstVisitWelcome() {
-		if (window.matchMedia('(max-width: 768px)').matches) return;
+		if (window.matchMedia(MOBILE_QUERY).matches) return;
 
 		const KEY = 'mills.welcome.seen';
 		try {
@@ -368,13 +374,13 @@ class WindowManager {
 			console.warn('[mills.desktop] welcome flag write failed', err);
 		}
 		if (this.state.open.includes('welcome')) return;
-		this.open('welcome');
+		this.open('welcome', { userGesture: false });
 	}
 
 	// ----------------------------------------------------------------
 	// behaviors
 
-	private open(id: string, opts: { skipPosition?: boolean; silent?: boolean } = {}) {
+	private open(id: string, opts: { skipPosition?: boolean; silent?: boolean; userGesture?: boolean } = {}) {
 		const el = this.windows.get(id);
 		if (!el) return;
 
@@ -382,7 +388,7 @@ class WindowManager {
 		// for a true open, not a focus-raise on an already-open window.
 		const wasOpen = this.state.open.includes(id);
 
-		el.hidden = false;
+		if (!window.matchMedia(MOBILE_QUERY).matches) el.hidden = false;
 		if (!opts.skipPosition) this.restorePosition(id, el);
 
 		// Move id to the top of the open list.
@@ -393,12 +399,7 @@ class WindowManager {
 		this.renderTaskbar();
 		this.persist();
 
-		if (!wasOpen) {
-			// `silent: true` is the bootstrap path (initialOpen prop /
-			// deep-link). Treat that as code-initiated, not a user gesture,
-			// so subscribers (e.g. music player autoplay) can gate.
-			dispatchWindowOpen(id, !opts.silent);
-		}
+		this.publishActivity(!opts.silent && opts.userGesture !== false ? id : undefined);
 
 		if (!opts.silent && !wasOpen) {
 			dispatchClippyTrigger('open', isAppId(id) ? id : undefined);
@@ -418,11 +419,16 @@ class WindowManager {
 		this.renderTaskbar();
 		this.persist();
 
+		this.publishActivity();
+
 		if (wasOpen) {
-			dispatchWindowClosed(id);
 			dispatchClippyTrigger('close', isAppId(id) ? id : undefined);
 			dispatchPlaySound('close');
 		}
+	}
+
+	private publishActivity(gestureId?: string): void {
+		reconcileAppActivity('desktop', [...this.windows].filter(([, el]) => !el.hidden).map(([id]) => id), gestureId);
 	}
 
 	private focus(id: string) {

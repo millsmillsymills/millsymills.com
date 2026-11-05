@@ -20,7 +20,7 @@
  * `desktop.css` that toggles `.desktop` vs `.mshell` visibility.
  */
 
-const MOBILE_MQL = '(max-width: 768px)';
+import { MOBILE_QUERY, reconcileAppActivity } from './util/app-activity';
 
 class MobileShell {
 	private root: HTMLElement;
@@ -30,6 +30,7 @@ class MobileShell {
 	private apps: Map<string, HTMLElement> = new Map();
 	private mql: MediaQueryList;
 	private transplanted = false;
+	private current: string | null = null;
 
 	constructor(root: HTMLElement) {
 		this.root = root;
@@ -50,7 +51,7 @@ class MobileShell {
 			this.show(next, /* fromPop */ true);
 		});
 
-		this.mql = window.matchMedia(MOBILE_MQL);
+		this.mql = window.matchMedia(MOBILE_QUERY);
 		this.applyBreakpoint();
 		this.mql.addEventListener('change', () => this.applyBreakpoint());
 
@@ -68,6 +69,9 @@ class MobileShell {
 			if (!initial && this.mql.matches) initial = this.firstVisitWelcome();
 		}
 		this.show(initial, /* fromPop */ true);
+		document.addEventListener('mills:close-window', (event) => {
+			if (this.mql.matches && this.current === event.detail.id) this.show(null);
+		});
 	}
 
 	// First arrival opens the welcome app once. The flag is shared with the
@@ -94,7 +98,7 @@ class MobileShell {
 		this.home.querySelectorAll<HTMLButtonElement>('[data-open-app]').forEach((btn) => {
 			btn.addEventListener('click', () => {
 				const id = btn.dataset['openApp'];
-				if (id) this.show(id);
+				if (id) this.show(id, false, true);
 			});
 		});
 	}
@@ -121,6 +125,7 @@ class MobileShell {
 		if (this.mql.matches && !this.transplanted) {
 			this.transplant('to-mobile');
 			this.transplanted = true;
+			this.syncSelection();
 		} else if (!this.mql.matches && this.transplanted) {
 			this.transplant('to-desktop');
 			this.transplanted = false;
@@ -141,16 +146,18 @@ class MobileShell {
 		});
 	}
 
-	private show(appId: string | null, fromPop = false): void {
-		this.apps.forEach((el, id) => {
+	private show(appId: string | null, fromPop = false, userGesture = false): void {
+		if (appId && !this.apps.has(appId)) appId = null;
+		this.current = appId;
+		this.apps.forEach((el) => {
 			el.hidden = true;
-			this.syncDesktopWindowHidden(id, true);
 		});
 
 		if (!appId) {
 			this.home.hidden = false;
 			this.appView.hidden = true;
 			document.body.classList.remove('mshell-app-open');
+			this.syncSelection();
 			if (!fromPop) history.pushState({ current: null }, '', location.pathname);
 			return;
 		}
@@ -164,14 +171,7 @@ class MobileShell {
 		this.home.hidden = true;
 		this.appView.hidden = false;
 		app.hidden = false;
-		// Mirror the open state onto the corresponding Desktop window's
-		// `hidden` attr so scripts watching window-manager's canonical
-		// "this app just opened" signal (e.g. inspector.exe's
-		// MutationObserver on `[data-window-id="inspector"]`) also fire
-		// on mobile. The window is `display:none` via CSS at this
-		// breakpoint, so the flip has no visual effect — it's purely
-		// the signalling channel.
-		this.syncDesktopWindowHidden(appId, false);
+		this.syncSelection(userGesture);
 		document.body.classList.add('mshell-app-open');
 
 		const launcher = this.home.querySelector<HTMLElement>(`[data-open-app="${appId}"]`);
@@ -182,6 +182,13 @@ class MobileShell {
 		if (!fromPop) history.pushState({ current: appId }, '', location.pathname);
 
 		this.scrollToHashIn(app);
+	}
+
+	private syncSelection(userGesture = false): void {
+		if (!this.mql.matches) return;
+		// Preserve the existing selected-app policy when returning to desktop.
+		this.apps.forEach((_, id) => this.syncDesktopWindowHidden(id, id !== this.current));
+		reconcileAppActivity('mobile', this.current ? [this.current] : [], userGesture ? this.current ?? undefined : undefined);
 	}
 
 	private syncDesktopWindowHidden(appId: string, hidden: boolean): void {

@@ -7,6 +7,7 @@
  */
 
 import { dispatchNowPlaying } from './util/events';
+import { subscribeAppActivity } from './util/app-activity';
 
 // Internal runtime track shape — distinct from src/data/playlist.ts's Track,
 // which is the canonical readonly playlist data. Kept separate so the
@@ -101,7 +102,7 @@ export class MusicPlayer {
 
 	/**
 	 * Issue #402: opening music.exe IS the play gesture. Autoplay the
-	 * first track when the window-manager fires a true open with a real
+	 * first track when either shell publishes activation with a real
 	 * user gesture; on deep-link / restore-from-storage opens (`silent`
 	 * path -> `userGesture: false`) leave the player paused so the
 	 * autoplay-policy NotAllowedError doesn't fire.
@@ -110,41 +111,20 @@ export class MusicPlayer {
 	 * keep streaming. Re-opening triggers a fresh autoplay.
 	 */
 	private bindWindowLifecycle(): void {
-		const { signal } = this.abort;
-		window.addEventListener(
-			'mills:window-open',
-			(event) => {
-				if (event.detail.id !== MUSIC_WINDOW_ID) return;
-				if (!event.detail.userGesture) return;
-				// If a track is already loaded and playing (e.g. user
-				// re-opened a previously-minimized window), don't restart.
+		subscribeAppActivity(MUSIC_WINDOW_ID, ({ active, userGesture }) => {
+			if (active) {
+				if (!userGesture) return;
 				if (this.current !== -1 && !this.audio.paused) return;
-				if (this.current === -1) {
-					this.load(0, true);
-				} else {
-					this.audio
-						.play()
-						.catch((err) => this.setStatus(playErrorMessage(err)));
-				}
-			},
-			{ signal },
-		);
-
-		window.addEventListener(
-			'mills:window-closed',
-			(event) => {
-				if (event.detail.id !== MUSIC_WINDOW_ID) return;
+				if (this.current === -1) this.load(0, true);
+				else this.audio.play().catch((err) => this.setStatus(playErrorMessage(err)));
+			} else {
 				this.audio.pause();
-				// Releasing the src tells the browser it can drop the buffered
-				// audio. The next open re-loads via this.load(0, true) so the
-				// playhead resets to the start of the playlist intentionally.
 				this.audio.removeAttribute('src');
 				this.audio.load();
 				this.current = -1;
 				this.refreshTrackHighlight();
-			},
-			{ signal },
-		);
+			}
+		}, this.abort.signal);
 	}
 
 	/**

@@ -304,6 +304,7 @@
 </style>
 
 <script>
+	import { subscribeAppActivity } from '../../../scripts/util/app-activity';
 	type Grade = 'A' | 'B' | 'C' | 'F' | 'err';
 	interface Check {
 		header: string;
@@ -530,19 +531,12 @@
 	function init(): void {
 		const win = document.querySelector<HTMLElement>('[data-window-id="inspector"]');
 		if (!win) return;
-		// Run once when this app's window first becomes visible. The
-		// MutationObserver fires when window-manager flips the `hidden`
-		// attribute on open, which is the canonical "this window just
-		// opened" signal in this codebase.
 		let ran = false;
-		const maybeRun = (): void => {
-			if (ran || win.hidden) return;
+		subscribeAppActivity('inspector', ({ active }) => {
+			if (!active || ran) return;
 			ran = true;
 			void run();
-		};
-		const observer = new MutationObserver(maybeRun);
-		observer.observe(win, { attributes: true, attributeFilter: ['hidden'] });
-		maybeRun();
+		});
 		document
 			.querySelector<HTMLButtonElement>('[data-inspector-refresh]')
 			?.addEventListener('click', () => void run());
