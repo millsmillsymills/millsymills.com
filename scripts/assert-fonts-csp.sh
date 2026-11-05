@@ -44,9 +44,9 @@ REFERENCED=()
 while IFS= read -r line; do
 	REFERENCED+=("$line")
 done < <(
-	grep -rhoE "url\\(['\"]?/fonts/[A-Za-z0-9_.-]+['\"]?\\)" src/ public/ \
-		| sed -E "s|url\\(['\"]?/fonts/([A-Za-z0-9_.-]+)['\"]?\\)|\\1|" \
-		| sort -u
+	grep -rhoE "url\\(['\"]?/fonts/[A-Za-z0-9_.-]+['\"]?\\)" src/ public/ |
+		sed -E "s|url\\(['\"]?/fonts/([A-Za-z0-9_.-]+)['\"]?\\)|\\1|" |
+		sort -u
 )
 
 if [ "${#REFERENCED[@]}" -eq 0 ]; then
@@ -137,6 +137,7 @@ if [ -d "$DIST" ]; then
 		lint::fatal "CSP drift: $DIST/ references a cross-origin font file"
 	fi
 else
+	# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 	printf '(dist/ not present — skipping post-build checks; run `npm run build` first)\n'
 fi
 

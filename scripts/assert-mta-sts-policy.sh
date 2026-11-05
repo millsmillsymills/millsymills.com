@@ -34,6 +34,7 @@ DIST_FILE="dist/.well-known/mta-sts.txt"
 SRC_FILE="src/pages/.well-known/mta-sts.txt.ts"
 
 if [ ! -s "$DIST_FILE" ]; then
+	# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 	printf '  Hint: run `npm run build` first.\n' >&2
 	lint::refuse_blind "$DIST_FILE missing or empty"
 fi

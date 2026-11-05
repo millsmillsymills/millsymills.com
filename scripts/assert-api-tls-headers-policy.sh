@@ -79,21 +79,23 @@ awk '
 ' "$CF_TF" || rc=$?
 
 case "$rc" in
-0) ;;
-1)
-	lint::fail "/api/tls/* ordered_cache_behavior is missing response_headers_policy_id"
-	printf '\nFix: in %s, inside the `ordered_cache_behavior { path_pattern = "/api/tls/*" ... }`\n' "$CF_TF" >&2
-	printf '     block, set `response_headers_policy_id = aws_cloudfront_response_headers_policy.<policy>.id`.\n' >&2
-	printf '     Without it, /api/tls/inspect serves no HSTS / CSP / COOP / COEP / CORP /\n' >&2
-	printf '     X-Content-Type-Options / Referrer-Policy / Permissions-Policy.\n' >&2
-	exit 1
-	;;
-2)
-	lint::refuse_blind "no ordered_cache_behavior with path_pattern \"/api/tls/*\" found in $CF_TF"
-	;;
-*)
-	lint::fatal "unexpected awk exit $rc"
-	;;
+	0) ;;
+	1)
+		lint::fail "/api/tls/* ordered_cache_behavior is missing response_headers_policy_id"
+		# shellcheck disable=SC2016 # Literal command examples, not substitutions.
+		printf '\nFix: in %s, inside the `ordered_cache_behavior { path_pattern = "/api/tls/*" ... }`\n' "$CF_TF" >&2
+		# shellcheck disable=SC2016 # Literal command examples, not substitutions.
+		printf '     block, set `response_headers_policy_id = aws_cloudfront_response_headers_policy.<policy>.id`.\n' >&2
+		printf '     Without it, /api/tls/inspect serves no HSTS / CSP / COOP / COEP / CORP /\n' >&2
+		printf '     X-Content-Type-Options / Referrer-Policy / Permissions-Policy.\n' >&2
+		exit 1
+		;;
+	2)
+		lint::refuse_blind "no ordered_cache_behavior with path_pattern \"/api/tls/*\" found in $CF_TF"
+		;;
+	*)
+		lint::fatal "unexpected awk exit $rc"
+		;;
 esac
 
 lint::ok "/api/tls/* ordered_cache_behavior has response_headers_policy_id attached in $CF_TF"

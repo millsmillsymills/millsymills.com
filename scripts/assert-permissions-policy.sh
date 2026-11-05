@@ -102,10 +102,13 @@ for policy_value in "$@"; do
 	')
 
 	if [ -n "$violations" ]; then
+		# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 		printf '\nFix: every Permissions-Policy directive in %s (policy #%d) must use `()` (deny) or `(self)` (self-allow).\n' "$CF_TF" "$policy_index" >&2
 		printf '     Permissive forms (=*, =(*), explicit origins) break the strict-deny posture.\n' >&2
 		printf '     Offending directive(s):\n' >&2
-		printf '       %s\n' $violations >&2
+		while IFS= read -r violation; do
+			printf '       %s\n' "$violation" >&2
+		done <<<"$violations"
 		lint::fatal "Permissions-Policy #$policy_index widens beyond strict-deny"
 	fi
 
@@ -134,6 +137,7 @@ for policy_value in "$@"; do
 	elif [ "$normalized" != "$canonical" ]; then
 		printf '\nFix: Permissions-Policy #%d in %s diverged from the shared strict-deny baseline.\n' "$parity_index" "$CF_TF" >&2
 		printf '     Every response-headers policy must ship the identical directive list;\n' >&2
+		# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 		printf '     only the deny/self-allow form (`=()` vs `=(self)`) may differ per policy.\n' >&2
 		printf '     Update all policies together, or the /security/ strict-deny claim drifts.\n' >&2
 		lint::fatal "Permissions-Policy #$parity_index drifted from baseline (#694 parity)"

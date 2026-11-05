@@ -50,8 +50,8 @@ fi
 # Anchor on the `pub` record so we always read the PRIMARY key's fpr,
 # never a subkey's. gpg lists pub before its subkeys, so the first fpr
 # after pub is the primary fingerprint.
-asc_fpr=$(gpg --show-keys --with-colons "$PGP_ASC" 2>/dev/null \
-	| awk -F: '$1=="pub"{seen=1} seen && $1=="fpr"{print $10; exit}')
+asc_fpr=$(gpg --show-keys --with-colons "$PGP_ASC" 2>/dev/null |
+	awk -F: '$1=="pub"{seen=1} seen && $1=="fpr"{print $10; exit}')
 if [[ -z "$asc_fpr" ]]; then
 	printf '\033[1;31m✗ could not parse fingerprint from %s\033[0m\n' "$PGP_ASC" >&2
 	exit 1
@@ -67,8 +67,8 @@ if [[ ${#wkd_files[@]} -ne 1 ]]; then
 	exit 1
 fi
 wkd_file="${wkd_files[0]}"
-wkd_fpr=$(gpg --show-keys --with-colons "$wkd_file" 2>/dev/null \
-	| awk -F: '$1=="pub"{seen=1} seen && $1=="fpr"{print $10; exit}')
+wkd_fpr=$(gpg --show-keys --with-colons "$wkd_file" 2>/dev/null |
+	awk -F: '$1=="pub"{seen=1} seen && $1=="fpr"{print $10; exit}')
 if [[ -z "$wkd_fpr" ]]; then
 	printf '\033[1;31m✗ could not parse fingerprint from WKD binary %s\033[0m\n' "$wkd_file" >&2
 	exit 1
@@ -126,7 +126,7 @@ fi
 if [[ "$age_set_in_ts" = false && "$age_file_exists" = false ]]; then
 	printf '\033[1;33m·\033[0m age key dormant (pgp.ts age=undefined, %s absent) — OK\n' "$AGE_PUB"
 elif [[ "$age_set_in_ts" = true && "$age_file_exists" = true ]]; then
-	age_pub=$(tr -d '[:space:]' < "$AGE_PUB")
+	age_pub=$(tr -d '[:space:]' <"$AGE_PUB")
 	if [[ ! "$age_pub" =~ ^age1[a-z0-9]+$ ]]; then
 		printf '\033[1;31m✗ %s does not look like an age recipient (expected ^age1[a-z0-9]+$)\033[0m\n' "$AGE_PUB" >&2
 		printf '\033[1;31m  hint: did you accidentally drop the private key (AGE-SECRET-KEY-...) instead of the recipient?\033[0m\n' >&2

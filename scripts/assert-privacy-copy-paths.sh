@@ -54,6 +54,7 @@ for p in "${CITED_PATHS[@]}"; do
 done
 
 if [ "$missing" -ne 0 ]; then
+	# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 	printf '\nFix: update %s so every `path:` citation points at a real file in the repo.\n' "$DATA_FILE" >&2
 	printf '     Either restore the missing file, or correct the path to match reality.\n' >&2
 	lint::fatal "privacy-copy.ts cites paths that do not exist"

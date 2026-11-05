@@ -33,6 +33,7 @@ APPS_FILE="src/data/apps.ts"
 PGP_FILE="src/data/pgp.ts"
 
 if [ ! -s "$DIST_FILE" ]; then
+	# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 	printf '  Hint: run `npm run build` first.\n' >&2
 	lint::refuse_blind "$DIST_FILE missing or empty"
 fi
@@ -101,8 +102,8 @@ done
 # fails silently (unlikely with TS, but the lint runs after build so a
 # build-time exception would have failed earlier — this is belt-and-
 # suspenders).
-PGP_FINGERPRINT=$(grep -oE "fingerprint: '[A-F0-9 ]+'" "$PGP_FILE" \
-	| sed -E "s/fingerprint: '([A-F0-9 ]+)'/\\1/")
+PGP_FINGERPRINT=$(grep -oE "fingerprint: '[A-F0-9 ]+'" "$PGP_FILE" |
+	sed -E "s/fingerprint: '([A-F0-9 ]+)'/\\1/")
 if [ -z "$PGP_FINGERPRINT" ]; then
 	lint::refuse_blind "no PGP fingerprint extracted from $PGP_FILE"
 fi

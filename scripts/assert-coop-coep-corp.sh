@@ -77,6 +77,7 @@ EOF
 
 if [ "$missing" -ne 0 ]; then
 	printf '\nFix: edit %s so the custom_headers_config items block sets each header to the value above.\n' "$CF_TF" >&2
+	# shellcheck disable=SC2016 # Literal command examples, not substitutions.
 	printf '     The /security/ page (`coop-coep` entry in src/data/security-controls.ts) cites these exact values.\n' >&2
 	lint::fatal "cross-origin isolation headers drift"
 fi
