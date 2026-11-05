@@ -135,18 +135,7 @@ section "infra: per-stack deploy_workflow files exist"
 # Each stacks/<name>.tfvars sets deploy_workflow to a filename under
 # .github/workflows/. A typo would only surface at terraform-apply time
 # (and then OIDC trust would be wrong). Catch it locally.
-for tfv in infra/stacks/*.tfvars; do
-	stack=$(basename "$tfv" .tfvars)
-	# `|| true` because grep returns 1 when no `deploy_workflow` is set
-	# (tfvars relies on the variable's default in that case); under
-	# `pipefail` an unmatched grep would otherwise abort the loop.
-	wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
-	wf=${wf:-deploy.yml}
-	if [ ! -f ".github/workflows/$wf" ]; then
-		printf '\033[1;31m✗ stack %s references missing workflow .github/workflows/%s\033[0m\n' "$stack" "$wf" >&2
-		exit 1
-	fi
-done
+node scripts/assert-stack-workflows.mjs workflow-files
 ok "stacks/*.tfvars deploy_workflow files all exist"
 
 section "infra: per-stack deploy_environment matches workflow's environment block"
@@ -154,23 +143,7 @@ section "infra: per-stack deploy_environment matches workflow's environment bloc
 # so the value in stacks/<name>.tfvars MUST match the `environment: name:` field
 # in the workflow file it references. A drift would surface only at deploy time
 # as `Not authorized to perform sts:AssumeRoleWithWebIdentity`. Catch it locally.
-for tfv in infra/stacks/*.tfvars; do
-	stack=$(basename "$tfv" .tfvars)
-	wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
-	wf=${wf:-deploy.yml}
-	tfv_env=$(grep -E '^deploy_environment' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
-	tfv_env=${tfv_env:-production}
-	# Workflow's env name appears as `name: <env>` inside the job's `environment:` block.
-	wf_env=$(awk '/^[[:space:]]*environment:[[:space:]]*$/{flag=1; next} flag && /^[[:space:]]*name:/{print $2; exit}' ".github/workflows/$wf" | tr -d '"' || true)
-	if [ -z "$wf_env" ]; then
-		printf '\033[1;31m✗ stack %s: workflow %s has no `environment: name:` field\033[0m\n' "$stack" "$wf" >&2
-		exit 1
-	fi
-	if [ "$tfv_env" != "$wf_env" ]; then
-		printf '\033[1;31m✗ stack %s: tfvars deploy_environment=%q != workflow %s environment=%q (OIDC trust will reject)\033[0m\n' "$stack" "$tfv_env" "$wf" "$wf_env" >&2
-		exit 1
-	fi
-done
+node scripts/assert-stack-workflows.mjs workflow-environments
 ok "stacks/*.tfvars deploy_environment matches each workflow's environment block"
 
 section "python: ct_monitor unit tests"

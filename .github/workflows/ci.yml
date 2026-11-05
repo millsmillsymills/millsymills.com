@@ -141,6 +141,11 @@ jobs:
         with:
           node-version: 22
 
+      # The shared configuration gates use the existing pinned YAML parser.
+      # Skip lifecycle scripts: this job only needs read-only tooling.
+      - name: Install CI gate dependencies
+        run: npm ci --ignore-scripts
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
@@ -187,37 +192,10 @@ jobs:
         run: node scripts/assert-tf-wrapper-refusals.mjs wrong-stack-unlock
 
       - name: per-stack deploy_workflow files exist
-        run: |
-          set -euo pipefail
-          for tfv in infra/stacks/*.tfvars; do
-            stack=$(basename "$tfv" .tfvars)
-            wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
-            wf=${wf:-deploy.yml}
-            if [ ! -f ".github/workflows/$wf" ]; then
-              echo "stack $stack references missing workflow .github/workflows/$wf" >&2
-              exit 1
-            fi
-          done
+        run: node scripts/assert-stack-workflows.mjs workflow-files
 
       - name: per-stack deploy_environment matches workflow's environment block
-        run: |
-          set -euo pipefail
-          for tfv in infra/stacks/*.tfvars; do
-            stack=$(basename "$tfv" .tfvars)
-            wf=$(grep -E '^deploy_workflow' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
-            wf=${wf:-deploy.yml}
-            tfv_env=$(grep -E '^deploy_environment' "$tfv" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
-            tfv_env=${tfv_env:-production}
-            wf_env=$(awk '/^[[:space:]]*environment:[[:space:]]*$/{flag=1; next} flag && /^[[:space:]]*name:/{print $2; exit}' ".github/workflows/$wf" | tr -d '"' || true)
-            if [ -z "$wf_env" ]; then
-              echo "stack $stack: workflow $wf has no \`environment: name:\` field" >&2
-              exit 1
-            fi
-            if [ "$tfv_env" != "$wf_env" ]; then
-              echo "stack $stack: tfvars deploy_environment=$tfv_env != workflow $wf environment=$wf_env (OIDC trust will reject)" >&2
-              exit 1
-            fi
-          done
+        run: node scripts/assert-stack-workflows.mjs workflow-environments
 
   python:
     name: ct_monitor unit tests
