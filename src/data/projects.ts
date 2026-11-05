@@ -75,7 +75,7 @@ export const projects: readonly Project[] = [
 		name: 'unifi-mcp',
 		tagline: 'MCP server for UniFi — Network, Protect, and Site Manager',
 		description:
-			'Wraps all three UniFi APIs — Network, Protect, and Site Manager — as 160 MCP tools: clients, sites, events, device control, camera state, guest networks. Readonly by default with explicitly gated writes, and fail-closed TLS — leaf-cert pinning for self-signed controllers, refusing to start rather than send an API key unverified to a non-private host. The on-site demo drives a simulated network with an AI assistant calling the real tools.',
+			'Wraps all three UniFi APIs — Network, Protect, and Site Manager — through MCP tools: clients, sites, events, device control, camera state, guest networks. Readonly by default with explicitly gated writes, and fail-closed TLS — leaf-cert pinning for self-signed controllers, refusing to start rather than send an API key unverified to a non-private host. The on-site demo drives a simulated network with an AI assistant calling the real tools.',
 		repo: 'https://github.com/millsymills-com/unifi-mcp',
 		icon: '/images/projects/unifi-mcp.svg',
 		demoUrl: '/unifi/',
