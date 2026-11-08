@@ -19,6 +19,14 @@ ok() {
 	printf '\033[1;32m✓ %s\033[0m\n' "$1"
 }
 
+# Matches .github/workflows/claude-settings-guard.yml. Check staged changes
+# as well as committed history; BASE_SHA may select an incoming commit range.
+section "security: Claude settings guard"
+python3 -m unittest discover -s .github/security -p test_claude_settings.py
+python3 .github/security/check_claude_settings.py --staged
+python3 .github/security/check_claude_settings.py --head "${HEAD_SHA:-$(git rev-parse HEAD)}" --base "${BASE_SHA:-}"
+ok "Claude settings and history checked"
+
 section "node: npm ci (dependency lifecycle hooks disabled)"
 npm ci --ignore-scripts
 ok "npm ci --ignore-scripts"
