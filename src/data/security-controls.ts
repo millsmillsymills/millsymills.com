@@ -324,6 +324,16 @@ export const securityControls: readonly SecurityControl[] = [
 
 	// ─── supply chain ──────────────────────────────────────────────────
 	{
+		id: 'claude-settings-guard',
+		title: 'Claude settings credential checks',
+		category: 'supply-chain',
+		status: 'roadmap',
+		what: 'The proposed developer and CI guard rejects tracked local Claude settings and checks shared settings, the staged index and incoming history for common credential patterns. Local CI runs the same checker; diagnostics omit settings values.',
+		why: 'Reduce accidental publication of credentials copied into Claude permission files, including local settings added with force.',
+		tradeoffs: 'Focused heuristics cannot detect every credential or encoding. CI runs after push, so exposed credentials still need revocation. This does not enable branch protection or replace general secret scanning. Marked roadmap until merged and deployed.',
+		code: ['.github/security/check_claude_settings.py', '.github/workflows/claude-settings-guard.yml', 'scripts/ci-local.sh'],
+	},
+	{
 		id: 'oidc-deploy',
 		title: 'OIDC-only deploy (no long-lived AWS keys)',
 		category: 'supply-chain',
