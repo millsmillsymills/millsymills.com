@@ -78,3 +78,6 @@ playwright-report/
 /hstspreload-submission-*.png
 # internal agent planning run-books — keep local (FIND-030 / #635)
 docs/superpowers/
+
+# Claude Code local settings can contain machine-specific permissions and secrets.
+**/.claude/settings.local.json
