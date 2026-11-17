@@ -141,8 +141,8 @@ resource "aws_lambda_permission" "ct_monitor_eventbridge" {
 # Scope, deliberately narrow on two counts. It reports invocations that
 # ran and threw; `treat_missing_data = notBreaching` means the separate
 # failure of the schedule not firing at all produces no datapoints and so
-# never alarms (the Invocations-floor pattern at webauthn_demo.tf covers
-# that shape, and is not duplicated here yet). And it notifies through the
+# never alarms. The companion ct_monitor_no_success alarm covers missed
+# or consistently failing runs over 26 hours. Both notify through the
 # same topic the Lambda publishes to, so an SNS-side cause -- topic gone,
 # sns:Publish denied, subscription unconfirmed -- takes the alarm's own
 # notification with it. It covers Lambda-side failures; it shares fate
