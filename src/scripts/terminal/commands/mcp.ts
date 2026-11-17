@@ -47,8 +47,9 @@ register({
 			out(`# install ${p.name}`, 't-dim');
 			out(`$ ${p.install}`, 't-ok');
 			out('');
-			out('then restart your MCP client. or for a one-shot smoke test:', 't-dim');
-			out(`$ curl -s http://<host>/ | jq '.tools'`, 't-dim');
+			out('replace placeholders locally, then restart your MCP client.', 't-dim');
+			out('for prerequisites, environment settings, TLS, and verification, follow the upstream README:', 't-dim');
+			out(`${p.repo}#readme`, 't-dim');
 			return;
 		}
 

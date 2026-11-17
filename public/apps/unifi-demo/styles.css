@@ -41,6 +41,8 @@ body{
 }
 ::selection{ background:var(--cyan); color:var(--fg-on-glow); }
 
+.simulation-notice{ margin:0; padding:8px 16px; flex-shrink:0; color:var(--fg1); background:var(--panel); font-size:12px; }
+
 .app{ display:flex; flex-direction:column; height:100vh; position:relative; }
 
 /* ───── global scanlines + sweep ───── */

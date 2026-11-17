@@ -68,20 +68,20 @@ export const projects: readonly Project[] = [
 		icon: '/images/projects/unraid-mcp.svg',
 		kind: 'mcp',
 		tags: ['mcp', 'unraid', 'homelab', 'python'],
-		install: 'claude mcp add unraid --transport http http://<unraid-host>:8765/',
+		install: 'claude mcp add unraid --transport stdio -e UNRAID_HOST="<unraid-host>" -e UNRAID_API_KEY="<api-key>" -- uvx --from git+https://github.com/millsymills-com/unraid-mcp.git unraid-mcp',
 	},
 	{
 		id: 'unifi-mcp',
 		name: 'unifi-mcp',
 		tagline: 'MCP server for UniFi — Network, Protect, and Site Manager',
 		description:
-			'Wraps all three UniFi APIs — Network, Protect, and Site Manager — through MCP tools: clients, sites, events, device control, camera state, guest networks. Readonly by default with explicitly gated writes, and fail-closed TLS — leaf-cert pinning for self-signed controllers, refusing to start rather than send an API key unverified to a non-private host. The on-site demo drives a simulated network with an AI assistant calling the real tools.',
+			'Wraps all three UniFi APIs — Network, Protect, and Site Manager — through MCP tools: clients, sites, events, device control, camera state, guest networks. Readonly by default with explicitly gated writes, and fail-closed TLS — leaf-cert pinning for self-signed controllers, refusing to start rather than send an API key unverified to a non-private host. The on-site demo is a scripted browser simulation of MCP interactions, with simulated network state and tool-call displays. It does not connect to an AI model or a live controller.',
 		repo: 'https://github.com/millsymills-com/unifi-mcp',
 		icon: '/images/projects/unifi-mcp.svg',
 		demoUrl: '/unifi/',
 		kind: 'mcp',
 		tags: ['mcp', 'unifi', 'networking', 'python'],
-		install: 'claude mcp add unifi --transport http http://<controller-host>:8766/',
+		install: 'claude mcp add unifi --transport stdio -e UNIFI_NETWORK_HOST="<controller-host>" -e UNIFI_NETWORK_API="<network-key>" -- uvx --from git+https://github.com/millsymills-com/unifi-mcp.git unifi-mcp',
 	},
 	{
 		id: 'protonmail-mcp',
