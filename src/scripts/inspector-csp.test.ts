@@ -14,3 +14,15 @@ test('nonce suppresses unsafe-inline for script elements', () => {
 	expect(gradeCsp(`script-src 'unsafe-inline' 'nonce-YWJjZA=='; script-src-attr 'none'; ${controls}`).grade).toBe('A');
 });
 test('missing policy fails', () => expect(gradeCsp(null).grade).toBe('F'));
+test.each(["'nonce-'", "'nonce-abc'junk", "'nonce-%%%='", "'sha256-'", "'sha256-%%%='", "'sha256-YWJjZA==='", "'sha999-YWJjZA=='"])('invalid source does not suppress unsafe-inline: %s', source => {
+	expect(gradeCsp(`script-src 'unsafe-inline' ${source}; ${controls}`).grade).toBe('C');
+});
+test('unsafe-inline keyword is case insensitive', () => {
+	expect(gradeCsp(`script-src 'UNSAFE-INLINE'; ${controls}`).grade).toBe('C');
+});
+test.each(["'nonce-YWJjZA=='", "'NONCE-YWJjZA=='", "'sha256-YWJjZA=='", "'SHA384-YWJjZA=='", "'sha512-YWJjZA-_' "])('valid source syntax suppresses unsafe-inline: %s', source => {
+	expect(gradeCsp(`script-src 'UNSAFE-INLINE' ${source}; ${controls}`).grade).toBe('A');
+});
+test('strict-dynamic also suppresses unrestricted inline script permission', () => {
+	expect(gradeCsp(`script-src 'UNSAFE-INLINE' 'STRICT-DYNAMIC'; ${controls}`).grade).toBe('A');
+});

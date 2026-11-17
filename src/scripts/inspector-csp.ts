@@ -11,8 +11,11 @@ export function gradeCsp(v: string | null): { header: string; grade: 'A' | 'B' |
 	const script = directives.get('script-src') ?? directives.get('default-src') ?? [];
 	const elements = directives.get('script-src-elem') ?? script;
 	const attributes = directives.get('script-src-attr') ?? script;
-	const allowsInline = (sources: string[]) => sources.includes("'unsafe-inline'") &&
-		!sources.some(source => /^'(?:nonce-|sha(?:256|384|512)-)/i.test(source));
+	// CSP3 source-list grammar requires a complete quoted expression and a
+	// nonempty base64/base64url value, with at most two trailing padding bytes.
+	const allowsInline = (sources: string[]) => sources.some(source => source.toLowerCase() === "'unsafe-inline'") &&
+		!sources.some(source => source.toLowerCase() === "'strict-dynamic'" ||
+			/^'(?:nonce|sha(?:256|384|512))-[a-z0-9+/_-]+={0,2}'$/i.test(source));
 	const hasUnsafeInline = allowsInline(elements) || allowsInline(attributes);
 	const hasObjectNone = directives.get('object-src')?.join(' ') === "'none'";
 	const hasBaseSelf = directives.get('base-uri')?.join(' ') === "'self'";
