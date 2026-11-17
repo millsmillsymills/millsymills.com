@@ -163,7 +163,8 @@ function parseBody(event) {
 	const decoded = event?.isBase64Encoded
 		? Buffer.from(String(raw), 'base64').toString('utf8')
 		: String(raw);
-	if (decoded.length > MAX_BODY_BYTES) {
+	const decodedBytes = Buffer.byteLength(decoded, 'utf8');
+	if (decodedBytes > MAX_BODY_BYTES) {
 		// EMF metric for the body-too-large alarm in webauthn_demo.tf.
 		// Wrapped so a hypothetical stringify/log failure can't turn the
 		// 413 path into an uncaught exception (which the outer handler
@@ -181,7 +182,7 @@ function parseBody(event) {
 				},
 				level: 'warn',
 				msg: 'webauthn-demo body too large',
-				bytes: decoded.length,
+				bytes: decodedBytes,
 				max: MAX_BODY_BYTES,
 				BodyTooLarge: 1,
 			}));
@@ -308,15 +309,14 @@ async function putSession(sessionId, payload) {
 
 async function takeSession(sessionId, expectedType) {
 	if (!sessionId || typeof sessionId !== 'string') return null;
-	const { Item } = await ddb.send(
-		new GetCommand({ TableName: SESSIONS_TABLE, Key: { sessionId } }),
+	// Atomically consume and return the previous item. Separate read/delete
+	// calls allow concurrent requests to redeem the same challenge twice.
+	const { Attributes: Item } = await ddb.send(
+		new DeleteCommand({
+			TableName: SESSIONS_TABLE, Key: { sessionId }, ReturnValues: 'ALL_OLD',
+		}),
 	);
 	if (!Item) return null;
-	// Single-use: delete eagerly so a replayed sessionId can't reuse the
-	// challenge even before TTL fires.
-	await ddb.send(
-		new DeleteCommand({ TableName: SESSIONS_TABLE, Key: { sessionId } }),
-	);
 	if (Item.type !== expectedType) return null;
 	if (typeof Item.expiresAt === 'number' && Item.expiresAt < nowEpochSeconds()) {
 		return null;
@@ -710,7 +710,18 @@ export const handler = async (event) => {
 	try {
 		return await route(body);
 	} catch (err) {
-		console.error('handler error', { path, ...errFields(err) });
+		console.error(JSON.stringify({
+			_aws: {
+				Timestamp: Date.now(),
+				CloudWatchMetrics: [{
+					Namespace: 'MillsymillsCom/WebauthnDemo',
+					Dimensions: [[]],
+					Metrics: [{ Name: 'ApplicationError', Unit: 'Count' }],
+				}],
+			},
+			level: 'error', msg: 'handler error', path, ...errFields(err),
+			ApplicationError: 1,
+		}));
 		return errorResponse(500, 'internal error');
 	}
 };
