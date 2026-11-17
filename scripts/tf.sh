@@ -65,6 +65,10 @@ case "$SUBCMD" in
 		;;
 	plan|apply|destroy|refresh)
 		stale_state_guard
+		# Package locally on every delivery, independent of remote null_resource state.
+		if [[ "$SUBCMD" == plan || "$SUBCMD" == apply ]]; then
+			python3 scripts/build-webauthn-package.py
+		fi
 		# Per-stack secrets file (gitignored). Listed LAST so it overrides any
 		# matching key from `stacks/${STACK}.tfvars` and from the auto-loaded
 		# root `infra/terraform.tfvars` (terraform applies `-var-file` flags in
