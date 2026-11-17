@@ -253,7 +253,7 @@ jobs:
         # `npm ci` (not `--omit=dev`) so the @aws-sdk/* packages bundled at
         # runtime by Lambda are available to the local test import. The
         # production bundle is built by Terraform's null_resource via
-        # `npm ci --omit=dev` -- this CI step does not ship anything.
+        # `npm ci --omit=dev --ignore-scripts` in an isolated builder.
         run: npm ci
 
       - name: Run handler unit tests
@@ -262,6 +262,9 @@ jobs:
         # verified:true path. --disable-warning=ExperimentalWarning keeps the
         # output clean (only the flag's own ExperimentalWarning is emitted).
         run: node --experimental-test-module-mocks --disable-warning=ExperimentalWarning --test 'infra/lambdas/webauthn_demo/tests/**/*.test.mjs'
+
+      - name: Verify isolated production Lambda package
+        run: python3 scripts/test_webauthn_package.py
 
   actions-lint:
     name: Workflow security audit (zizmor)

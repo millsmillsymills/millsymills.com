@@ -173,6 +173,8 @@ section "node: webauthn_demo lambda unit tests"
 # flag's own ExperimentalWarning so the run output stays clean.
 node --experimental-test-module-mocks --disable-warning=ExperimentalWarning --test 'infra/lambdas/webauthn_demo/tests/**/*.test.mjs'
 ok "infra/lambdas/webauthn_demo unit tests"
+python3 scripts/test_webauthn_package.py
+ok "isolated production Lambda package"
 
 section "terraform: fmt"
 terraform -chdir=infra fmt -check -recursive
