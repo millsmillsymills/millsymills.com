@@ -54,6 +54,8 @@ npm run check        # astro check (typecheck .astro + .ts)
 
 ## Terraform notes
 
+- WebAuthn Lambda delivery uses `python3 scripts/build-webauthn-package.py` before plan/apply (`scripts/tf.sh` runs it automatically). It requires Python 3, Node 22+ and npm, installs production dependencies with lifecycle scripts disabled in a temporary directory, and writes a deterministic, content-addressed ZIP under `infra/.terraform/webauthn/`. Source, lockfile and builder changes invalidate the path; direct Terraform plans fail clearly if the matching artifact is absent. `fmt`/`validate` do not build packages. Keep the ZIP with a saved plan and do not replace it between plan/apply. Existing runtime dependencies are pure JavaScript; introducing native dependencies requires a Lambda-compatible Linux ARM64 build environment. Static-site deploy does not deploy this Lambda. Removing the old install-only null_resource requires a reviewed infrastructure plan, but does not delete any AWS resource.
+
 - Primary AWS region is `us-west-2` (set in `infra/variables.tf`'s `aws_region` default and reaffirmed per stack in `infra/stacks/<stack>.tfvars`). The state bucket lives in `us-west-2` too — see `infra/stacks/<stack>.backend.hcl`.
 - ACM certificate, DNSSEC KMS keys, and CloudFront-logs delivery are pinned to us-east-1 via the `aws.us_east_1` provider alias in `main.tf` (CloudFront / Route53 DNSSEC service constraints). These are unaffected by the primary-region setting.
 - Route53 hosted zone for millsymills.com must exist before running `terraform apply` (data source lookup, not managed)

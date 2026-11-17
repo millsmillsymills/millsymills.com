@@ -1,9 +1,3 @@
-# Note: the CI and Deploy workflows are currently configured for
-# workflow_dispatch only (see ci.yml / deploy.yml). Dependabot PRs
-# opened here will NOT trigger automated checks until those triggers
-# are re-enabled; run `./scripts/ci-local.sh` on each Dependabot
-# branch before merging.
-
 version: 2
 updates:
   - package-ecosystem: npm
@@ -43,6 +37,30 @@ updates:
 
   - package-ecosystem: terraform
     directory: "/infra"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    groups:
+      terraform-providers:
+        patterns:
+          - "*"
+
+  # Independent production authentication package (not a root npm workspace).
+  - package-ecosystem: npm
+    directory: "/infra/lambdas/webauthn_demo"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+
+  # State bootstrap is a separate Terraform root with its own provider lock.
+  - package-ecosystem: terraform
+    directory: "/infra/bootstrap-state"
     schedule:
       interval: weekly
       day: monday

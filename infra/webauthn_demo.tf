@@ -117,39 +117,19 @@ resource "aws_dynamodb_table" "webauthn_sessions" {
 # --------------------------------------------------------------------
 # Lambda function + Function URL.
 #
-# The handler depends on `@simplewebauthn/server`; the AWS SDK is
-# supplied by the Lambda Node.js runtime (matches the
-# `infra/csp_report.mjs` pattern). The `null_resource` runs `npm ci
-# --omit=dev` whenever `package-lock.json` changes, so the `node_modules`
-# the archive_file zips is always reproducible from the committed lock.
+# Build outside Terraform with scripts/build-webauthn-package.py (tf.sh does
+# this before plan/apply). Never use remote provisioner state as proof that a
+# fresh local filesystem contains dependencies. The content-addressed path
+# invalidates old artifacts when either source, lock or builder changes.
 # --------------------------------------------------------------------
-
-resource "null_resource" "webauthn_demo_install" {
-  count = var.enable_webauthn_demo ? 1 : 0
-
-  triggers = {
-    lockfile = filesha256("${local.webauthn_demo_lambda_dir}/package-lock.json")
-  }
-
-  provisioner "local-exec" {
-    command     = "npm ci --omit=dev"
-    working_dir = local.webauthn_demo_lambda_dir
-  }
-}
-
-data "archive_file" "webauthn_demo" {
-  type        = "zip"
-  source_dir  = local.webauthn_demo_lambda_dir
-  output_path = "${path.module}/.terraform/webauthn_demo.zip"
-
-  # `tests/` is an unzipped dev-only payload -- exclude it to keep the
-  # deployable bundle minimal and avoid shipping the test fixtures.
-  excludes = [
-    "tests",
-    ".npmrc",
-  ]
-
-  depends_on = [null_resource.webauthn_demo_install]
+locals {
+  webauthn_demo_build_id = sha256(join("", [
+    filesha256("${local.webauthn_demo_lambda_dir}/index.mjs"),
+    filesha256("${local.webauthn_demo_lambda_dir}/package.json"),
+    filesha256("${local.webauthn_demo_lambda_dir}/package-lock.json"),
+    filesha256("${path.module}/../scripts/build-webauthn-package.py"),
+  ]))
+  webauthn_demo_package = "${path.module}/.terraform/webauthn/${local.webauthn_demo_build_id}.zip"
 }
 
 resource "aws_iam_role" "webauthn_demo" {
@@ -223,8 +203,8 @@ resource "aws_lambda_function" "webauthn_demo" {
 
   function_name    = local.webauthn_demo_name
   role             = aws_iam_role.webauthn_demo[0].arn
-  filename         = data.archive_file.webauthn_demo.output_path
-  source_code_hash = data.archive_file.webauthn_demo.output_base64sha256
+  filename         = local.webauthn_demo_package
+  source_code_hash = fileexists(local.webauthn_demo_package) ? filebase64sha256(local.webauthn_demo_package) : null
   handler          = "index.handler"
   runtime          = "nodejs22.x"
   architectures    = ["arm64"]
@@ -249,6 +229,13 @@ resource "aws_lambda_function" "webauthn_demo" {
       WEBAUTHN_RP_ID           = var.domain
       WEBAUTHN_EXPECTED_ORIGIN = "https://${var.domain}"
       ORIGIN_SECRET            = random_password.webauthn_demo_origin_secret[0].result
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = fileexists(local.webauthn_demo_package)
+      error_message = "WebAuthn artifact missing for current source. Run python3 scripts/build-webauthn-package.py before planning/applying (or use scripts/tf.sh)."
     }
   }
 
@@ -650,11 +637,6 @@ moved {
 moved {
   from = aws_dynamodb_table.webauthn_sessions
   to   = aws_dynamodb_table.webauthn_sessions[0]
-}
-
-moved {
-  from = null_resource.webauthn_demo_install
-  to   = null_resource.webauthn_demo_install[0]
 }
 
 moved {
