@@ -4,8 +4,8 @@
  * The editor opens 8–12 known files, all sourced either from `?raw` snippet
  * imports or fixtures under `src/data/dotfiles/`. Highlighting at build time
  * keeps shiki out of the runtime bundle entirely — the editor pane just
- * pastes the prerendered `<pre class="shiki">` HTML and the page only pays
- * for the inlined strings (no grammar JSON, no oniguruma WASM, no theme
+ * renders token text with DOM APIs and the page only pays
+ * for the inlined tokens (no grammar JSON, no oniguruma WASM, no theme
  * loader).
  *
  * Two source-of-truth sets:
@@ -50,14 +50,14 @@ const DOTFILE_SOURCES = Object.freeze([
 ]);
 
 /**
- * Read source files, run shiki, return `{ vscodePath: html }`.
+ * Read source files, run shiki, return `{ vscodePath: tokenLines }`.
  *
  * Soft-fails on a missing grammar or unreadable source: logs a warning and
  * omits that entry from the map so the editor falls through to plain text.
  * A missing grammar should never break the build — but a build where ALL
  * entries failed is treated as a CI regression and throws (see end of fn).
  *
- * @returns {Promise<Record<string, string>>}
+ * @returns {Promise<Record<string, Array<Array<{content: string, color?: string, fontStyle?: number}>>>>}
  */
 export async function prerenderHighlights() {
 	let highlighter;
@@ -68,30 +68,31 @@ export async function prerenderHighlights() {
 		});
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
+		if (process.env.CI === 'true') throw new Error(`[vscode-highlights] shiki init failed (${msg}); refusing a CI build without highlights`, { cause: err });
 		console.warn(`[vscode-highlights] shiki init failed (${msg}); editor will render plain text`);
 		return {};
 	}
 
-	const out = /** @type {Record<string, string>} */ ({});
+	const out = /** @type {Record<string, Array<Array<{content: string, color?: string, fontStyle?: number}>>>} */ ({});
 
 	// 1. Dotfile fixtures — read raw, no truncation/scrub.
 	for (const { vscodePath, sourceFile, language } of DOTFILE_SOURCES) {
-		const html = await highlightFile(highlighter, sourceFile, language, vscodePath, (raw) => raw);
-		if (html !== null) out[vscodePath] = html;
+		const tokens = await highlightFile(highlighter, sourceFile, language, vscodePath, (raw) => raw);
+		if (tokens !== null) out[vscodePath] = tokens;
 	}
 
 	// 2. /project/ snippets — driven by the shared manifest. applySnippet
 	// produces the byte-identical content that file-tree.ts displays, so
 	// shiki highlights exactly what the user sees.
 	for (const entry of PROJECT_SNIPPETS) {
-		const html = await highlightFile(
+		const tokens = await highlightFile(
 			highlighter,
 			entry.sourceFile,
 			entry.language,
 			entry.vscodePath,
 			(raw) => applySnippet(raw, entry),
 		);
-		if (html !== null) out[entry.vscodePath] = html;
+		if (tokens !== null) out[entry.vscodePath] = tokens;
 	}
 
 	highlighter.dispose();
@@ -119,7 +120,7 @@ export async function prerenderHighlights() {
  * @param {string} language    Shiki grammar id
  * @param {string} vscodePath  For the warning message
  * @param {(raw: string) => string} transform
- * @returns {Promise<string | null>}
+ * @returns {Promise<Array<Array<{content: string, color?: string, fontStyle?: number}>> | null>}
  */
 async function highlightFile(highlighter, sourceFile, language, vscodePath, transform) {
 	let content;
@@ -132,7 +133,8 @@ async function highlightFile(highlighter, sourceFile, language, vscodePath, tran
 		return null;
 	}
 	try {
-		return highlighter.codeToHtml(content, { lang: language, theme: 'neon-noir' });
+		return highlighter.codeToTokens(content, { lang: language, theme: 'neon-noir' }).tokens
+			.map(line => line.map(({ content, color, fontStyle }) => ({ content, color, fontStyle })));
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
 		console.warn(`[vscode-highlights] shiki failed on ${vscodePath} (${msg}); skipping`);

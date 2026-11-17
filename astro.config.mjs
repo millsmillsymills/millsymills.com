@@ -110,7 +110,7 @@ function leadingZeroBitsBuf(buf) {
 const mailPow = buildMailPowManifest('mills@millsymills.com', 'mills.mail.v1', 14);
 
 /**
- * Prerendered shiki HTML for vscode.exe's editor pane. Computed once at
+ * Shiki token lines for vscode.exe's editor pane. Computed once at
  * config-eval time; baked into the bundle as a literal so shiki itself
  * never reaches the runtime. See src/scripts/vscode/highlight-build.mjs
  * for the inputs and the soft-fail rationale.
@@ -157,7 +157,7 @@ export default defineConfig({
 			'import.meta.env.PUBLIC_GIT_LOG': JSON.stringify(gitLog),
 			// Single JSON.stringify: substituted as a literal object at build.
 			'import.meta.env.PUBLIC_MAIL_POW': JSON.stringify(mailPow),
-			// Prerendered shiki HTML for vscode.exe — substituted as a literal
+			// Shiki token lines for vscode.exe — substituted as a literal
 			// `Record<vscodePath, html>` object. editor.ts reads this once and
 			// looks up by tab path; missing entries fall through to plain text.
 			'import.meta.env.PUBLIC_VSCODE_HIGHLIGHTS': JSON.stringify(vscodeHighlights),
