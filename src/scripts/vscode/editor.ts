@@ -1,27 +1,12 @@
 /*
- * Editor pane: shiki-prerendered HTML when the path has a build-time
- * highlight, plain text otherwise. Line-number gutter is rendered
- * separately so it stays aligned regardless of which path is taken.
- *
- * Build-time highlighting lives in src/scripts/vscode/highlight-build.mjs;
- * shiki itself never reaches the runtime — only the resulting HTML strings
- * inlined via Vite define. Missing entries are expected (text files,
- * dynamic-content fixtures): they fall through to plain text.
- *
- * HTML insertion trust note: the shiki output is generated at build time
- * by `prerenderHighlights()` from files committed to this repo. There is
- * no runtime input path — Vite inlines the resulting object as a JS
- * literal at config-eval time. We parse it with `DOMParser`, which is not
- * a Trusted Types injection sink (the parsed document is inert and adopted
- * nodes carry no scripts), so the runtime stays clean under an enforcing
- * `require-trusted-types-for 'script'` policy (#130).
+ * Build-time Shiki tokens are rendered with element/text APIs only. No HTML
+ * parser or TrustedHTML policy is needed under enforcing Trusted Types.
+ * Missing highlights use plain text; Shiki itself stays out of the bundle.
  */
 
 import type { VfsNode } from './types';
 
-const HIGHLIGHTS = import.meta.env.PUBLIC_VSCODE_HIGHLIGHTS;
-
-export function renderEditor(container: HTMLElement, node: VfsNode | null): { line: number; col: number; language: string } {
+export function renderEditor(container: HTMLElement, node: VfsNode | null, highlights = import.meta.env.PUBLIC_VSCODE_HIGHLIGHTS): { line: number; col: number; language: string } {
 	if (!node || node.type !== 'file') {
 		const empty = document.createElement('div');
 		empty.className = 'vscode-editor-empty';
@@ -39,11 +24,28 @@ export function renderEditor(container: HTMLElement, node: VfsNode | null): { li
 
 	const code = document.createElement('div');
 	code.className = 'vscode-editor-code';
-	const prerendered = HIGHLIGHTS[node.path];
+	const prerendered = highlights[node.path];
 	if (prerendered) {
-		// Trusted: build-time shiki output, no runtime user input. See module header.
-		const parsed = new DOMParser().parseFromString(prerendered, 'text/html');
-		code.append(...Array.from(parsed.body.childNodes));
+		const pre = document.createElement('pre');
+		pre.className = 'shiki neon-noir';
+		const body = document.createElement('code');
+		for (const [index, tokens] of prerendered.entries()) {
+			if (index > 0) body.append(document.createTextNode('\n'));
+			const line = document.createElement('span');
+			line.className = 'line';
+			for (const token of tokens) {
+				const span = document.createElement('span');
+				span.textContent = token.content;
+				if (token.color) span.style.color = token.color;
+				if ((token.fontStyle ?? 0) & 1) span.style.fontStyle = 'italic';
+				if ((token.fontStyle ?? 0) & 2) span.style.fontWeight = 'bold';
+				if ((token.fontStyle ?? 0) & 4) span.style.textDecoration = 'underline';
+				line.appendChild(span);
+			}
+			body.appendChild(line);
+		}
+		pre.appendChild(body);
+		code.appendChild(pre);
 	} else {
 		const pre = document.createElement('pre');
 		pre.className = 'vscode-editor-plain';
