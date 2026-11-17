@@ -481,10 +481,6 @@ class FetchCertsTests(unittest.TestCase):
         self.assertEqual(req.headers["User-agent"], "example.com-ct-monitor")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class RetainedEvidenceTests(unittest.TestCase):
     def test_omitted_and_fallback_details_are_logged_with_explicit_bounds(self):
         certs = [{"id": i, "issuer_name": "O=Other", "entry_timestamp": _now_iso(),
@@ -512,3 +508,7 @@ class RetainedEvidenceTests(unittest.TestCase):
             message = sns.publish.call_args.kwargs['Message']
             self.assertIn('bounded', message)
             self.assertNotIn('full list', message)
+
+
+if __name__ == "__main__":
+    unittest.main()

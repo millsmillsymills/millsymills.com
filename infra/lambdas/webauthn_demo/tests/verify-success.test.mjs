@@ -302,3 +302,28 @@ test('concurrent registration redemptions consume a challenge once', async () =>
 	assert.equal(ddbCalls.filter((c) => c.name === 'PutCommand').length, 1);
 	assert.equal((await handler(event)).statusCode, 400);
 });
+
+test('concurrent zero-counter authentication consumes its challenge once', async () => {
+	let stored = authenticationSession().Item;
+	ddbResponses.set('GetCommand', (cmd) => cmd.input.TableName === 'sessions-test'
+		? { Item: stored }
+		: { Item: { credentialId: 'cred-zero', publicKey: new Uint8Array([1]),
+			counter: 0, userHandle: 'user-handle-1' } });
+	ddbResponses.set('DeleteCommand', (cmd) => {
+		const old = stored;
+		stored = undefined;
+		return cmd.input.ReturnValues === 'ALL_OLD' ? { Attributes: old } : {};
+	});
+	authenticationVerifyResult = { verified: true, authenticationInfo: { newCounter: 0 } };
+	const event = eventOf({ path: '/authentication/verify', body: {
+		sessionId: 's1', response: { id: 'cred-zero',
+			response: { clientDataJSON: clientDataJSON('https://example.test') } },
+	} });
+	const results = await Promise.all([handler(event), handler(event)]);
+	assert.deepEqual(results.map((r) => r.statusCode).sort(), [200, 400]);
+	assert.deepEqual(JSON.parse(results.find((r) => r.statusCode === 200).body),
+		{ verified: true, userHandle: 'user-handle-1' });
+	// Always-zero authenticators skip counter writes; challenge consumption guards replay.
+	assert.equal(ddbCalls.filter((c) => c.name === 'UpdateCommand').length, 0);
+	assert.equal((await handler(event)).statusCode, 400);
+});
