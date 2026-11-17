@@ -209,7 +209,7 @@
 }
 /*
  * .vscode-editor-code wraps either a plain <pre> (no highlight available)
- * or shiki's prerendered <pre class="shiki neon-noir">. Padding lives on
+ * or the token renderer's <pre class="shiki neon-noir">. Padding lives on
  * the inner <pre> so shiki's transparent background extends to the cell
  * edge while text stays inset, matching the gutter's vertical alignment.
  */

@@ -304,6 +304,7 @@
 </style>
 
 <script>
+	import { gradeCsp } from '../../../scripts/inspector-csp';
 	import { subscribeAppActivity } from '../../../scripts/util/app-activity';
 	type Grade = 'A' | 'B' | 'C' | 'F' | 'err';
 	interface Check {
@@ -336,20 +337,6 @@
 		return { header, grade: 'F', value: v };
 	}
 
-	function gradeCsp(v: string | null): Check {
-		const header = 'Content-Security-Policy';
-		if (!v) return { header, grade: 'F', value: '(missing)' };
-		const hasUnsafeInline = /'unsafe-inline'/.test(v) && /script-src/.test(v);
-		const hasObjectNone = /object-src\s+'none'/.test(v);
-		const hasBaseSelf = /base-uri\s+'self'/.test(v);
-		const hasFrameAnc = /frame-ancestors/.test(v);
-		const hasUpgrade = /upgrade-insecure-requests/.test(v);
-		const score = [hasObjectNone, hasBaseSelf, hasFrameAnc, hasUpgrade].filter(Boolean).length;
-		if (hasUnsafeInline) return { header, grade: 'C', value: v };
-		if (score === 4) return { header, grade: 'A', value: v };
-		if (score >= 2) return { header, grade: 'B', value: v };
-		return { header, grade: 'C', value: v };
-	}
 
 	function gradeFrameOptions(v: string | null, csp: string | null): Check {
 		const header = 'X-Frame-Options';

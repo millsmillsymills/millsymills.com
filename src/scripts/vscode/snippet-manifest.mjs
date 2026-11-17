@@ -6,7 +6,7 @@
  * it's showing:
  *
  *   1. file-tree.ts's `projectFiles` map (display-time truncation + suffix)
- *   2. highlight-build.mjs's prerender pipeline (build-time shiki HTML)
+ *   2. highlight-build.mjs's prerender pipeline (build-time shiki tokens)
  *   3. astro.config.mjs's scrubVscodeSnippets Vite plugin (URL scrub registry)
  *
  * Pre-2026-04-26 each consumer carried its own copy of SNIPPET_LINES, the
