@@ -235,7 +235,7 @@ test('/authentication/options returns sessionId + options', async () => {
 });
 
 test('/registration/verify with unknown session returns 400 and emits SessionMiss EMF', async () => {
-	ddbResponses.set('GetCommand', { Item: undefined });
+	ddbResponses.set('DeleteCommand', { Attributes: undefined });
 	const original = console.warn;
 	const lines = [];
 	console.warn = (msg) => lines.push(typeof msg === 'string' ? msg : JSON.stringify(msg));
@@ -268,8 +268,8 @@ test('/registration/verify with unknown session returns 400 and emits SessionMis
 test('/registration/verify with origin mismatch returns 400 before crypto', async () => {
 	// Session exists -- the origin check runs FIRST and rejects before any
 	// SimpleWebAuthn call happens, even though the session is valid.
-	ddbResponses.set('GetCommand', {
-		Item: {
+	ddbResponses.set('DeleteCommand', {
+		Attributes: {
 			sessionId: 's1',
 			type: 'registration',
 			challenge: 'challenge-bytes',
@@ -291,8 +291,8 @@ test('/registration/verify with origin mismatch returns 400 before crypto', asyn
 });
 
 test('/authentication/verify with origin mismatch returns 400 before crypto', async () => {
-	ddbResponses.set('GetCommand', {
-		Item: {
+	ddbResponses.set('DeleteCommand', {
+		Attributes: {
 			sessionId: 's1',
 			type: 'authentication',
 			challenge: 'c',
@@ -314,24 +314,10 @@ test('/authentication/verify with origin mismatch returns 400 before crypto', as
 });
 
 test('/authentication/verify with unknown credential returns 404', async () => {
-	let getCount = 0;
-	ddbResponses.set('GetCommand', () => {
-		getCount += 1;
-		if (getCount === 1) {
-			// session lookup
-			return {
-				Item: {
-					sessionId: 's1',
-					type: 'authentication',
-					challenge: 'c',
-					userHandle: 'uh',
-					expiresAt: Math.floor(Date.now() / 1000) + 60,
-				},
-			};
-		}
-		// credential lookup
-		return { Item: undefined };
-	});
+	ddbResponses.set('DeleteCommand', { Attributes: {
+		sessionId: 's1', type: 'authentication', challenge: 'c',
+		expiresAt: Math.floor(Date.now() / 1000) + 60,
+	} });
 	const res = await handler(
 		eventOf({
 			path: '/authentication/verify',
@@ -576,4 +562,67 @@ test('all four routes are registered', () => {
 		'/registration/options',
 		'/registration/verify',
 	]);
+});
+
+test('UTF-8 body limit applies equally to plain and base64 multibyte JSON', async () => {
+	for (const isBase64Encoded of [false, true]) {
+		const lines = [];
+		console.warn = (line) => lines.push(JSON.parse(line));
+		// 8 bytes of JSON framing + 1363 three-byte characters = 4097 bytes.
+		const raw = JSON.stringify({ x: '€'.repeat(1363) });
+		const res = await handler(eventOf({ path: '/registration/options',
+			body: isBase64Encoded ? Buffer.from(raw).toString('base64') : raw, isBase64Encoded }));
+		assert.equal(res.statusCode, 413);
+		assert.equal(lines[0].bytes, 4097);
+		assert.equal(ddbCalls.length, 0);
+	}
+	const boundary = JSON.stringify({ x: '€'.repeat(1362) + 'aa' });
+	assert.equal(Buffer.byteLength(boundary), 4096);
+	assert.equal((await handler(eventOf({ path: '/registration/options', body: boundary }))).statusCode, 200);
+});
+
+test('caught storage failure emits ApplicationError once without disclosing request data', async () => {
+	ddbResponses.set('PutCommand', () => { throw new Error('synthetic unavailable storage'); });
+	const lines = [];
+	const original = console.error;
+	console.error = (...args) => lines.push(args);
+	try {
+		const res = await handler(eventOf({ path: '/registration/options', body: { private: 'do-not-log-me' } }));
+		assert.equal(res.statusCode, 500);
+		assert.match(res.body, /internal error/);
+		const metrics = lines.flat().filter((line) => typeof line === 'string' && line.startsWith('{')).map(JSON.parse);
+		assert.equal(metrics.length, 1);
+		assert.equal(metrics[0].ApplicationError, 1);
+		assert.equal(metrics[0].path, '/registration/options');
+		assert.equal(metrics[0]._aws.CloudWatchMetrics[0].Namespace, 'MillsymillsCom/WebauthnDemo');
+		assert.deepEqual(metrics[0]._aws.CloudWatchMetrics[0].Dimensions, [[]]);
+		assert.deepEqual(metrics[0]._aws.CloudWatchMetrics[0].Metrics, [{ Name: 'ApplicationError', Unit: 'Count' }]);
+		assert.ok(!JSON.stringify(lines).includes('do-not-log-me'));
+	} finally { console.error = original; }
+});
+
+test('atomic session consumption still rejects expired and wrong-type challenges', async () => {
+	for (const session of [
+		{ type: 'registration', expiresAt: 1 },
+		{ type: 'authentication', expiresAt: Math.floor(Date.now() / 1000) + 60 },
+	]) {
+		ddbResponses.set('DeleteCommand', { Attributes: session });
+		const res = await handler(eventOf({ path: '/registration/verify', body: {
+			sessionId: 's1', response: { response: { clientDataJSON: clientDataJSON('https://example.test') } },
+		} }));
+		assert.equal(res.statusCode, 400);
+		assert.match(res.body, /unknown or expired session/);
+	}
+	assert.equal(ddbCalls.filter((call) => call.name === 'PutCommand').length, 0);
+});
+
+test('routine client errors and successful options do not emit ApplicationError', async () => {
+	const original = console.error;
+	const lines = [];
+	console.error = (...args) => lines.push(args);
+	try {
+		assert.equal((await handler(eventOf({ path: '/registration/options', body: '{' }))).statusCode, 400);
+		assert.equal((await handler(eventOf({ path: '/registration/options', body: {} }))).statusCode, 200);
+		assert.equal(lines.length, 0);
+	} finally { console.error = original; }
 });

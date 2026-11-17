@@ -52,9 +52,10 @@ _FIELD_MAX_CHARS = 512
 _DN_SPLIT = re.compile(r"[,;]")
 
 # How many cert blocks the alert body renders. Enough detail to triage
-# from the email; the full list is always in the handler's return value,
-# which Lambda logs to CloudWatch.
+# from the email; additional sanitized evidence is explicitly logged below.
+# Async Lambda return values are not persisted to CloudWatch.
 _MAX_ALERT_CERTS = 20
+_MAX_LOG_CERTS = 100
 
 # SNS rejects a Publish over 256 KB. `_clean` caps each field at
 # _FIELD_MAX_CHARS *characters* and a UTF-8 character can be 4 bytes, so
@@ -170,6 +171,7 @@ def lambda_handler(event: dict[str, Any], context: object) -> CtResult:
         }
         return ok
 
+    log_evidence(suspicious)
     publish_alert(DOMAIN, suspicious)
     alert: CtAlert = {
         "status": "alert",
@@ -179,6 +181,28 @@ def lambda_handler(event: dict[str, Any], context: object) -> CtResult:
         "unexpected": suspicious,
     }
     return alert
+
+
+def log_evidence(certs: list[CrtshEntry]) -> None:
+    """Retain bounded, sanitized triage evidence before either SNS attempt.
+
+    Bound both record count and every field; report truncation explicitly.
+    WARNING is intentional: Lambda's default Python log level includes it.
+    """
+    for index, cert in enumerate(certs[:_MAX_LOG_CERTS]):
+        logger.warning(json.dumps({
+            "event": "ct_suspicious_certificate",
+            "index": index,
+            "certificate": {key: _clean(cert.get(key)) for key in (
+                "id", "issuer_name", "common_name", "name_value", "entry_timestamp",
+            )},
+        }))
+    logger.warning(json.dumps({
+        "event": "ct_evidence_summary", "total": len(certs),
+        "retained": min(len(certs), _MAX_LOG_CERTS),
+        "omitted": max(0, len(certs) - _MAX_LOG_CERTS),
+        "field_max_chars": _FIELD_MAX_CHARS,
+    }))
 
 
 def _safe_id(value: object) -> str:
@@ -239,7 +263,9 @@ def format_alert(domain: str, certs: list[CrtshEntry]) -> str:
     if omitted > 0:
         lines.append(
             f"({omitted} further certificate(s) omitted from this message. "
-            "The full list is in the ct-monitor Lambda's CloudWatch logs, and at "
+            f"Sanitized bounded details (up to {_MAX_LOG_CERTS} certificates, "
+            f"{_FIELD_MAX_CHARS} characters per field) are in the ct-monitor "
+            "Lambda's CloudWatch logs; review the source at "
             f"https://crt.sh/?q={urllib.parse.quote(domain)})",
         )
     return "\n".join(lines)
@@ -253,7 +279,8 @@ def _summary_alert(domain: str, count: int) -> str:
         "issued by an issuer outside the allow-list.",
         "",
         "The detailed alert could not be published. Treat this as possible",
-        "mis-issuance and inspect the ct-monitor Lambda's CloudWatch logs,",
+        "mis-issuance and inspect sanitized bounded details in the ct-monitor Lambda's CloudWatch logs",
+        f"(up to {_MAX_LOG_CERTS} certificates, {_FIELD_MAX_CHARS} characters per field),",
         f"then review https://crt.sh/?q={urllib.parse.quote(domain)}",
     ])
 
