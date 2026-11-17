@@ -368,6 +368,25 @@ resource "aws_cloudwatch_metric_alarm" "webauthn_demo_errors" {
   }
 }
 
+# Handled HTTP 500 responses do not increment AWS/Lambda Errors. The handler
+# emits this metric through EMF, using its existing log permissions.
+resource "aws_cloudwatch_metric_alarm" "webauthn_demo_application_errors" {
+  count = var.enable_webauthn_demo ? 1 : 0
+
+  alarm_name          = "${local.webauthn_demo_name}-application-errors"
+  alarm_description   = "webauthn_demo returned a handled HTTP 500. Check CloudWatch logs for storage or application failures."
+  namespace           = "MillsymillsCom/WebauthnDemo"
+  metric_name         = "ApplicationError"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.csp_report_ops[0].arn]
+  ok_actions          = [aws_sns_topic.csp_report_ops[0].arn]
+}
+
 # Custom metric emitted by `infra/lambdas/webauthn_demo/index.mjs` via
 # CloudWatch Embedded Metric Format: a single `console.warn` JSON blob
 # with an `_aws` envelope tells CloudWatch to ingest the named metric

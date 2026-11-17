@@ -119,7 +119,7 @@ function authenticationSession() {
 }
 
 test('registration verify success persists the credential via putCredential', async () => {
-	ddbResponses.set('GetCommand', registrationSession());
+	ddbResponses.set('DeleteCommand', { Attributes: registrationSession().Item });
 	registrationVerifyResult = {
 		verified: true,
 		registrationInfo: {
@@ -162,7 +162,7 @@ test('registration verify success persists the credential via putCredential', as
 });
 
 test('registration verify success defaults a missing counter to 0', async () => {
-	ddbResponses.set('GetCommand', registrationSession());
+	ddbResponses.set('DeleteCommand', { Attributes: registrationSession().Item });
 	registrationVerifyResult = {
 		verified: true,
 		registrationInfo: {
@@ -191,10 +191,8 @@ test('registration verify success defaults a missing counter to 0', async () => 
 });
 
 test('authentication verify success advances the counter via updateCredentialCounter', async () => {
-	let getCount = 0;
+	ddbResponses.set('DeleteCommand', { Attributes: authenticationSession().Item });
 	ddbResponses.set('GetCommand', () => {
-		getCount += 1;
-		if (getCount === 1) return authenticationSession();
 		return {
 			Item: {
 				credentialId: 'cred1',
@@ -238,10 +236,8 @@ test('authentication verify success advances the counter via updateCredentialCou
 });
 
 test('authentication verify success rejects a regressed counter as a cloned authenticator', async () => {
-	let getCount = 0;
+	ddbResponses.set('DeleteCommand', { Attributes: authenticationSession().Item });
 	ddbResponses.set('GetCommand', () => {
-		getCount += 1;
-		if (getCount === 1) return authenticationSession();
 		return {
 			Item: {
 				credentialId: 'cred1',
@@ -284,4 +280,25 @@ test('authentication verify success rejects a regressed counter as a cloned auth
 
 	assert.equal(res.statusCode, 401);
 	assert.match(res.body, /counter regressed/);
+});
+
+test('concurrent registration redemptions consume a challenge once', async () => {
+	let stored = registrationSession().Item;
+	// Both reads complete before either continuation deletes: models the old race.
+	ddbResponses.set('GetCommand', () => ({ Item: stored }));
+	ddbResponses.set('DeleteCommand', (cmd) => {
+		const old = stored;
+		stored = undefined;
+		return cmd.input.ReturnValues === 'ALL_OLD' ? { Attributes: old } : {};
+	});
+	registrationVerifyResult = { verified: true, registrationInfo: {
+		credential: { id: 'synthetic-credential', publicKey: new Uint8Array([1]), counter: 0 },
+	} };
+	const event = eventOf({ path: '/registration/verify', body: {
+		sessionId: 's1', response: { response: { clientDataJSON: clientDataJSON('https://example.test') } },
+	} });
+	const results = await Promise.all([handler(event), handler(event)]);
+	assert.deepEqual(results.map((r) => r.statusCode).sort(), [200, 400]);
+	assert.equal(ddbCalls.filter((c) => c.name === 'PutCommand').length, 1);
+	assert.equal((await handler(event)).statusCode, 400);
 });

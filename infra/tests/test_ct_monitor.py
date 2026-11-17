@@ -483,3 +483,32 @@ class FetchCertsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RetainedEvidenceTests(unittest.TestCase):
+    def test_omitted_and_fallback_details_are_logged_with_explicit_bounds(self):
+        certs = [{"id": i, "issuer_name": "O=Other", "entry_timestamp": _now_iso(),
+                  "name_value": "host\nforged\x00" + "🚀" * 1000} for i in range(102)]
+        for fallback in (False, True):
+            with self.subTest(fallback=fallback), \
+                 mock.patch.object(ct_monitor, "fetch_certs", return_value=certs), \
+                 mock.patch.object(ct_monitor, "sns") as sns, \
+                 self.assertLogs(ct_monitor.logger, level="WARNING") as logs:
+                if fallback:
+                    sns.publish.side_effect = [RuntimeError("synthetic failure"), {}]
+                ct_monitor.lambda_handler({}, None)
+            records = [json.loads(record.message) for record in logs.records
+                       if record.message.startswith('{')]
+            details = [record for record in records if record['event'] == 'ct_suspicious_certificate']
+            self.assertEqual(len(details), 100)
+            self.assertEqual(details[-1]['certificate']['id'], '99')
+            self.assertEqual(records[-1]['omitted'], 2)
+            self.assertEqual(records[-1]['total'], 102)
+            for detail in details:
+                self.assertLess(len(json.dumps(detail).encode('utf-8')), 20_000)
+                self.assertNotIn('\n', detail['certificate']['name_value'])
+                self.assertNotIn('\x00', detail['certificate']['name_value'])
+                self.assertLessEqual(len(detail['certificate']['name_value']), 512)
+            message = sns.publish.call_args.kwargs['Message']
+            self.assertIn('bounded', message)
+            self.assertNotIn('full list', message)
