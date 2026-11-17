@@ -8,6 +8,7 @@
  */
 
 import { apps } from '../data/apps';
+import { MOBILE_QUERY } from './util/app-activity';
 
 interface Entry {
 	id: string;
@@ -186,14 +187,14 @@ class CommandPalette {
 	}
 
 	private openApp(id: string): void {
-		const opener = document.querySelector<HTMLElement>(`[data-open-window="${id}"]`);
+		// Both launchers exist in the DOM; use only the active surface's
+		// handler so app activity and mobile history follow the same path.
+		const attribute = window.matchMedia(MOBILE_QUERY).matches
+			? 'data-open-app'
+			: 'data-open-window';
+		const opener = document.querySelector<HTMLElement>(`[${attribute}="${id}"]`);
 		if (opener) {
 			opener.click();
-			return;
-		}
-		const mbtn = document.querySelector<HTMLElement>(`[data-open-app="${id}"]`);
-		if (mbtn) {
-			mbtn.click();
 			return;
 		}
 		window.location.href = `/${id}/`;

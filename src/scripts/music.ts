@@ -152,7 +152,8 @@ export class MusicPlayer {
 	private bindAudioEvents(): void {
 		this.audio.addEventListener('timeupdate', () => this.renderTime());
 		this.audio.addEventListener('durationchange', () => this.renderTime());
-		this.audio.addEventListener('ended', () => this.next());
+		// Natural completion sets paused=true, but the playlist should continue.
+		this.audio.addEventListener('ended', () => this.next(true));
 		this.audio.addEventListener('play', () => {
 			this.setStatus('playing');
 			this.setPlayGlyph('pause');
@@ -236,9 +237,9 @@ export class MusicPlayer {
 		this.load(next, !this.audio.paused);
 	}
 
-	private next(): void {
+	private next(autoplay = !this.audio.paused): void {
 		const next = (this.current + 1) % this.tracks.length;
-		this.load(next, !this.audio.paused);
+		this.load(next, autoplay);
 	}
 
 	private setStatus(text: string): void {

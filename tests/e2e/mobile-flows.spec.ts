@@ -60,3 +60,31 @@ test('hidden apps remain reachable from their mobile deep links', async ({ page 
 	await expect(mobileApp).not.toBeEmpty();
 	await expect(page.locator('.mshell__home')).toBeHidden();
 });
+
+
+for (const entry of ['/about/', '/?open=about']) {
+	test(`mobile Back restores initial app from ${entry}`, async ({ page }) => {
+		await page.goto(entry);
+		const app = page.locator('[data-mobile-app="about"]');
+		await expect(app).toBeVisible();
+		await page.getByRole('button', { name: 'back to home' }).click();
+		await expect(page.locator('.mshell__home')).toBeVisible();
+		await page.goBack();
+		await expect(app).toBeVisible();
+		await expect(page.locator('.mshell__home')).toBeHidden();
+		await page.goForward();
+		await expect(page.locator('.mshell__home')).toBeVisible();
+	});
+}
+
+test('mobile command palette selects an app and retains home in history', async ({ page }) => {
+	await page.goto('/');
+	await page.keyboard.press('Control+K');
+	await page.locator('.cmdp__input').fill('about');
+	await page.keyboard.press('Enter');
+	await expect(page.locator('.cmdp')).toBeHidden();
+	await expect(page.locator('[data-mobile-app="about"]')).toBeVisible();
+	await expect(page.locator('.mshell__home')).toBeHidden();
+	await page.goBack();
+	await expect(page.locator('.mshell__home')).toBeVisible();
+});

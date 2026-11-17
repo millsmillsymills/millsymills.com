@@ -225,3 +225,30 @@ describe('MusicPlayer window-closed cleanup', () => {
 		expect(audioStubs.play).toHaveBeenCalledTimes(1);
 	});
 });
+
+
+describe('MusicPlayer playlist continuation', () => {
+	it('plays the next track after natural completion, including wrapping the playlist', () => {
+		const { root } = mountPlayer();
+		dispatchWindowOpen(MUSIC_WINDOW_ID, true);
+		const audio = root.querySelector<HTMLAudioElement>('[data-music-audio]')!;
+		vi.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(true);
+		audioStubs.play.mockClear();
+		audio.dispatchEvent(new Event('ended'));
+		expect(audio.getAttribute('src')).toBe('/audio/b.mp3');
+		expect(audioStubs.play).toHaveBeenCalledTimes(1);
+		audio.dispatchEvent(new Event('ended'));
+		expect(audio.getAttribute('src')).toBe('/audio/a.mp3');
+		expect(audioStubs.play).toHaveBeenCalledTimes(2);
+	});
+
+	it.each([true, false])('manual Next preserves paused=%s', (paused) => {
+		const { root } = mountPlayer();
+		dispatchWindowOpen(MUSIC_WINDOW_ID, true);
+		vi.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(paused);
+		audioStubs.play.mockClear();
+		root.querySelector<HTMLButtonElement>('[data-music-next]')!.click();
+		expect(root.querySelector('audio')!.getAttribute('src')).toBe('/audio/b.mp3');
+		expect(audioStubs.play).toHaveBeenCalledTimes(paused ? 0 : 1);
+	});
+});
