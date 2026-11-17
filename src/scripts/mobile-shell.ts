@@ -69,6 +69,9 @@ class MobileShell {
 			if (!initial && this.mql.matches) initial = this.firstVisitWelcome();
 		}
 		this.show(initial, /* fromPop */ true);
+		// Seed the original entry too: Back after leaving a deep link must
+		// restore its app, without adding an extra history entry.
+		history.replaceState({ ...history.state, current: this.current }, '');
 		document.addEventListener('mills:close-window', (event) => {
 			if (this.mql.matches && this.current === event.detail.id) this.show(null);
 		});

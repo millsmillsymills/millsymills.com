@@ -177,13 +177,6 @@ function openModal(overlay: HTMLElement, opts: ResetOptions, trigger: HTMLElemen
 		if (e.key === 'Escape') {
 			e.preventDefault();
 			closeModal();
-		} else if (e.key === 'Enter') {
-			// Only confirm if focus is inside the modal. A future surface
-			// that focuses an <input> while the modal is open shouldn't
-			// have its Enter wipe state.
-			if (!activeOverlay?.contains(document.activeElement)) return;
-			e.preventDefault();
-			onYesClick();
 		}
 	};
 	window.addEventListener('keydown', onKeyHandler);

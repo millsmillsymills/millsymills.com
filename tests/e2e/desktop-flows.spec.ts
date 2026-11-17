@@ -165,3 +165,46 @@ test.describe('high-value app tracer bullets', () => {
 		await expect(start).toHaveAttribute('aria-expanded', 'false');
 	});
 });
+
+
+test('reset Cancel keeps preferences when activated with Enter or Space', async ({ page }) => {
+	await page.goto('/');
+	await page.evaluate(() => {
+		localStorage.setItem('mills.test-preference', 'keep');
+		sessionStorage.setItem('mills.test-preference', 'keep');
+	});
+	for (const key of ['Enter', 'Space']) {
+		await page.locator('.taskbar__start').click();
+		await page.locator('.start-menu [data-reset-trigger]').click();
+		const cancel = page.locator('[data-reset-no]');
+		await expect(cancel).toBeFocused();
+		await page.keyboard.press(key);
+		await expect(page.locator('.reset-confirm')).toBeHidden();
+		expect(await page.evaluate(() => [
+			localStorage.getItem('mills.test-preference'),
+			sessionStorage.getItem('mills.test-preference'),
+		])).toEqual(['keep', 'keep']);
+		await expect(page.locator('[data-shutdown-overlay]')).not.toHaveClass(/shutdown-overlay--on/);
+	}
+});
+
+test('desktop command palette still opens a desktop window', async ({ page }) => {
+	await page.goto('/');
+	await page.keyboard.press('Control+K');
+	await page.locator('.cmdp__input').fill('about');
+	await page.keyboard.press('Enter');
+	await expect(page.locator('.cmdp')).toBeHidden();
+	await expect(windowFor(page, 'about')).toBeVisible();
+});
+
+
+test('reset Yes still confirms with Enter', async ({ page }) => {
+	await page.goto('/');
+	await page.evaluate(() => localStorage.setItem('mills.test-preference', 'remove'));
+	await page.locator('.taskbar__start').click();
+	await page.locator('.start-menu [data-reset-trigger]').click();
+	await page.locator('[data-reset-yes]').focus();
+	await page.keyboard.press('Enter');
+	expect(await page.evaluate(() => localStorage.getItem('mills.test-preference'))).toBeNull();
+	await expect(page.locator('[data-shutdown-overlay]')).toHaveClass(/shutdown-overlay--on/);
+});
