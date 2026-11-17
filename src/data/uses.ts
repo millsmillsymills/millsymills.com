@@ -12,7 +12,7 @@ export interface GearItem {
 	readonly icon?: `/${string}`;
 	/** Render the icon at a larger size when the default 32px is too small to read. */
 	readonly largeIcon?: boolean;
-	/** On-site demo route (e.g. `/unifi/`) surfaced as a "live demo" link on the item. */
+	/** On-site demo route (e.g. `/unifi/`) surfaced as an "interactive simulation" link on the item. */
 	readonly demoUrl?: `/${string}`;
 }
 
@@ -113,7 +113,7 @@ export const gear: readonly GearGroup[] = [
 				name: 'UniFi networking stack',
 				detail: 'controller + switches + APs',
 				url: 'https://ui.com/',
-				why: 'one pane of glass for the whole /24. great telemetry. hence unifi-mcp — drive a simulated version of it from the live demo.',
+				why: 'one pane of glass for the whole /24. great telemetry. hence unifi-mcp — drive a simulated version of it from the interactive simulation.',
 				icon: '/images/icons/uses/unifi-pixel.png',
 				demoUrl: '/unifi/',
 			},

@@ -52,7 +52,7 @@ function incidentsSection(): string {
 function projectsSection(): string {
 	const lines = projects
 		.map((p) => {
-			const demo = p.demoUrl ? ` Live demo at ${p.demoUrl}.` : '';
+			const demo = p.demoUrl ? ` Scripted browser simulation (no live AI or controller) at ${p.demoUrl}.` : '';
 			return `- ${p.name} — ${p.tagline}.${demo}\n  <${p.repo}>`;
 		})
 		.join('\n');

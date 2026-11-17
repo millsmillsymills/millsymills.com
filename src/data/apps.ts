@@ -167,7 +167,7 @@ const _APPS_DATA = [
 		iconUrl: '/images/projects/unifi-mcp-transparent.svg',
 		title: 'unifi-mcp.exe',
 		ogDescription:
-			'a live, simulated unifi-mcp demo — drive a fake network with an AI assistant calling real MCP tools across network, protect, and site manager.',
+			'a scripted browser simulation of unifi-mcp: simulated network state and tool-call displays, with no AI model or live controller.',
 		// Embeds the self-contained demo from public/apps/unifi-demo/ in an
 		// iframe (UniFi.astro).
 		x: 130,
