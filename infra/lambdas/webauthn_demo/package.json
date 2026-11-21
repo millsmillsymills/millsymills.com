@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@simplewebauthn/server": "13.3.0"
+    "@simplewebauthn/server": "14.1.0"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "3.1045.0",
