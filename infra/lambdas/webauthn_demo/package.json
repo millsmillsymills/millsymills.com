@@ -12,7 +12,7 @@
     "@simplewebauthn/server": "13.3.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "3.1045.0",
+    "@aws-sdk/client-dynamodb": "3.1165.0",
     "@aws-sdk/lib-dynamodb": "3.1045.0"
   }
 }
